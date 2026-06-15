@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+
+# builds
+.next/
+dist/
+build/
+
+# env
+.env
+.env.local
+.env.production
+
+# logs
+logs/
+*.log
+
+# prisma
+prisma/dev.db
+
+# docker
+docker-data/
+
+# editor
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# tests
+coverage/
+
+# cache
+.cache/
+.turbo/
+
+# local files
+tmp/
