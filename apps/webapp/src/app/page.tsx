@@ -1,5 +1,6 @@
 "use client";
 
+import { calculateReadiness } from "@kupitnezabyt/shared";
 import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import { useEffect, useMemo, useState } from "react";
@@ -65,6 +66,12 @@ const categoryStatusLabels: Record<CategoryStatus, string> = {
   URGENT: "Срочно"
 };
 
+const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
+const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
+const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
+
+type ActiveTab = "check" | "groups" | "home" | "items" | "search" | "settings" | "shopping";
+
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,11 +85,17 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Item[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [selectedStarterCategories, setSelectedStarterCategories] = useState<string[]>([
+    "Еда",
+    "Аптека",
+    "Дом"
+  ]);
+  const [starterItems, setStarterItems] = useState(["Кофе", "Ибупрофен", "Шампунь"]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "check" | "groups" | "items" | "search" | "settings" | "shopping"
-  >("items");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -144,6 +157,22 @@ export default function HomePage() {
 
   const checkedCount = checkSession?.items.filter((sessionItem) => sessionItem.checkedAt).length ?? 0;
 
+  const readiness = useMemo(() => calculateReadiness(items), [items]);
+
+  const urgentItems = useMemo(
+    () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
+    [items]
+  );
+
+  const upcomingChecks = useMemo(() => {
+    return items
+      .filter((item) => item.nextCheckAt)
+      .sort((first, second) =>
+        String(first.nextCheckAt).localeCompare(String(second.nextCheckAt))
+      )
+      .slice(0, 5);
+  }, [items]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -156,6 +185,7 @@ export default function HomePage() {
 
         setToken(authToken);
         await refreshData(authToken);
+        setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
       } catch (caughtError) {
         if (isMounted) {
           setError(formatError(caughtError));
@@ -480,6 +510,43 @@ export default function HomePage() {
     setCheckSession(session);
   }
 
+  async function handleFinishOnboarding(skipSetup = false) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    if (!skipSetup) {
+      const existingCategoryNames = new Set(categories.map((category) => category.name));
+      const createdCategories: Category[] = [];
+
+      for (const name of selectedStarterCategories) {
+        if (!existingCategoryNames.has(name)) {
+          createdCategories.push(await createCategory(token, name));
+        }
+      }
+
+      const nextCategories = createdCategories.length
+        ? [...categories, ...createdCategories]
+        : categories;
+      const firstCategory = nextCategories[0];
+      if (firstCategory) {
+        for (const name of starterItems.map((item) => item.trim()).filter(Boolean).slice(0, 5)) {
+          await createItem(token, {
+            categoryId: firstCategory.id,
+            name
+          });
+        }
+      }
+    }
+
+    window.localStorage.setItem(onboardingStorageKey, "true");
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+    await refreshData(token);
+    setActiveTab("home");
+  }
+
   async function handleSearchItems() {
     if (!token || !searchQuery.trim()) {
       return;
@@ -533,11 +600,142 @@ export default function HomePage() {
     setRecommendations([]);
     setSearchResults([]);
     setHasSearched(false);
-    setActiveTab("items");
+    window.localStorage.removeItem(onboardingStorageKey);
+    setActiveTab("home");
   }
 
   if (isLoading) {
     return <main className="app-shell centered">Загрузка...</main>;
+  }
+
+  if (showOnboarding) {
+    return (
+      <main className="app-shell onboarding-shell">
+        {error ? <div className="notice">{error}</div> : null}
+        <section className="onboarding-panel">
+          <p className="eyebrow">Шаг {onboardingStep + 1} из 4</p>
+
+          {onboardingStep === 0 ? (
+            <>
+              <h1>kupitnezabyt</h1>
+              <p>
+                Помогает помнить о товарах, которые регулярно заканчиваются:
+                еда, аптека, косметика, дом и другое.
+              </p>
+              <button type="button" onClick={() => setOnboardingStep(1)}>
+                Начать
+              </button>
+            </>
+          ) : onboardingStep === 1 ? (
+            <>
+              <h1>Стартовые категории</h1>
+              <p>Выберите несколько областей, с которых удобно начать.</p>
+              <div className="choice-grid">
+                {starterCategories.map((name) => {
+                  const isSelected = selectedStarterCategories.includes(name);
+                  return (
+                    <button
+                      className={isSelected ? "choice active" : "choice"}
+                      key={name}
+                      type="button"
+                      onClick={() =>
+                        setSelectedStarterCategories((current) =>
+                          isSelected
+                            ? current.filter((categoryName) => categoryName !== name)
+                            : [...current, name]
+                        )
+                      }
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="onboarding-actions">
+                <button type="button" onClick={() => setOnboardingStep(2)}>
+                  Продолжить
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setSelectedStarterCategories([])}
+                >
+                  Пропустить
+                </button>
+              </div>
+            </>
+          ) : onboardingStep === 2 ? (
+            <>
+              <h1>Первые товары</h1>
+              <p>Добавьте 3-5 вещей, которые обычно заканчиваются.</p>
+              <div className="starter-items">
+                {starterItems.map((value, index) => (
+                  <input
+                    aria-label={`Стартовый товар ${index + 1}`}
+                    key={index}
+                    placeholder={starterItemHints[index] ?? "Товар"}
+                    value={value}
+                    onChange={(event) =>
+                      setStarterItems((current) =>
+                        current.map((item, itemIndex) =>
+                          itemIndex === index ? event.target.value : item
+                        )
+                      )
+                    }
+                  />
+                ))}
+              </div>
+              <div className="onboarding-actions">
+                <button type="button" onClick={() => setOnboardingStep(3)}>
+                  Продолжить
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => {
+                    setStarterItems([]);
+                    setOnboardingStep(3);
+                  }}
+                >
+                  Пропустить
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1>Напоминания</h1>
+              <p>
+                Я буду присылать напоминания в Telegram, когда пора проверить
+                запасы. Это не системное push-разрешение: сообщения отправляет бот.
+              </p>
+              <div className="onboarding-actions">
+                <button
+                  type="button"
+                  onClick={() =>
+                    void handleFinishOnboarding().catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  Готово
+                </button>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() =>
+                    void handleFinishOnboarding(true).catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  Пропустить настройку
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      </main>
+    );
   }
 
   return (
@@ -554,6 +752,13 @@ export default function HomePage() {
 
       <nav className="tabs" aria-label="Основные разделы">
         <button
+          className={activeTab === "home" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("home")}
+        >
+          Главная
+        </button>
+        <button
           className={activeTab === "items" ? "active" : ""}
           type="button"
           onClick={() => setActiveTab("items")}
@@ -568,25 +773,11 @@ export default function HomePage() {
           Покупки
         </button>
         <button
-          className={activeTab === "groups" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("groups")}
-        >
-          Наборы
-        </button>
-        <button
           className={activeTab === "check" ? "active" : ""}
           type="button"
           onClick={() => setActiveTab("check")}
         >
           Проверка
-        </button>
-        <button
-          className={activeTab === "search" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("search")}
-        >
-          Поиск
         </button>
         <button
           className={activeTab === "settings" ? "active" : ""}
@@ -597,7 +788,136 @@ export default function HomePage() {
         </button>
       </nav>
 
-      {activeTab === "items" ? (
+      {activeTab === "home" ? (
+        <section className="stack">
+          <div className="home-summary">
+            <div>
+              <p className="eyebrow">Готовность</p>
+              <strong>{readiness === null ? "Нет данных" : `${readiness}%`}</strong>
+              <span>{items.length ? `${items.length} отслеживаемых` : "Добавьте первые товары"}</span>
+            </div>
+            <div>
+              <p className="eyebrow">Покупки</p>
+              <strong>{shoppingList.length}</strong>
+              <span>{shoppingList.length ? "активных позиций" : "список пуст"}</span>
+            </div>
+          </div>
+
+          <section className="quick-actions" aria-label="Быстрые действия">
+            <button type="button" onClick={() => setActiveTab("items")}>
+              Категории
+            </button>
+            <button type="button" onClick={() => setActiveTab("shopping")}>
+              Покупки
+            </button>
+            <button type="button" onClick={() => setActiveTab("check")}>
+              Проверка
+            </button>
+            <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
+              Поиск
+            </button>
+            <button className="ghost-button" type="button" onClick={() => setActiveTab("groups")}>
+              Наборы
+            </button>
+          </section>
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2>Срочно и купить</h2>
+                <p>{urgentItems.length ? `${urgentItems.length} поз.` : "Пока спокойно"}</p>
+              </div>
+            </div>
+            {urgentItems.length ? (
+              <div className="item-list">
+                {urgentItems.map((item) => (
+                  <article className="shopping-row" key={item.id}>
+                    <div>
+                      <p className={item.status === "URGENT" ? "urgent" : "normal"}>
+                        {statusLabels[item.status]}
+                      </p>
+                      <h2>{item.name}</h2>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryId(item.categoryId);
+                        setActiveTab("items");
+                      }}
+                    >
+                      Открыть
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="empty">Нет товаров, которые нужно купить прямо сейчас.</p>
+            )}
+          </section>
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2>Ближайшие проверки</h2>
+                <p>{upcomingChecks.length ? `${upcomingChecks.length} поз.` : "Нет дат"}</p>
+              </div>
+            </div>
+            {upcomingChecks.length ? (
+              <div className="item-list">
+                {upcomingChecks.map((item) => (
+                  <article className="shopping-row" key={item.id}>
+                    <div>
+                      <p>{formatDate(item.nextCheckAt)}</p>
+                      <h2>{item.name}</h2>
+                      <span>{statusLabels[item.status]}</span>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryId(item.categoryId);
+                        setActiveTab("items");
+                      }}
+                    >
+                      Открыть
+                    </button>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <p className="empty">Добавьте циклы проверки, чтобы видеть ближайшие даты.</p>
+            )}
+          </section>
+
+          <section className="home-section">
+            <div className="section-heading">
+              <div>
+                <h2>Категории</h2>
+                <p>{categories.length ? `${categories.length} активных` : "Пока нет"}</p>
+              </div>
+            </div>
+            <div className="category-row" aria-label="Быстрый доступ к категориям">
+              {categories.map((category) => (
+                <button
+                  className="category"
+                  key={category.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategoryId(category.id);
+                    setActiveTab("items");
+                  }}
+                >
+                  <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
+                  <small>
+                    {categoryStatusLabels[category.aggregateStatus]} · {category.itemCount}
+                  </small>
+                </button>
+              ))}
+            </div>
+          </section>
+        </section>
+      ) : activeTab === "items" ? (
         <section className="stack">
           <form
             className="inline-form"
@@ -1186,6 +1506,12 @@ export default function HomePage() {
           </div>
 
           <div className="settings-actions">
+            <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
+              Поиск товаров
+            </button>
+            <button className="ghost-button" type="button" onClick={() => setActiveTab("groups")}>
+              Наборы товаров
+            </button>
             <button
               type="button"
               onClick={() =>
@@ -1224,4 +1550,15 @@ function formatError(error: unknown): string {
   }
 
   return "Что-то пошло не так.";
+}
+
+function formatDate(value: string | null): string {
+  if (!value) {
+    return "Дата не задана";
+  }
+
+  return new Intl.DateTimeFormat("ru", {
+    day: "2-digit",
+    month: "short"
+  }).format(new Date(value));
 }

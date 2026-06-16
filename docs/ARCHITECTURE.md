@@ -170,3 +170,16 @@ not send data to third-party services.
 Account deletion deletes the `User` row. User-owned data is removed through the
 existing cascade relations and therefore becomes inaccessible to future API
 requests.
+
+## Product Polish
+
+Slice 11 keeps onboarding state in the webapp `localStorage` instead of adding
+database fields. The onboarding flow can create starter categories and first
+items through the same authenticated API endpoints used by the main category
+screen.
+
+The webapp now opens on a home screen with readiness, active shopping count,
+urgent items, upcoming item checks, and quick category access. The main mobile
+navigation is limited to five product sections: home, categories, shopping,
+check, and settings. Search and groups remain available from quick actions so
+their existing flows are preserved without adding a shared UI package.

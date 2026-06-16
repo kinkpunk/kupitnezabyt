@@ -395,34 +395,38 @@ Tests:
 
 ## Slice 11: Onboarding and Product Polish
 
+Status: implemented.
+
 Goal: make first-run UX match the product spec.
 
 Webapp:
 
 - Add four-step onboarding:
-  - welcome
-  - starter categories
-  - first items
-  - notification explanation
+  - welcome. Done.
+  - starter categories. Done.
+  - first items. Done.
+  - notification explanation. Done.
 - Add home screen:
-  - readiness index
-  - upcoming checks
-  - urgent items
-  - quick category access
+  - readiness index. Done.
+  - upcoming checks. Done for item `nextCheckAt`.
+  - urgent items. Done.
+  - quick category access. Done.
 - Add bottom navigation:
-  - Главная
-  - Категории
-  - Покупки
-  - Проверка
-  - Настройки
+  - Главная. Done.
+  - Категории. Done.
+  - Покупки. Done.
+  - Проверка. Done.
+  - Настройки. Done.
 
 Database:
 
-- Add onboarding state only if needed.
+- Add onboarding state only if needed. Not needed for MVP; webapp stores local
+  completion state in `localStorage`.
 
 Tests:
 
 - E2E first-run flow in dev auth mode.
+  Still requires a `test:e2e` setup.
 
 ## Slice 12: Shared UI Package, If Needed
 

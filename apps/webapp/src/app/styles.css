@@ -80,6 +80,11 @@ select {
   padding: 20px 16px 32px;
 }
 
+.onboarding-shell {
+  display: grid;
+  align-content: center;
+}
+
 .centered {
   display: grid;
   place-items: center;
@@ -166,6 +171,87 @@ select {
 .stack {
   display: grid;
   gap: 14px;
+}
+
+.onboarding-panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+
+.onboarding-panel h1,
+.onboarding-panel p {
+  margin: 0;
+}
+
+.onboarding-panel h1 {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.onboarding-panel p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.choice-grid,
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choice {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.choice.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.starter-items,
+.onboarding-actions {
+  display: grid;
+  gap: 8px;
+}
+
+.home-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.home-summary > div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.home-summary strong {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.home-summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.home-section {
+  display: grid;
+  gap: 10px;
 }
 
 .inline-form {
@@ -365,11 +451,15 @@ select {
 
 @media (min-width: 520px) {
   .tabs {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .shopping-form {
     grid-template-columns: 1fr 150px 120px auto;
+  }
+
+  .onboarding-actions {
+    grid-template-columns: 1fr 1fr;
   }
 
   .recommendation-row {
