@@ -78,6 +78,13 @@ export type ItemGroup = {
   items: ItemGroupItem[];
 };
 
+export type RecommendationSuggestion = {
+  id: string;
+  ruleId: string;
+  suggestedItem: string;
+  categoryHint: string | null;
+};
+
 export type AuthResponse = {
   token: string;
 };

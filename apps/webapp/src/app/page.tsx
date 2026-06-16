@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ApiError,
+  acceptRecommendation,
   addGroupItem,
   archiveCategory,
   archiveGroup,
@@ -19,9 +20,11 @@ import {
   createItem,
   createShoppingListItem,
   deleteShoppingListItem,
+  dismissRecommendation,
   getCategories,
   getGroups,
   getItems,
+  getRecommendations,
   getShoppingList,
   login,
   removeGroupItem,
@@ -32,7 +35,14 @@ import {
   updateItem,
   updateShoppingListItem
 } from "../lib/api";
-import type { Category, CheckSession, Item, ItemGroup, ShoppingListEntry } from "../lib/types";
+import type {
+  Category,
+  CheckSession,
+  Item,
+  ItemGroup,
+  RecommendationSuggestion,
+  ShoppingListEntry
+} from "../lib/types";
 
 const statusLabels: Record<ItemStatus, string> = {
   IN_STOCK: "Есть",
@@ -57,6 +67,10 @@ export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
+  const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
+  const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
+    null
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"check" | "groups" | "items" | "shopping">("items");
@@ -175,6 +189,12 @@ export default function HomePage() {
     setGroups(nextGroups);
   }
 
+  async function refreshRecommendations(authToken: string, item: Item) {
+    const nextRecommendations = await getRecommendations(authToken, item.id);
+    setRecommendations(nextRecommendations);
+    setRecommendationSourceItemName(nextRecommendations.length ? item.name : null);
+  }
+
   async function handleCreateCategory() {
     if (!token || !categoryName.trim()) {
       return;
@@ -200,6 +220,7 @@ export default function HomePage() {
     setItemName("");
     setItems((current) => [...current, item]);
     await refreshData(token);
+    await refreshRecommendations(token, item);
   }
 
   async function handleSetStatus(item: Item, status: ItemStatus) {
@@ -213,6 +234,37 @@ export default function HomePage() {
       current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
     );
     setShoppingList(await getShoppingList(token));
+    await refreshRecommendations(token, updatedItem);
+  }
+
+  async function handleAcceptRecommendation(recommendation: RecommendationSuggestion) {
+    if (!token) {
+      return;
+    }
+
+    if (!window.confirm(`Добавить "${recommendation.suggestedItem}"?`)) {
+      return;
+    }
+
+    setError(null);
+    const item = await acceptRecommendation(token, recommendation.id);
+    await refreshData(token);
+    await refreshRecommendations(token, item);
+  }
+
+  async function handleDismissRecommendation(recommendation: RecommendationSuggestion) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    await dismissRecommendation(token, recommendation.id);
+    setRecommendations((current) =>
+      current.filter((currentRecommendation) => currentRecommendation.id !== recommendation.id)
+    );
+    setRecommendationSourceItemName((currentName) =>
+      recommendations.length <= 1 ? null : currentName
+    );
   }
 
   async function handleCompleteShoppingListItem(entry: ShoppingListEntry) {
@@ -551,6 +603,52 @@ export default function HomePage() {
                 />
                 <button type="submit">Добавить</button>
               </form>
+
+              {recommendations.length ? (
+                <section className="recommendations" aria-label="Рекомендации">
+                  <div>
+                    <p className="eyebrow">Рекомендации</p>
+                    <h2>
+                      {recommendationSourceItemName
+                        ? `Вместе с "${recommendationSourceItemName}"`
+                        : "Можно добавить"}
+                    </h2>
+                  </div>
+                  <div className="recommendation-list">
+                    {recommendations.map((recommendation) => (
+                      <article className="recommendation-row" key={recommendation.id}>
+                        <div>
+                          <h3>{recommendation.suggestedItem}</h3>
+                          <span>{recommendation.categoryHint ?? "Категория исходного товара"}</span>
+                        </div>
+                        <div className="shopping-actions">
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={() =>
+                              void handleDismissRecommendation(recommendation).catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Не нужно
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleAcceptRecommendation(recommendation).catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Добавить
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
 
               <div className="item-list">
                 {visibleItems.length ? (

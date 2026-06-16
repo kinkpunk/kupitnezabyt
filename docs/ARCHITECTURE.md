@@ -133,3 +133,23 @@ by that user. Membership is unique by `(groupId, itemId)`.
 Group check sessions reuse the same `CheckSession` and `CheckSessionItem`
 models introduced for category checks. Starting a group check snapshots active,
 non-archived, non-`PAUSED` group items.
+
+Slice 9 adds `RecommendationDismissal` for user-level suppression of dismissed
+rule-based suggestions. Recommendation rules are stored in code in
+`packages/shared`; they are deterministic, local, and do not call LLMs, analytics
+providers, or third-party services.
+
+## Recommendations
+
+Recommendation matching is pure shared business logic:
+
+- `normalizeName` handles casing, spacing, and `ё`/`е` normalization.
+- Rule matching checks trigger terms against the changed item name.
+- Duplicate suppression compares normalized suggestion names with the user's
+  active item names.
+- Dismissal suppression compares the current user's stored
+  `RecommendationDismissal` rows with rule suggestions.
+
+The API remains the source of truth. Accepting a recommendation recalculates it
+server-side before creating an item and returns an existing active item if the
+normalized name is already present.

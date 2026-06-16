@@ -333,37 +333,40 @@ Tests:
 
 ## Slice 9: Rule-Based Recommendations
 
+Status: implemented.
+
 Goal: add deterministic recommendations without LLM/ML.
 
 Database or code:
 
-- Store rules in code or seed data.
-- Add `RecommendationDismissal`.
+- Store rules in code or seed data. Done in `packages/shared`.
+- Add `RecommendationDismissal`. Done.
 
 Shared:
 
 - Add:
-  - `normalizeName`
-  - rule matching
-  - duplicate suppression
-  - dismissal suppression
+  - `normalizeName`. Done.
+  - rule matching. Done.
+  - duplicate suppression. Done.
+  - dismissal suppression. Done.
 
 Backend:
 
 - Implement:
-  - `GET /api/recommendations?itemId=...`
-  - accept
-  - dismiss
+  - `GET /api/recommendations?itemId=...`. Done.
+  - accept. Done.
+  - dismiss. Done.
 
 Webapp:
 
-- Show up to five suggestions after relevant item creation/status changes.
-- Require explicit confirmation before adding anything.
+- Show up to five suggestions after relevant item creation/status changes. Done.
+- Require explicit confirmation before adding anything. Done.
 
 Tests:
 
-- Unit tests for normalization and matching.
+- Unit tests for normalization and matching. Done.
 - Integration tests for accept/dismiss behavior.
+  Still requires PostgreSQL integration setup.
 
 ## Slice 10: Search, Export, and Account Deletion
 

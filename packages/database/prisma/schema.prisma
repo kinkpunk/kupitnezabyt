@@ -17,12 +17,13 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  categories        Category[]
-  checkSessions     CheckSession[]
-  groups            ItemGroup[]
-  items             Item[]
-  reminders         Reminder[]
-  shoppingListItems ShoppingListItem[]
+  categories               Category[]
+  checkSessions            CheckSession[]
+  groups                   ItemGroup[]
+  items                    Item[]
+  recommendationDismissals RecommendationDismissal[]
+  reminders                Reminder[]
+  shoppingListItems        ShoppingListItem[]
 }
 
 model Category {
@@ -135,7 +136,7 @@ model ItemGroup {
   updatedAt       DateTime  @updatedAt
   archivedAt      DateTime?
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   checkSessions CheckSession[]
   items         ItemGroupItem[]
 
@@ -188,6 +189,19 @@ model CheckSessionItem {
 
   @@unique([sessionId, itemId])
   @@index([sessionId, sortOrder])
+}
+
+model RecommendationDismissal {
+  id            String   @id @default(cuid())
+  userId        String
+  ruleId        String
+  suggestedItem String
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ruleId, suggestedItem])
+  @@index([userId, ruleId])
 }
 
 enum ItemStatus {

@@ -4,7 +4,10 @@ import {
   aggregateCategoryStatus,
   calculateNextCheckAt,
   calculateSnoozedUntil,
-  isItemStatus
+  getRuleBasedRecommendations,
+  isItemStatus,
+  normalizeName,
+  parseRecommendationId
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
 import type { FastifyReply } from "fastify";
@@ -60,6 +63,10 @@ type ShoppingListBody = {
 
 type GroupItemBody = {
   itemId?: unknown;
+};
+
+type AcceptRecommendationBody = {
+  categoryId?: unknown;
 };
 
 const config = getConfig();
@@ -688,6 +695,167 @@ export function buildServer() {
     });
   });
 
+  app.get<{ Querystring: { itemId?: string } }>(
+    "/api/recommendations",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const itemId = readRequiredString(request.query.itemId);
+      if (!itemId) {
+        await sendError(reply, 400, "ITEM_ID_REQUIRED", "Item id is required.");
+        return;
+      }
+
+      const triggerItem = await prisma.item.findFirst({
+        where: {
+          id: itemId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!triggerItem) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      return getRecommendationsForItem(userId, triggerItem);
+    }
+  );
+
+  app.post<{ Body: AcceptRecommendationBody; Params: { id: string } }>(
+    "/api/recommendations/:id/accept",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const recommendationId = parseRecommendationId(request.params.id);
+      if (!recommendationId) {
+        await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
+        return;
+      }
+
+      const triggerItem = await prisma.item.findFirst({
+        where: {
+          id: recommendationId.itemId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!triggerItem) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      const activeItems = await prisma.item.findMany({
+        where: {
+          userId,
+          archivedAt: null
+        }
+      });
+      const normalizedSuggestedItem = normalizeName(recommendationId.suggestedItem);
+      const duplicateItem = activeItems.find(
+        (item) => normalizeName(item.name) === normalizedSuggestedItem
+      );
+      if (duplicateItem) {
+        return duplicateItem;
+      }
+
+      const suggestion = getRuleBasedRecommendations({
+        triggerItem,
+        userItems: activeItems,
+        dismissals: [],
+        limit: 20
+      }).find(
+        (currentSuggestion) =>
+          currentSuggestion.ruleId === recommendationId.ruleId &&
+          normalizeName(currentSuggestion.suggestedItem) === normalizedSuggestedItem
+      );
+
+      if (!suggestion) {
+        await sendError(reply, 404, "RECOMMENDATION_NOT_FOUND", "Recommendation was not found.");
+        return;
+      }
+
+      const categoryId = readOptionalString(request.body?.categoryId) ?? triggerItem.categoryId;
+      const category = await prisma.category.findFirst({
+        where: {
+          id: categoryId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!category) {
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+        return;
+      }
+
+      return prisma.item.create({
+        data: {
+          userId,
+          categoryId: category.id,
+          name: suggestion.suggestedItem
+        }
+      });
+    }
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/recommendations/:id/dismiss",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const recommendationId = parseRecommendationId(request.params.id);
+      if (!recommendationId) {
+        await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
+        return;
+      }
+
+      const triggerItem = await prisma.item.findFirst({
+        where: {
+          id: recommendationId.itemId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!triggerItem) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      const suggestion = (await getRecommendationsForItem(userId, triggerItem)).find(
+        (currentSuggestion) =>
+          currentSuggestion.ruleId === recommendationId.ruleId &&
+          normalizeName(currentSuggestion.suggestedItem) ===
+            normalizeName(recommendationId.suggestedItem)
+      );
+
+      if (!suggestion) {
+        await sendError(reply, 404, "RECOMMENDATION_NOT_FOUND", "Recommendation was not found.");
+        return;
+      }
+
+      await prisma.recommendationDismissal.upsert({
+        where: {
+          userId_ruleId_suggestedItem: {
+            userId,
+            ruleId: recommendationId.ruleId,
+            suggestedItem: suggestion.suggestedItem
+          }
+        },
+        update: {},
+        create: {
+          userId,
+          ruleId: recommendationId.ruleId,
+          suggestedItem: suggestion.suggestedItem
+        }
+      });
+
+      return {
+        dismissed: true
+      };
+    }
+  );
+
   app.get<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
     const item = await prisma.item.findFirst({
       where: {
@@ -1285,6 +1453,43 @@ const groupInclude = {
     }
   }
 } as const;
+
+async function getRecommendationsForItem(
+  userId: string,
+  triggerItem: {
+    id: string;
+    name: string;
+  }
+) {
+  const [activeItems, dismissals] = await Promise.all([
+    prisma.item.findMany({
+      where: {
+        userId,
+        archivedAt: null
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    }),
+    prisma.recommendationDismissal.findMany({
+      where: {
+        userId
+      },
+      select: {
+        ruleId: true,
+        suggestedItem: true
+      }
+    })
+  ]);
+
+  return getRuleBasedRecommendations({
+    triggerItem,
+    userItems: activeItems,
+    dismissals,
+    limit: 5
+  });
+}
 
 async function sendError(
   reply: FastifyReply,

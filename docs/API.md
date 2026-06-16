@@ -204,6 +204,54 @@ Add item body:
 
 Group membership is unique by `(groupId, itemId)`.
 
+## Recommendations
+
+```http
+GET  /api/recommendations?itemId=...
+POST /api/recommendations/:id/accept
+POST /api/recommendations/:id/dismiss
+```
+
+Recommendations are deterministic rule-based suggestions generated from the
+authenticated user's existing items. No LLM or external recommendation service
+is used.
+
+`GET /api/recommendations?itemId=...` returns up to five suggestions for an
+active item owned by the current user:
+
+```json
+[
+  {
+    "id": "...",
+    "ruleId": "coffee-basics",
+    "suggestedItem": "Фильтры для кофе",
+    "categoryHint": "Продукты"
+  }
+]
+```
+
+`POST /api/recommendations/:id/accept` creates the suggested item only after
+explicit user action. Body is optional:
+
+```json
+{
+  "categoryId": "..."
+}
+```
+
+When `categoryId` is omitted, the API adds the item to the trigger item's
+category. The backend recalculates the recommendation, suppresses duplicates by
+normalized name, and never trusts user identity from the body or query string.
+
+`POST /api/recommendations/:id/dismiss` stores a dismissal for the current user
+so the same rule suggestion is not shown again:
+
+```json
+{
+  "dismissed": true
+}
+```
+
 ## Check Sessions
 
 ```http

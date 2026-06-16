@@ -8,6 +8,7 @@ import type {
   DeletedCountResponse,
   ItemGroup,
   Item,
+  RecommendationSuggestion,
   ShoppingListEntry
 } from "./types";
 
@@ -136,6 +137,37 @@ export function setItemStatus(
   status: ItemStatus
 ): Promise<Item> {
   return post<Item>(`/api/items/${itemId}/status`, token, { status });
+}
+
+export function getRecommendations(
+  token: string,
+  itemId: string
+): Promise<RecommendationSuggestion[]> {
+  return get<RecommendationSuggestion[]>(
+    `/api/recommendations?itemId=${encodeURIComponent(itemId)}`,
+    token
+  );
+}
+
+export function acceptRecommendation(
+  token: string,
+  recommendationId: string,
+  categoryId?: string
+): Promise<Item> {
+  return post<Item>(`/api/recommendations/${recommendationId}/accept`, token, {
+    categoryId
+  });
+}
+
+export function dismissRecommendation(
+  token: string,
+  recommendationId: string
+): Promise<{ dismissed: boolean }> {
+  return post<{ dismissed: boolean }>(
+    `/api/recommendations/${recommendationId}/dismiss`,
+    token,
+    {}
+  );
 }
 
 export function getShoppingList(token: string): Promise<ShoppingListEntry[]> {

@@ -217,6 +217,47 @@ select {
   gap: 12px;
 }
 
+.recommendations {
+  display: grid;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-strong));
+  padding: 14px;
+}
+
+.recommendations h2,
+.recommendation-row h3 {
+  margin: 0;
+  line-height: 1.15;
+}
+
+.recommendations h2 {
+  font-size: 18px;
+}
+
+.recommendation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.recommendation-row h3 {
+  font-size: 16px;
+}
+
+.recommendation-row span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .check-card,
 .item-card,
 .shopping-row {
@@ -320,6 +361,11 @@ select {
 @media (min-width: 520px) {
   .shopping-form {
     grid-template-columns: 1fr 150px 120px auto;
+  }
+
+  .recommendation-row {
+    grid-template-columns: 1fr auto;
+    align-items: center;
   }
 }
 
