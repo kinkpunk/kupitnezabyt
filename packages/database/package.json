@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@kupitnezabyt/shared": "workspace:*",
     "@prisma/client": "^6.10.1"
   },
   "devDependencies": {

@@ -22,6 +22,7 @@ check sessions, recommendations, search, export, onboarding, deployment, and CI.
 apps/webapp          Next.js mobile UI
 apps/api             Fastify API
 apps/bot             grammY Telegram bot entry point
+apps/worker          reminder polling and Telegram delivery
 packages/database    Prisma schema and client
 packages/shared      Shared domain types and pure business logic
 ```
@@ -90,3 +91,26 @@ Reminder rows include an `idempotencyKey` so later worker slices can avoid
 duplicates for the same user, reminder type, entity, and UTC scheduled date.
 Slice 5 stores and updates reminder data only; it does not send Telegram
 notifications.
+
+Slice 6 adds `apps/worker` for reminder delivery. The worker polls pending
+`Reminder` rows, renders item-check notifications, sends them through Telegram
+Bot API, and updates reminder status to `SENT`, `FAILED`, or `CANCELLED`.
+Temporary failures are retried by moving `scheduledFor` forward with bounded
+backoff. User data mutations are not rolled back when Telegram delivery fails.
+
+The worker currently handles `ITEM_CHECK` reminders. Other reminder types are
+left for later slices when their product flows exist.
+
+```bash
+pnpm --filter @kupitnezabyt/worker dev
+```
+
+Worker environment:
+
+```env
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBAPP_URL=
+WORKER_POLL_INTERVAL_MS=300000
+REMINDER_BATCH_SIZE=25
+REMINDER_MAX_ATTEMPTS=5
+```

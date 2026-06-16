@@ -48,6 +48,12 @@ importers:
 
   apps/bot:
     dependencies:
+      '@kupitnezabyt/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@kupitnezabyt/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       grammy:
         specifier: ^1.38.2
         version: 1.44.0
@@ -78,8 +84,24 @@ importers:
         specifier: ^19.1.6
         version: 19.2.3(@types/react@19.2.17)
 
+  apps/worker:
+    dependencies:
+      '@kupitnezabyt/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@kupitnezabyt/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+    devDependencies:
+      tsx:
+        specifier: ^4.20.3
+        version: 4.22.4
+
   packages/database:
     dependencies:
+      '@kupitnezabyt/shared':
+        specifier: workspace:*
+        version: link:../shared
       '@prisma/client':
         specifier: ^6.10.1
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)

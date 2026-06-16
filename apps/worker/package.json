@@ -1,5 +1,5 @@
 {
-  "name": "@kupitnezabyt/bot",
+  "name": "@kupitnezabyt/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,8 +13,7 @@
   },
   "dependencies": {
     "@kupitnezabyt/database": "workspace:*",
-    "@kupitnezabyt/shared": "workspace:*",
-    "grammy": "^1.38.2"
+    "@kupitnezabyt/shared": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.20.3"

@@ -232,33 +232,42 @@ Tests:
 
 ## Slice 6: Worker and Telegram Notifications
 
+Status: implemented for `ITEM_CHECK` reminders.
+
 Goal: send reminder messages through Telegram with duplicate protection.
 
 Worker:
 
-- Create `apps/worker`.
-- Implement due reminder polling.
+- Create `apps/worker`. Done.
+- Implement due reminder polling. Done for `ITEM_CHECK`.
 - Send jobs through BullMQ/Redis or direct worker flow, depending on the simplest
-  maintainable path at the time.
-- Retry temporary failures with bounded backoff.
-- Never roll back user data because Telegram sending failed.
+  maintainable path at the time. Done with direct DB polling; BullMQ remains
+  unnecessary until queue complexity is justified.
+- Retry temporary failures with bounded backoff. Done by rescheduling pending
+  reminders and marking final failures as `FAILED`.
+- Never roll back user data because Telegram sending failed. Done; delivery
+  failures update only reminder state.
 
 Bot:
 
-- Add notification message rendering.
+- Add notification message rendering. Done in `packages/shared`.
 - Add item reminder buttons:
-  - `Есть`
-  - `Мало`
-  - `Купить`
-  - `Срочно`
-  - `Позже`
-  - `Открыть`
+  - `Есть`. Done.
+  - `Мало`. Done.
+  - `Купить`. Done.
+  - `Срочно`. Done.
+  - `Позже`. Done.
+  - `Открыть`. Done.
 - Callback actions must call the same backend status logic used by the webapp.
+  Done by moving item status workflows into `packages/database` and using them
+  from both API and bot callbacks.
 
 Tests:
 
-- Worker duplicate-prevention tests.
-- Bot callback idempotency tests.
+- Worker duplicate-prevention tests. Covered at unit level for sent/retry/failed
+  paths; DB-level duplicate prevention still needs PostgreSQL integration tests.
+- Bot callback idempotency tests. Callback parsing is covered in shared tests;
+  database callback execution still needs integration tests.
 
 ## Slice 7: Check Sessions
 
