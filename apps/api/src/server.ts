@@ -7,6 +7,8 @@ import {
   getRuleBasedRecommendations,
   isItemStatus,
   normalizeName,
+  normalizeSearchQuery,
+  createUserDataExport,
   parseRecommendationId
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
@@ -160,6 +162,120 @@ export function buildServer() {
     return prisma.user.findUniqueOrThrow({
       where: {
         id: requireUserId(request.userId)
+      }
+    });
+  });
+
+  app.delete("/api/me", async (request) => {
+    await prisma.user.delete({
+      where: {
+        id: requireUserId(request.userId)
+      }
+    });
+
+    return {
+      deleted: true
+    };
+  });
+
+  app.get("/api/export/json", async (request) => {
+    const userId = requireUserId(request.userId);
+    const [
+      user,
+      categories,
+      items,
+      shoppingListItems,
+      reminders,
+      groups,
+      checkSessions,
+      recommendationDismissals
+    ] = await Promise.all([
+      prisma.user.findUniqueOrThrow({
+        where: {
+          id: userId
+        }
+      }),
+      prisma.category.findMany({
+        where: {
+          userId
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
+      }),
+      prisma.item.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }),
+      prisma.shoppingListItem.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }),
+      prisma.reminder.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }),
+      prisma.itemGroup.findMany({
+        where: {
+          userId
+        },
+        include: {
+          items: {
+            orderBy: {
+              createdAt: "asc"
+            }
+          }
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }),
+      prisma.checkSession.findMany({
+        where: {
+          userId
+        },
+        include: {
+          items: {
+            orderBy: {
+              sortOrder: "asc"
+            }
+          }
+        },
+        orderBy: {
+          startedAt: "asc"
+        }
+      }),
+      prisma.recommendationDismissal.findMany({
+        where: {
+          userId
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      })
+    ]);
+
+    return createUserDataExport({
+      exportedAt: new Date(),
+      data: {
+        user,
+        categories,
+        items,
+        shoppingListItems,
+        reminders,
+        groups,
+        checkSessions,
+        recommendationDismissals
       }
     });
   });
@@ -652,6 +768,56 @@ export function buildServer() {
       orderBy: {
         createdAt: "asc"
       }
+    });
+  });
+
+  app.get<{ Querystring: { q?: string } }>("/api/items/search", async (request, reply) => {
+    const query = normalizeSearchQuery(request.query.q ?? "");
+    if (!query) {
+      await sendError(reply, 400, "SEARCH_QUERY_REQUIRED", "Search query is required.");
+      return;
+    }
+
+    return prisma.item.findMany({
+      where: {
+        userId: requireUserId(request.userId),
+        archivedAt: null,
+        OR: [
+          {
+            name: {
+              contains: query,
+              mode: "insensitive"
+            }
+          },
+          {
+            brand: {
+              contains: query,
+              mode: "insensitive"
+            }
+          },
+          {
+            notes: {
+              contains: query,
+              mode: "insensitive"
+            }
+          },
+          {
+            category: {
+              name: {
+                contains: query,
+                mode: "insensitive"
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        category: true
+      },
+      orderBy: {
+        updatedAt: "desc"
+      },
+      take: 50
     });
   });
 

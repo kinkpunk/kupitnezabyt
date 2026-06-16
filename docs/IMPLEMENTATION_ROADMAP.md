@@ -370,24 +370,28 @@ Tests:
 
 ## Slice 10: Search, Export, and Account Deletion
 
+Status: implemented.
+
 Goal: complete user data management pieces from MVP.
 
 Backend:
 
-- Add item search by name, brand, category, notes.
-- Add `GET /api/export/json`.
-- Add `DELETE /api/me`.
-- Ensure account deletion removes or makes inaccessible all user data.
+- Add item search by name, brand, category, notes. Done.
+- Add `GET /api/export/json`. Done.
+- Add `DELETE /api/me`. Done.
+- Ensure account deletion removes or makes inaccessible all user data. Done via
+  user deletion and cascade relations.
 
 Webapp:
 
-- Add search screen or search field where it best fits.
-- Add settings screen with export and delete account.
+- Add search screen or search field where it best fits. Done as a search tab.
+- Add settings screen with export and delete account. Done.
 
 Tests:
 
 - Integration tests for user isolation in search/export/delete.
-- Export shape snapshot test if useful.
+- Export shape snapshot test if useful. Done at shared envelope level; DB-backed
+  endpoint tests still require PostgreSQL integration setup.
 
 ## Slice 11: Onboarding and Product Polish
 

@@ -142,7 +142,7 @@ select {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -358,7 +358,16 @@ select {
   gap: 6px;
 }
 
+.settings-actions {
+  display: grid;
+  gap: 8px;
+}
+
 @media (min-width: 520px) {
+  .tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
   .shopping-form {
     grid-template-columns: 1fr 150px 120px auto;
   }

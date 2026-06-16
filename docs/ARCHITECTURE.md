@@ -153,3 +153,20 @@ Recommendation matching is pure shared business logic:
 The API remains the source of truth. Accepting a recommendation recalculates it
 server-side before creating an item and returns an existing active item if the
 normalized name is already present.
+
+## User Data Management
+
+Slice 10 adds authenticated search, JSON export, and account deletion.
+
+Item search is implemented in the API with Prisma filters over active items
+owned by the current user. It matches item name, brand, notes, and category
+name, and does not trust any user id from client input.
+
+JSON export returns a versioned envelope with the authenticated user's current
+data: user profile, categories, items, shopping list entries, reminders, groups,
+check sessions, and recommendation dismissals. The export is read-only and does
+not send data to third-party services.
+
+Account deletion deletes the `User` row. User-owned data is removed through the
+existing cascade relations and therefore becomes inaccessible to future API
+requests.

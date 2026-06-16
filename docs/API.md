@@ -47,6 +47,16 @@ All endpoints below require:
 Authorization: Bearer <token>
 ```
 
+## Me
+
+```http
+GET    /api/me
+DELETE /api/me
+```
+
+`DELETE /api/me` deletes the authenticated user. Related user data is removed
+through database cascades and becomes inaccessible through the API.
+
 ## Categories
 
 ```http
@@ -70,6 +80,7 @@ Create body:
 
 ```http
 GET /api/items
+GET /api/items/search?q=...
 POST /api/items
 GET /api/items/:id
 PATCH /api/items/:id
@@ -110,6 +121,10 @@ PAUSED
 
 Changing status is transactional: the item is updated and the linked shopping
 list entry is created, updated, or completed according to product rules.
+
+Search matches active, non-archived items by item `name`, `brand`, `notes`, and
+category name. Results are scoped to the authenticated user and limited to 50
+items.
 
 Snooze body:
 
@@ -251,6 +266,33 @@ so the same rule suggestion is not shown again:
   "dismissed": true
 }
 ```
+
+## Export
+
+```http
+GET /api/export/json
+```
+
+Exports authenticated user data as JSON:
+
+```json
+{
+  "schemaVersion": 1,
+  "exportedAt": "2026-06-16T20:00:00.000Z",
+  "data": {
+    "user": {},
+    "categories": [],
+    "items": [],
+    "shoppingListItems": [],
+    "reminders": [],
+    "groups": [],
+    "checkSessions": [],
+    "recommendationDismissals": []
+  }
+}
+```
+
+The export endpoint is read-only and always uses the bearer auth context.
 
 ## Check Sessions
 

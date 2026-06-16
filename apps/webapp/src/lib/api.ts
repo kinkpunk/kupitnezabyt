@@ -9,7 +9,8 @@ import type {
   ItemGroup,
   Item,
   RecommendationSuggestion,
-  ShoppingListEntry
+  ShoppingListEntry,
+  UserDataExport
 } from "./types";
 
 declare global {
@@ -64,6 +65,10 @@ export async function login(): Promise<string> {
   return response.token;
 }
 
+export function clearSavedToken(): void {
+  window.localStorage.removeItem(tokenStorageKey);
+}
+
 function prepareTelegramWebApp(): void {
   const webApp = window.Telegram?.WebApp;
   webApp?.ready?.();
@@ -105,6 +110,10 @@ export function archiveCategory(token: string, categoryId: string): Promise<Cate
 
 export function getItems(token: string): Promise<Item[]> {
   return get<Item[]>("/api/items", token);
+}
+
+export function searchItems(token: string, query: string): Promise<Item[]> {
+  return get<Item[]>(`/api/items/search?q=${encodeURIComponent(query)}`, token);
 }
 
 export function createItem(
@@ -271,6 +280,14 @@ export function completeCheckSession(token: string, sessionId: string): Promise<
 
 export function cancelCheckSession(token: string, sessionId: string): Promise<CheckSession> {
   return post<CheckSession>(`/api/check/session/${sessionId}/cancel`, token, {});
+}
+
+export function exportUserData(token: string): Promise<UserDataExport> {
+  return get<UserDataExport>("/api/export/json", token);
+}
+
+export function deleteAccount(token: string): Promise<DeleteResponse> {
+  return del<DeleteResponse>("/api/me", token);
 }
 
 async function get<TResponse>(path: string, token: string): Promise<TResponse> {

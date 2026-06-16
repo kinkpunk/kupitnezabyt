@@ -21,6 +21,7 @@ export type Item = {
   lastCheckedAt: string | null;
   lastBoughtAt: string | null;
   nextCheckAt: string | null;
+  category?: Category | null;
 };
 
 export type ShoppingListEntry = {
@@ -95,4 +96,10 @@ export type DeletedCountResponse = {
 
 export type DeleteResponse = {
   deleted: boolean;
+};
+
+export type UserDataExport = {
+  schemaVersion: 1;
+  exportedAt: string;
+  data: Record<string, unknown>;
 };

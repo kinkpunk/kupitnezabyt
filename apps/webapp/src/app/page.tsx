@@ -19,8 +19,11 @@ import {
   createGroup,
   createItem,
   createShoppingListItem,
+  clearSavedToken,
   deleteShoppingListItem,
+  deleteAccount,
   dismissRecommendation,
+  exportUserData,
   getCategories,
   getGroups,
   getItems,
@@ -28,6 +31,7 @@ import {
   getShoppingList,
   login,
   removeGroupItem,
+  searchItems,
   setItemStatus,
   setCheckSessionItemStatus,
   startCategoryCheckSession,
@@ -71,9 +75,14 @@ export default function HomePage() {
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
     null
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Item[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"check" | "groups" | "items" | "shopping">("items");
+  const [activeTab, setActiveTab] = useState<
+    "check" | "groups" | "items" | "search" | "settings" | "shopping"
+  >("items");
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -471,6 +480,62 @@ export default function HomePage() {
     setCheckSession(session);
   }
 
+  async function handleSearchItems() {
+    if (!token || !searchQuery.trim()) {
+      return;
+    }
+
+    setError(null);
+    const results = await searchItems(token, searchQuery.trim());
+    setSearchResults(results);
+    setHasSearched(true);
+  }
+
+  async function handleExportUserData() {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    const payload = await exportUserData(token);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json"
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `kupitnezabyt-export-${payload.exportedAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDeleteAccount() {
+    if (!token) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Удалить аккаунт и все данные? Это действие нельзя отменить."
+      )
+    ) {
+      return;
+    }
+
+    setError(null);
+    await deleteAccount(token);
+    clearSavedToken();
+    setToken(null);
+    setCategories([]);
+    setItems([]);
+    setGroups([]);
+    setShoppingList([]);
+    setRecommendations([]);
+    setSearchResults([]);
+    setHasSearched(false);
+    setActiveTab("items");
+  }
+
   if (isLoading) {
     return <main className="app-shell centered">Загрузка...</main>;
   }
@@ -515,6 +580,20 @@ export default function HomePage() {
           onClick={() => setActiveTab("check")}
         >
           Проверка
+        </button>
+        <button
+          className={activeTab === "search" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("search")}
+        >
+          Поиск
+        </button>
+        <button
+          className={activeTab === "settings" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("settings")}
+        >
+          Настройки
         </button>
       </nav>
 
@@ -988,7 +1067,7 @@ export default function HomePage() {
             <p className="empty">Создайте набор для совместной проверки товаров.</p>
           )}
         </section>
-      ) : (
+      ) : activeTab === "check" ? (
         <section className="stack">
           <div className="section-heading">
             <div>
@@ -1043,6 +1122,92 @@ export default function HomePage() {
               Откройте категорию и нажмите «Проверить», чтобы начать пошаговую проверку.
             </p>
           )}
+        </section>
+      ) : activeTab === "search" ? (
+        <section className="stack">
+          <div className="section-heading">
+            <div>
+              <h2>Поиск</h2>
+              <p>Название, бренд, заметки или категория</p>
+            </div>
+          </div>
+
+          <form
+            className="inline-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSearchItems().catch((caughtError) => setError(formatError(caughtError)));
+            }}
+          >
+            <input
+              aria-label="Поиск товаров"
+              placeholder="Например, кофе"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+            <button type="submit">Найти</button>
+          </form>
+
+          <div className="item-list">
+            {searchResults.length ? (
+              searchResults.map((item) => (
+                <article className="shopping-row" key={item.id}>
+                  <div>
+                    <p>{item.category?.name ?? "Без категории"}</p>
+                    <h2>{item.name}</h2>
+                    <span>{statusLabels[item.status]}</span>
+                  </div>
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategoryId(item.categoryId);
+                      setActiveTab("items");
+                    }}
+                  >
+                    Открыть
+                  </button>
+                </article>
+              ))
+            ) : hasSearched ? (
+              <p className="empty">Ничего не найдено.</p>
+            ) : (
+              <p className="empty">Введите запрос, чтобы найти отслеживаемые товары.</p>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="stack">
+          <div className="section-heading">
+            <div>
+              <h2>Настройки</h2>
+              <p>Экспорт и удаление данных</p>
+            </div>
+          </div>
+
+          <div className="settings-actions">
+            <button
+              type="button"
+              onClick={() =>
+                void handleExportUserData().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              Скачать JSON
+            </button>
+            <button
+              className="ghost-button danger-button"
+              type="button"
+              onClick={() =>
+                void handleDeleteAccount().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              Удалить аккаунт
+            </button>
+          </div>
         </section>
       )}
     </main>
