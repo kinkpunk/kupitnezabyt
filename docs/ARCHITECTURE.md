@@ -114,3 +114,12 @@ WORKER_POLL_INTERVAL_MS=300000
 REMINDER_BATCH_SIZE=25
 REMINDER_MAX_ATTEMPTS=5
 ```
+
+## Check Sessions
+
+Slice 7 adds guided category checks with `CheckSession` and `CheckSessionItem`.
+Starting a category check creates a snapshot of active non-archived,
+non-`PAUSED` items. Each status selection calls the same item status workflow
+used elsewhere, so shopping list sync and reminder sync remain centralized.
+
+Group check sessions are deferred until groups exist.

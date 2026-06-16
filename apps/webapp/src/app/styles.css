@@ -142,7 +142,7 @@ select {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 16px;
 }
@@ -217,6 +217,7 @@ select {
   gap: 12px;
 }
 
+.check-card,
 .item-card,
 .shopping-row {
   display: grid;
@@ -230,6 +231,15 @@ select {
 
 .item-card {
   grid-template-columns: 1fr;
+}
+
+.check-card {
+  grid-template-columns: 1fr;
+}
+
+.check-card h2 {
+  margin: 0;
+  font-size: 26px;
 }
 
 .item-card-header {

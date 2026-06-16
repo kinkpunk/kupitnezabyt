@@ -271,33 +271,36 @@ Tests:
 
 ## Slice 7: Check Sessions
 
+Status: implemented for category check sessions.
+
 Goal: support guided inventory checks.
 
 Database:
 
-- Add `CheckSession`.
-- Add `CheckSessionItem`.
+- Add `CheckSession`. Done.
+- Add `CheckSessionItem`. Done.
 
 Backend:
 
 - Implement category check session endpoints:
-  - start
-  - get
-  - update item status
-  - complete
-  - cancel
-- Snapshot active non-archived, non-`PAUSED` items at session start.
-- Reuse existing item status transition logic.
+  - start. Done.
+  - get. Done.
+  - update item status. Done.
+  - complete. Done.
+  - cancel. Done.
+- Snapshot active non-archived, non-`PAUSED` items at session start. Done.
+- Reuse existing item status transition logic. Done.
 
 Webapp:
 
-- Add check screen with one item card, progress, and four status actions.
-- Add category entry point: `Проверить категорию`.
+- Add check screen with one item card, progress, and four status actions. Done.
+- Add category entry point: `Проверить категорию`. Done.
 
 Tests:
 
 - Integration tests for session snapshot behavior and completion.
 - E2E test for checking one category.
+  These still require PostgreSQL and Playwright setup.
 
 ## Slice 8: Groups
 

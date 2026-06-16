@@ -18,6 +18,7 @@ model User {
   updatedAt        DateTime @updatedAt
 
   categories        Category[]
+  checkSessions     CheckSession[]
   items             Item[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
@@ -37,6 +38,7 @@ model Category {
   archivedAt      DateTime?
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkSessions     CheckSession[]
   items             Item[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
@@ -65,6 +67,7 @@ model Item {
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  checkSessionItems CheckSessionItem[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 
@@ -118,6 +121,39 @@ model Reminder {
   @@index([groupId, scheduledFor])
 }
 
+model CheckSession {
+  id          String             @id @default(cuid())
+  userId      String
+  categoryId  String?
+  groupId     String?
+  status      CheckSessionStatus @default(IN_PROGRESS)
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  items    CheckSessionItem[]
+
+  @@index([userId, status, startedAt])
+  @@index([categoryId, status])
+  @@index([groupId, status])
+}
+
+model CheckSessionItem {
+  id             String      @id @default(cuid())
+  sessionId      String
+  itemId         String
+  sortOrder      Int
+  selectedStatus ItemStatus?
+  checkedAt      DateTime?
+
+  session CheckSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  item    Item         @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, itemId])
+  @@index([sessionId, sortOrder])
+}
+
 enum ItemStatus {
   IN_STOCK
   LOW
@@ -149,5 +185,11 @@ enum ReminderStatus {
   PENDING
   SENT
   FAILED
+  CANCELLED
+}
+
+enum CheckSessionStatus {
+  IN_PROGRESS
+  COMPLETED
   CANCELLED
 }

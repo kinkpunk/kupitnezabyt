@@ -173,6 +173,37 @@ deleted through the shopping list endpoints.
 Deleting completed entries removes only completed shopping list rows for the
 current authenticated user.
 
+## Check Sessions
+
+```http
+POST /api/check/category/:categoryId/start
+GET  /api/check/session/:sessionId
+POST /api/check/session/:sessionId/item/:itemId/status
+POST /api/check/session/:sessionId/complete
+POST /api/check/session/:sessionId/cancel
+```
+
+Starting a category check session snapshots active, non-archived, non-`PAUSED`
+items from the category. Updating an item status reuses the same backend item
+status workflow as the webapp cards and bot callbacks.
+
+Status body:
+
+```json
+{
+  "status": "LOW"
+}
+```
+
+Supported check statuses:
+
+```text
+IN_STOCK
+LOW
+NEED_BUY
+URGENT
+```
+
 ## Errors
 
 Errors use this shape:

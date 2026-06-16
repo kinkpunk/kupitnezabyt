@@ -33,6 +33,29 @@ export type ShoppingListEntry = {
   item: Item | null;
 };
 
+export type CheckSessionStatus = "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+
+export type CheckSessionItem = {
+  id: string;
+  sessionId: string;
+  itemId: string;
+  sortOrder: number;
+  selectedStatus: ItemStatus | null;
+  checkedAt: string | null;
+  item: Item;
+};
+
+export type CheckSession = {
+  id: string;
+  categoryId: string | null;
+  groupId: string | null;
+  status: CheckSessionStatus;
+  startedAt: string;
+  completedAt: string | null;
+  category: Category | null;
+  items: CheckSessionItem[];
+};
+
 export type AuthResponse = {
   token: string;
 };

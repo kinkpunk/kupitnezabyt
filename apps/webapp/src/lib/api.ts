@@ -3,6 +3,7 @@ import type { ItemStatus } from "@kupitnezabyt/shared";
 import type {
   AuthResponse,
   Category,
+  CheckSession,
   DeleteResponse,
   DeletedCountResponse,
   Item,
@@ -179,6 +180,32 @@ export function deleteShoppingListItem(
 
 export function clearCompletedShoppingList(token: string): Promise<DeletedCountResponse> {
   return del<DeletedCountResponse>("/api/shopping-list/completed", token);
+}
+
+export function startCategoryCheckSession(
+  token: string,
+  categoryId: string
+): Promise<CheckSession> {
+  return post<CheckSession>(`/api/check/category/${categoryId}/start`, token, {});
+}
+
+export function setCheckSessionItemStatus(
+  token: string,
+  sessionId: string,
+  itemId: string,
+  status: ItemStatus
+): Promise<CheckSession> {
+  return post<CheckSession>(`/api/check/session/${sessionId}/item/${itemId}/status`, token, {
+    status
+  });
+}
+
+export function completeCheckSession(token: string, sessionId: string): Promise<CheckSession> {
+  return post<CheckSession>(`/api/check/session/${sessionId}/complete`, token, {});
+}
+
+export function cancelCheckSession(token: string, sessionId: string): Promise<CheckSession> {
+  return post<CheckSession>(`/api/check/session/${sessionId}/cancel`, token, {});
 }
 
 async function get<TResponse>(path: string, token: string): Promise<TResponse> {

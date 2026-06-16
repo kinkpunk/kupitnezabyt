@@ -338,6 +338,53 @@ export function buildServer() {
     });
   });
 
+  app.post<{ Params: { categoryId: string } }>(
+    "/api/check/category/:categoryId/start",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const category = await prisma.category.findFirst({
+        where: {
+          id: request.params.categoryId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!category) {
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+        return;
+      }
+
+      const items = await prisma.item.findMany({
+        where: {
+          userId,
+          categoryId: category.id,
+          archivedAt: null,
+          status: {
+            not: "PAUSED"
+          }
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      });
+
+      return prisma.checkSession.create({
+        data: {
+          userId,
+          categoryId: category.id,
+          items: {
+            create: items.map((item, index) => ({
+              itemId: item.id,
+              sortOrder: index
+            }))
+          }
+        },
+        include: checkSessionInclude
+      });
+    }
+  );
+
   app.get<{ Querystring: { categoryId?: string } }>("/api/items", async (request) => {
     const categoryId = readOptionalString(request.query.categoryId);
 
@@ -832,8 +879,155 @@ export function buildServer() {
     };
   });
 
+  app.get<{ Params: { sessionId: string } }>(
+    "/api/check/session/:sessionId",
+    async (request, reply) => {
+      const session = await prisma.checkSession.findFirst({
+        where: {
+          id: request.params.sessionId,
+          userId: requireUserId(request.userId)
+        },
+        include: checkSessionInclude
+      });
+
+      if (!session) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+
+      return session;
+    }
+  );
+
+  app.post<{ Body: StatusBody; Params: { sessionId: string; itemId: string } }>(
+    "/api/check/session/:sessionId/item/:itemId/status",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const status = request.body?.status;
+      if (typeof status !== "string" || !isItemStatus(status) || status === "PAUSED") {
+        await sendError(reply, 400, "INVALID_STATUS", "Item status is invalid for a check.");
+        return;
+      }
+
+      const session = await prisma.checkSession.findFirst({
+        where: {
+          id: request.params.sessionId,
+          userId,
+          status: "IN_PROGRESS"
+        }
+      });
+
+      if (!session) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+
+      const sessionItem = await prisma.checkSessionItem.findFirst({
+        where: {
+          sessionId: session.id,
+          itemId: request.params.itemId
+        }
+      });
+
+      if (!sessionItem) {
+        await sendError(reply, 404, "CHECK_SESSION_ITEM_NOT_FOUND", "Check item was not found.");
+        return;
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await setItemStatus(tx, userId, request.params.itemId, status);
+        await tx.checkSessionItem.update({
+          where: {
+            id: sessionItem.id
+          },
+          data: {
+            selectedStatus: status,
+            checkedAt: new Date()
+          }
+        });
+      });
+
+      return prisma.checkSession.findUniqueOrThrow({
+        where: {
+          id: session.id
+        },
+        include: checkSessionInclude
+      });
+    }
+  );
+
+  app.post<{ Params: { sessionId: string } }>(
+    "/api/check/session/:sessionId/complete",
+    async (request, reply) => {
+      const session = await prisma.checkSession.findFirst({
+        where: {
+          id: request.params.sessionId,
+          userId: requireUserId(request.userId),
+          status: "IN_PROGRESS"
+        }
+      });
+
+      if (!session) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+
+      return prisma.checkSession.update({
+        where: {
+          id: session.id
+        },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date()
+        },
+        include: checkSessionInclude
+      });
+    }
+  );
+
+  app.post<{ Params: { sessionId: string } }>(
+    "/api/check/session/:sessionId/cancel",
+    async (request, reply) => {
+      const session = await prisma.checkSession.findFirst({
+        where: {
+          id: request.params.sessionId,
+          userId: requireUserId(request.userId),
+          status: "IN_PROGRESS"
+        }
+      });
+
+      if (!session) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+
+      return prisma.checkSession.update({
+        where: {
+          id: session.id
+        },
+        data: {
+          status: "CANCELLED",
+          completedAt: new Date()
+        },
+        include: checkSessionInclude
+      });
+    }
+  );
+
   return app;
 }
+
+const checkSessionInclude = {
+  category: true,
+  items: {
+    include: {
+      item: true
+    },
+    orderBy: {
+      sortOrder: "asc"
+    }
+  }
+} as const;
 
 async function sendError(
   reply: FastifyReply,

@@ -8,7 +8,9 @@ import {
   ApiError,
   archiveCategory,
   archiveItem,
+  cancelCheckSession,
   clearCompletedShoppingList,
+  completeCheckSession,
   completeShoppingListItem,
   createCategory,
   createItem,
@@ -19,10 +21,12 @@ import {
   getShoppingList,
   login,
   setItemStatus,
+  setCheckSessionItemStatus,
+  startCategoryCheckSession,
   updateItem,
   updateShoppingListItem
 } from "../lib/api";
-import type { Category, Item, ShoppingListEntry } from "../lib/types";
+import type { Category, CheckSession, Item, ShoppingListEntry } from "../lib/types";
 
 const statusLabels: Record<ItemStatus, string> = {
   IN_STOCK: "Есть",
@@ -47,7 +51,7 @@ export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"items" | "shopping">("items");
+  const [activeTab, setActiveTab] = useState<"check" | "items" | "shopping">("items");
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -57,6 +61,7 @@ export default function HomePage() {
   const [manualShoppingPriority, setManualShoppingPriority] = useState<ShoppingPriority>("NORMAL");
   const [editingShoppingId, setEditingShoppingId] = useState<string | null>(null);
   const [editingShoppingTitle, setEditingShoppingTitle] = useState("");
+  const [checkSession, setCheckSession] = useState<CheckSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,6 +99,12 @@ export default function HomePage() {
 
     return [...groups.values()];
   }, [shoppingList]);
+
+  const currentCheckItem = useMemo(() => {
+    return checkSession?.items.find((sessionItem) => !sessionItem.checkedAt) ?? null;
+  }, [checkSession]);
+
+  const checkedCount = checkSession?.items.filter((sessionItem) => sessionItem.checkedAt).length ?? 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -292,6 +303,50 @@ export default function HomePage() {
     await refreshData(token);
   }
 
+  async function handleStartCategoryCheck() {
+    if (!token || !selectedCategory) {
+      return;
+    }
+
+    setError(null);
+    const session = await startCategoryCheckSession(token, selectedCategory.id);
+    setCheckSession(session);
+    setActiveTab("check");
+  }
+
+  async function handleCheckStatus(status: ItemStatus) {
+    if (!token || !checkSession || !currentCheckItem) {
+      return;
+    }
+
+    setError(null);
+    const session = await setCheckSessionItemStatus(
+      token,
+      checkSession.id,
+      currentCheckItem.itemId,
+      status
+    );
+    setCheckSession(session);
+
+    if (session.items.every((sessionItem) => sessionItem.checkedAt)) {
+      const completedSession = await completeCheckSession(token, session.id);
+      setCheckSession(completedSession);
+      await refreshData(token);
+    } else {
+      await refreshData(token);
+    }
+  }
+
+  async function handleCancelCheck() {
+    if (!token || !checkSession) {
+      return;
+    }
+
+    setError(null);
+    const session = await cancelCheckSession(token, checkSession.id);
+    setCheckSession(session);
+  }
+
   if (isLoading) {
     return <main className="app-shell centered">Загрузка...</main>;
   }
@@ -322,6 +377,13 @@ export default function HomePage() {
           onClick={() => setActiveTab("shopping")}
         >
           Покупки
+        </button>
+        <button
+          className={activeTab === "check" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("check")}
+        >
+          Проверка
         </button>
       </nav>
 
@@ -369,17 +431,30 @@ export default function HomePage() {
                     {selectedCategory.itemCount} поз.
                   </p>
                 </div>
-                <button
-                  className="ghost-button danger-button"
-                  type="button"
-                  onClick={() =>
-                    void handleArchiveSelectedCategory().catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  Архив
-                </button>
+                <div className="icon-actions">
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() =>
+                      void handleStartCategoryCheck().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Проверить
+                  </button>
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    onClick={() =>
+                      void handleArchiveSelectedCategory().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Архив
+                  </button>
+                </div>
               </div>
 
               <form
@@ -477,7 +552,7 @@ export default function HomePage() {
             <p className="empty">Создайте категорию, чтобы добавить первый товар.</p>
           )}
         </section>
-      ) : (
+      ) : activeTab === "shopping" ? (
         <section className="stack">
           <div className="section-heading">
             <div>
@@ -612,6 +687,60 @@ export default function HomePage() {
             </div>
           ) : (
             <p className="empty">Список покупок пуст.</p>
+          )}
+        </section>
+      ) : (
+        <section className="stack">
+          <div className="section-heading">
+            <div>
+              <h2>Проверка</h2>
+              <p>
+                {checkSession
+                  ? `${checkedCount} из ${checkSession.items.length}`
+                  : "Выберите категорию"}
+              </p>
+            </div>
+            {checkSession?.status === "IN_PROGRESS" ? (
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() =>
+                  void handleCancelCheck().catch((caughtError) => setError(formatError(caughtError)))
+                }
+              >
+                Отмена
+              </button>
+            ) : null}
+          </div>
+
+          {checkSession?.status === "COMPLETED" ? (
+            <p className="empty">Проверка завершена.</p>
+          ) : checkSession?.status === "CANCELLED" ? (
+            <p className="empty">Проверка отменена.</p>
+          ) : currentCheckItem ? (
+            <article className="check-card">
+              <p className="eyebrow">{checkSession?.category?.name ?? "Категория"}</p>
+              <h2>{currentCheckItem.item.name}</h2>
+              <div className="status-grid">
+                {statusOptions.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    onClick={() =>
+                      void handleCheckStatus(status).catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    {statusLabels[status]}
+                  </button>
+                ))}
+              </div>
+            </article>
+          ) : (
+            <p className="empty">
+              Откройте категорию и нажмите «Проверить», чтобы начать пошаговую проверку.
+            </p>
           )}
         </section>
       )}
