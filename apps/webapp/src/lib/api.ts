@@ -3,6 +3,7 @@ import type { ItemStatus } from "@kupitnezabyt/shared";
 import type {
   AuthResponse,
   Category,
+  DeleteResponse,
   DeletedCountResponse,
   Item,
   ShoppingListEntry
@@ -139,11 +140,41 @@ export function getShoppingList(token: string): Promise<ShoppingListEntry[]> {
   return get<ShoppingListEntry[]>("/api/shopping-list", token);
 }
 
+export function createShoppingListItem(
+  token: string,
+  input: {
+    title: string;
+    categoryId?: string | null;
+    priority?: "NORMAL" | "URGENT";
+  }
+): Promise<ShoppingListEntry> {
+  return post<ShoppingListEntry>("/api/shopping-list", token, input);
+}
+
+export function updateShoppingListItem(
+  token: string,
+  shoppingListItemId: string,
+  input: {
+    title: string;
+    categoryId?: string | null;
+    priority?: "NORMAL" | "URGENT";
+  }
+): Promise<ShoppingListEntry> {
+  return patch<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}`, token, input);
+}
+
 export function completeShoppingListItem(
   token: string,
   shoppingListItemId: string
 ): Promise<ShoppingListEntry> {
   return post<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}/complete`, token, {});
+}
+
+export function deleteShoppingListItem(
+  token: string,
+  shoppingListItemId: string
+): Promise<DeleteResponse> {
+  return del<DeleteResponse>(`/api/shopping-list/${shoppingListItemId}`, token);
 }
 
 export function clearCompletedShoppingList(token: string): Promise<DeletedCountResponse> {

@@ -130,12 +130,32 @@ entry.
 
 ```http
 GET /api/shopping-list
+POST /api/shopping-list
+PATCH /api/shopping-list/:id
 POST /api/shopping-list/:id/complete
+DELETE /api/shopping-list/:id
 DELETE /api/shopping-list/completed
 ```
 
 Completing a shopping list entry linked to an item marks the entry completed and
 sets the item back to `IN_STOCK`.
+
+Manual entries are created without `itemId`:
+
+```json
+{
+  "title": "Молоко",
+  "categoryId": "...",
+  "priority": "NORMAL"
+}
+```
+
+`categoryId` is optional. `priority` can be `NORMAL` or `URGENT` and defaults to
+`NORMAL`.
+
+Manual entries can be updated and deleted. Shopping list entries linked to a
+tracked item are managed by item status and cannot be manually patched or
+deleted through the shopping list endpoints.
 
 Deleting completed entries removes only completed shopping list rows for the
 current authenticated user.

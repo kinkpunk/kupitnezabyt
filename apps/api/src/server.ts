@@ -47,6 +47,12 @@ type TelegramAuthBody = {
   initData?: unknown;
 };
 
+type ShoppingListBody = {
+  title?: unknown;
+  categoryId?: unknown;
+  priority?: unknown;
+};
+
 const config = getConfig();
 
 export function buildServer() {
@@ -565,6 +571,131 @@ export function buildServer() {
     });
   });
 
+  app.post<{ Body: ShoppingListBody }>("/api/shopping-list", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const title = readRequiredString(request.body?.title);
+    if (!title) {
+      await sendError(reply, 400, "TITLE_REQUIRED", "Shopping list title is required.");
+      return;
+    }
+
+    const categoryId = readOptionalString(request.body?.categoryId);
+    if (categoryId) {
+      const category = await prisma.category.findFirst({
+        where: {
+          id: categoryId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!category) {
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+        return;
+      }
+    }
+
+    const priority = readShoppingPriority(request.body?.priority);
+    if (!priority) {
+      await sendError(reply, 400, "INVALID_PRIORITY", "Shopping list priority is invalid.");
+      return;
+    }
+
+    return prisma.shoppingListItem.create({
+      data: {
+        userId,
+        title,
+        categoryId: categoryId ?? null,
+        priority
+      },
+      include: {
+        category: true,
+        item: true
+      }
+    });
+  });
+
+  app.patch<{ Body: ShoppingListBody; Params: { id: string } }>(
+    "/api/shopping-list/:id",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const shoppingListItem = await prisma.shoppingListItem.findFirst({
+        where: {
+          id: request.params.id,
+          userId,
+          isCompleted: false
+        }
+      });
+
+      if (!shoppingListItem) {
+        await sendError(
+          reply,
+          404,
+          "SHOPPING_LIST_ITEM_NOT_FOUND",
+          "Shopping list item was not found."
+        );
+        return;
+      }
+
+      if (shoppingListItem.itemId) {
+        await sendError(
+          reply,
+          400,
+          "TRACKED_ENTRY_MANAGED_BY_ITEM",
+          "Tracked shopping list entries are managed by item status."
+        );
+        return;
+      }
+
+      const title = readRequiredString(request.body?.title);
+      if (!title) {
+        await sendError(reply, 400, "TITLE_REQUIRED", "Shopping list title is required.");
+        return;
+      }
+
+      const categoryId = hasOwnProperty(request.body, "categoryId")
+        ? readOptionalString(request.body.categoryId) ?? null
+        : shoppingListItem.categoryId;
+      if (categoryId) {
+        const category = await prisma.category.findFirst({
+          where: {
+            id: categoryId,
+            userId,
+            archivedAt: null
+          }
+        });
+
+        if (!category) {
+          await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+          return;
+        }
+      }
+
+      const priority = hasOwnProperty(request.body, "priority")
+        ? readShoppingPriority(request.body.priority)
+        : shoppingListItem.priority;
+      if (!priority) {
+        await sendError(reply, 400, "INVALID_PRIORITY", "Shopping list priority is invalid.");
+        return;
+      }
+
+      return prisma.shoppingListItem.update({
+        where: {
+          id: shoppingListItem.id
+        },
+        data: {
+          title,
+          categoryId,
+          priority
+        },
+        include: {
+          category: true,
+          item: true
+        }
+      });
+    }
+  );
+
   app.post<{ Params: { id: string } }>(
     "/api/shopping-list/:id/complete",
     async (request, reply) => {
@@ -587,6 +718,47 @@ export function buildServer() {
       }
     }
   );
+
+  app.delete<{ Params: { id: string } }>("/api/shopping-list/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const shoppingListItem = await prisma.shoppingListItem.findFirst({
+      where: {
+        id: request.params.id,
+        userId,
+        isCompleted: false
+      }
+    });
+
+    if (!shoppingListItem) {
+      await sendError(
+        reply,
+        404,
+        "SHOPPING_LIST_ITEM_NOT_FOUND",
+        "Shopping list item was not found."
+      );
+      return;
+    }
+
+    if (shoppingListItem.itemId) {
+      await sendError(
+        reply,
+        400,
+        "TRACKED_ENTRY_MANAGED_BY_ITEM",
+        "Tracked shopping list entries are managed by item status."
+      );
+      return;
+    }
+
+    await prisma.shoppingListItem.delete({
+      where: {
+        id: shoppingListItem.id
+      }
+    });
+
+    return {
+      deleted: true
+    };
+  });
 
   app.delete("/api/shopping-list/completed", async (request) => {
     const result = await prisma.shoppingListItem.deleteMany({
@@ -675,6 +847,14 @@ function readOptionalPositiveInteger(value: unknown): number | undefined {
   }
 
   return parsed;
+}
+
+function readShoppingPriority(value: unknown): "NORMAL" | "URGENT" | null {
+  if (value === undefined || value === null || value === "") {
+    return "NORMAL";
+  }
+
+  return value === "NORMAL" || value === "URGENT" ? value : null;
 }
 
 function hasOwnProperty<TObject extends object, TKey extends PropertyKey>(

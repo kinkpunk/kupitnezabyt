@@ -40,3 +40,7 @@ export type AuthResponse = {
 export type DeletedCountResponse = {
   deletedCount: number;
 };
+
+export type DeleteResponse = {
+  deleted: boolean;
+};

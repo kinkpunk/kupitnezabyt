@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemStatus } from "@kupitnezabyt/shared";
+import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import { useEffect, useMemo, useState } from "react";
 
@@ -12,12 +12,15 @@ import {
   completeShoppingListItem,
   createCategory,
   createItem,
+  createShoppingListItem,
+  deleteShoppingListItem,
   getCategories,
   getItems,
   getShoppingList,
   login,
   setItemStatus,
-  updateItem
+  updateItem,
+  updateShoppingListItem
 } from "../lib/api";
 import type { Category, Item, ShoppingListEntry } from "../lib/types";
 
@@ -49,6 +52,11 @@ export default function HomePage() {
   const [itemName, setItemName] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
+  const [manualShoppingTitle, setManualShoppingTitle] = useState("");
+  const [manualShoppingCategoryId, setManualShoppingCategoryId] = useState("");
+  const [manualShoppingPriority, setManualShoppingPriority] = useState<ShoppingPriority>("NORMAL");
+  const [editingShoppingId, setEditingShoppingId] = useState<string | null>(null);
+  const [editingShoppingTitle, setEditingShoppingTitle] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +72,28 @@ export default function HomePage() {
         : [],
     [items, selectedCategory]
   );
+
+  const shoppingGroups = useMemo(() => {
+    const groups = new Map<string, { id: string; title: string; entries: ShoppingListEntry[] }>();
+
+    for (const entry of shoppingList) {
+      const id = entry.category?.id ?? "manual";
+      const title = entry.category?.name ?? "Без категории";
+      const group = groups.get(id);
+
+      if (group) {
+        group.entries.push(entry);
+      } else {
+        groups.set(id, {
+          id,
+          title,
+          entries: [entry]
+        });
+      }
+    }
+
+    return [...groups.values()];
+  }, [shoppingList]);
 
   useEffect(() => {
     let isMounted = true;
@@ -164,6 +194,49 @@ export default function HomePage() {
 
     setError(null);
     await completeShoppingListItem(token, entry.id);
+    await refreshData(token);
+  }
+
+  async function handleCreateManualShoppingItem() {
+    if (!token || !manualShoppingTitle.trim()) {
+      return;
+    }
+
+    setError(null);
+    await createShoppingListItem(token, {
+      title: manualShoppingTitle.trim(),
+      categoryId: manualShoppingCategoryId || null,
+      priority: manualShoppingPriority
+    });
+    setManualShoppingTitle("");
+    setManualShoppingCategoryId("");
+    setManualShoppingPriority("NORMAL");
+    await refreshData(token);
+  }
+
+  async function handleUpdateManualShoppingItem(entry: ShoppingListEntry) {
+    if (!token || !editingShoppingTitle.trim()) {
+      return;
+    }
+
+    setError(null);
+    await updateShoppingListItem(token, entry.id, {
+      title: editingShoppingTitle.trim(),
+      categoryId: entry.categoryId,
+      priority: entry.priority
+    });
+    setEditingShoppingId(null);
+    setEditingShoppingTitle("");
+    await refreshData(token);
+  }
+
+  async function handleDeleteManualShoppingItem(entry: ShoppingListEntry) {
+    if (!token || !window.confirm(`Удалить "${entry.title}" из списка покупок?`)) {
+      return;
+    }
+
+    setError(null);
+    await deleteShoppingListItem(token, entry.id);
     await refreshData(token);
   }
 
@@ -423,28 +496,120 @@ export default function HomePage() {
               Очистить
             </button>
           </div>
-          {shoppingList.length ? (
-            shoppingList.map((entry) => (
-              <article className="shopping-row" key={entry.id}>
-                <div>
-                  <p className={entry.priority === "URGENT" ? "urgent" : "normal"}>
-                    {entry.priority === "URGENT" ? "Срочно" : "Купить"}
-                  </p>
-                  <h2>{entry.title}</h2>
-                  <span>{entry.category?.name ?? "Без категории"}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void handleCompleteShoppingListItem(entry).catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  Куплено
-                </button>
-              </article>
-            ))
+
+          <form
+            className="shopping-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreateManualShoppingItem().catch((caughtError) =>
+                setError(formatError(caughtError))
+              );
+            }}
+          >
+            <input
+              aria-label="Разовая покупка"
+              placeholder="Разовая покупка"
+              value={manualShoppingTitle}
+              onChange={(event) => setManualShoppingTitle(event.target.value)}
+            />
+            <select
+              aria-label="Категория покупки"
+              value={manualShoppingCategoryId}
+              onChange={(event) => setManualShoppingCategoryId(event.target.value)}
+            >
+              <option value="">Без категории</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Приоритет покупки"
+              value={manualShoppingPriority}
+              onChange={(event) => setManualShoppingPriority(event.target.value as ShoppingPriority)}
+            >
+              <option value="NORMAL">Купить</option>
+              <option value="URGENT">Срочно</option>
+            </select>
+            <button type="submit">Добавить</button>
+          </form>
+
+          {shoppingGroups.length ? (
+            <div className="shopping-groups">
+              {shoppingGroups.map((group) => (
+                <section className="shopping-group" key={group.id}>
+                  <h3>{group.title}</h3>
+                  {group.entries.map((entry) => (
+                    <article className="shopping-row" key={entry.id}>
+                      {editingShoppingId === entry.id ? (
+                        <form
+                          className="inline-form"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void handleUpdateManualShoppingItem(entry).catch((caughtError) =>
+                              setError(formatError(caughtError))
+                            );
+                          }}
+                        >
+                          <input
+                            aria-label="Новое название покупки"
+                            value={editingShoppingTitle}
+                            onChange={(event) => setEditingShoppingTitle(event.target.value)}
+                          />
+                          <button type="submit">Сохранить</button>
+                        </form>
+                      ) : (
+                        <div>
+                          <p className={entry.priority === "URGENT" ? "urgent" : "normal"}>
+                            {entry.priority === "URGENT" ? "Срочно" : "Купить"}
+                          </p>
+                          <h2>{entry.title}</h2>
+                          <span>{entry.itemId ? "Отслеживаемый товар" : "Разовая позиция"}</span>
+                        </div>
+                      )}
+                      <div className="shopping-actions">
+                        {!entry.itemId && editingShoppingId !== entry.id ? (
+                          <>
+                            <button
+                              className="ghost-button"
+                              type="button"
+                              onClick={() => {
+                                setEditingShoppingId(entry.id);
+                                setEditingShoppingTitle(entry.title);
+                              }}
+                            >
+                              Изм.
+                            </button>
+                            <button
+                              className="ghost-button danger-button"
+                              type="button"
+                              onClick={() =>
+                                void handleDeleteManualShoppingItem(entry).catch((caughtError) =>
+                                  setError(formatError(caughtError))
+                                )
+                              }
+                            >
+                              Удалить
+                            </button>
+                          </>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void handleCompleteShoppingListItem(entry).catch((caughtError) =>
+                              setError(formatError(caughtError))
+                            )
+                          }
+                        >
+                          Куплено
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+              ))}
+            </div>
           ) : (
             <p className="empty">Список покупок пуст.</p>
           )}

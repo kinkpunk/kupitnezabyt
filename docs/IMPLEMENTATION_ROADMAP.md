@@ -166,31 +166,35 @@ Tests:
 
 ## Slice 4: Shopping List Completion
 
+Status: implemented.
+
 Goal: finish the shopping-list behavior from the MVP spec.
 
 Backend:
 
-- Implement manual shopping list positions without tracked `itemId`.
-- Implement `PATCH /api/shopping-list/:id`.
-- Implement `DELETE /api/shopping-list/:id`.
-- Implement `DELETE /api/shopping-list/completed`.
+- Implement manual shopping list positions without tracked `itemId`. Done.
+- Implement `PATCH /api/shopping-list/:id`. Done for manual entries.
+- Implement `DELETE /api/shopping-list/:id`. Done for manual entries.
+- Implement `DELETE /api/shopping-list/completed`. Done.
 - Keep tracked item completion transactional:
-  - `Item.status = IN_STOCK`
-  - `Item.lastBoughtAt = now`
-  - `Item.lastCheckedAt = now`
-  - `ShoppingListItem.isCompleted = true`
-  - `Item.nextCheckAt = calculateNextCheckAt(...)`
+  - `Item.status = IN_STOCK`. Done.
+  - `Item.lastBoughtAt = now`. Done.
+  - `Item.lastCheckedAt = now`. Done.
+  - `ShoppingListItem.isCompleted = true`. Done.
+  - `Item.nextCheckAt = calculateNextCheckAt(...)`. Done.
 
 Webapp:
 
-- Group shopping list entries by category.
-- Show urgent entries first.
-- Add manual entry creation.
-- Add clear completed action.
+- Group shopping list entries by category. Done.
+- Show urgent entries first. Done through API ordering.
+- Add manual entry creation. Done.
+- Add clear completed action. Done.
 
 Tests:
 
 - Unit and integration coverage for manual entries and tracked item completion.
+  Unit checks are covered by the existing domain tests; integration tests still
+  need a test PostgreSQL setup.
 
 ## Slice 5: Periodic Checks and Reminder Data
 
