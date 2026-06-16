@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  telegramUserId   String   @unique
+  telegramUsername String?
+  firstName        String?
+  language         String   @default("ru")
+  timezone         String   @default("Europe/Minsk")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  categories        Category[]
+  items             Item[]
+  shoppingListItems ShoppingListItem[]
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  userId    String
+  name      String
+  icon      String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  archivedAt DateTime?
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items             Item[]
+  shoppingListItems ShoppingListItem[]
+
+  @@index([userId, archivedAt])
+}
+
+model Item {
+  id              String         @id @default(cuid())
+  userId          String
+  categoryId      String
+  name            String
+  brand           String?
+  notes           String?
+  status          ItemStatus     @default(IN_STOCK)
+  importance      ItemImportance @default(NORMAL)
+  usageCycleDays  Int?
+  lastCheckedAt   DateTime?
+  lastBoughtAt    DateTime?
+  nextCheckAt     DateTime?
+  reminderEnabled Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  archivedAt      DateTime?
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  shoppingListItems ShoppingListItem[]
+
+  @@index([userId, categoryId, archivedAt])
+  @@index([userId, status])
+}
+
+model ShoppingListItem {
+  id          String           @id @default(cuid())
+  userId      String
+  itemId      String?
+  title       String
+  categoryId  String?
+  priority    ShoppingPriority @default(NORMAL)
+  isCompleted Boolean          @default(false)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item     Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isCompleted, priority])
+  @@index([itemId, isCompleted])
+}
+
+enum ItemStatus {
+  IN_STOCK
+  LOW
+  NEED_BUY
+  URGENT
+  PAUSED
+}
+
+enum ItemImportance {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum ShoppingPriority {
+  NORMAL
+  URGENT
+}

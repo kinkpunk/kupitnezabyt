@@ -1,0 +1,25 @@
+{
+  "name": "kupitnezabyt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.0.0",
+  "scripts": {
+    "dev": "corepack pnpm --parallel --filter @kupitnezabyt/api --filter @kupitnezabyt/webapp dev",
+    "build": "corepack pnpm -r build",
+    "typecheck": "corepack pnpm -r --if-present typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "db:generate": "corepack pnpm --filter @kupitnezabyt/database db:generate",
+    "db:migrate": "corepack pnpm --filter @kupitnezabyt/database db:migrate",
+    "db:seed": "corepack pnpm --filter @kupitnezabyt/database db:seed"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/node": "^22.15.32",
+    "eslint": "^9.29.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.34.1",
+    "vitest": "^3.2.3"
+  }
+}

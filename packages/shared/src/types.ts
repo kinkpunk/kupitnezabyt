@@ -1,0 +1,29 @@
+export const itemStatuses = [
+  "IN_STOCK",
+  "LOW",
+  "NEED_BUY",
+  "URGENT",
+  "PAUSED"
+] as const;
+
+export type ItemStatus = (typeof itemStatuses)[number];
+
+export const itemImportances = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
+
+export type ItemImportance = (typeof itemImportances)[number];
+
+export const shoppingPriorities = ["NORMAL", "URGENT"] as const;
+
+export type ShoppingPriority = (typeof shoppingPriorities)[number];
+
+export type ShoppingSyncAction =
+  | {
+      type: "UPSERT";
+      priority: ShoppingPriority;
+    }
+  | {
+      type: "COMPLETE_OPEN";
+    }
+  | {
+      type: "NONE";
+    };

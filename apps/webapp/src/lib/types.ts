@@ -1,0 +1,36 @@
+import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
+
+export type Category = {
+  id: string;
+  name: string;
+  icon: string | null;
+  sortOrder: number;
+};
+
+export type Item = {
+  id: string;
+  userId: string;
+  categoryId: string;
+  name: string;
+  brand: string | null;
+  notes: string | null;
+  status: ItemStatus;
+  usageCycleDays: number | null;
+  lastCheckedAt: string | null;
+  lastBoughtAt: string | null;
+  nextCheckAt: string | null;
+};
+
+export type ShoppingListEntry = {
+  id: string;
+  title: string;
+  itemId: string | null;
+  categoryId: string | null;
+  priority: ShoppingPriority;
+  category: Category | null;
+  item: Item | null;
+};
+
+export type AuthResponse = {
+  token: string;
+};
