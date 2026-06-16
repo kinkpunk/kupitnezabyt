@@ -194,3 +194,15 @@ add build surface without real cross-package reuse.
 Create `packages/ui` later only when stable components are reused across
 multiple files or applications, for example shared buttons, inputs, status
 badges, bottom navigation, modals, or confirmation dialogs.
+
+## Final Integration
+
+Slice 13 adds a local Docker Compose integration surface for infrastructure,
+webapp, API, bot, and worker. The app profile can run webapp and API locally
+against Compose PostgreSQL and Redis. Telegram-facing services are behind a
+separate `telegram` profile because they require a real bot token, a public
+Mini App URL, and network access to Telegram.
+
+The final integration checklist lives in `docs/FINAL_INTEGRATION.md`. Automated
+unit/type/lint checks are available in the workspace today; full browser e2e and
+DB-backed API integration tests remain explicit follow-up work.

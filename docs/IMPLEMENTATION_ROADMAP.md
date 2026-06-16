@@ -457,23 +457,33 @@ Decision for the current MVP state:
 
 ## Slice 13: Final MVP Integration
 
+Status: implemented for local verification; external Telegram smoke requires
+real credentials and a public HTTPS Mini App URL.
+
 Goal: verify the complete MVP as one product.
 
 Tasks:
 
-- Run all services through Docker Compose.
+- Run all services through Docker Compose. Done by adding `app` and `telegram`
+  compose profiles.
 - Run:
-  - `pnpm typecheck`
-  - `pnpm lint`
-  - `pnpm test`
-  - `pnpm test:e2e`
-- Confirm Telegram Mini App opens from the bot.
-- Confirm Telegram init data validation in production-like mode.
-- Confirm reminders are idempotent.
-- Confirm no duplicate shopping entries are created.
-- Confirm sensitive values are not logged.
+  - `pnpm typecheck`. Done.
+  - `pnpm lint`. Done.
+  - `pnpm test`. Done.
+  - `pnpm test:e2e`. Not configured yet; documented as a known gap.
+- Confirm Telegram Mini App opens from the bot. Documented in
+  `docs/FINAL_INTEGRATION.md`; requires real Telegram credentials.
+- Confirm Telegram init data validation in production-like mode. Covered by
+  deterministic auth tests; end-to-end Telegram smoke requires real init data.
+- Confirm reminders are idempotent. Covered by worker unit tests for
+  sent/retry/failed paths; DB-backed smoke remains in final checklist.
+- Confirm no duplicate shopping entries are created. Enforced by DB partial
+  unique index and shared status workflow; DB-backed smoke remains in final
+  checklist.
+- Confirm sensitive values are not logged. API logger redacts authorization and
+  raw Telegram init data; manual log review remains in final checklist.
 - Update `README.md`, `docs/API.md`, and `docs/ARCHITECTURE.md` where behavior
-  changed.
+  changed. Done for README and architecture; API behavior did not change.
 
 ## Dependency Policy
 

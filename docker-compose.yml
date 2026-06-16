@@ -22,6 +22,129 @@ services:
     volumes:
       - redis-data:/data
 
+  api:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: >
+      sh -lc "corepack enable &&
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm db:generate &&
+      corepack pnpm --filter @kupitnezabyt/api dev"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+      REDIS_URL: redis://redis:6379
+      API_PORT: 3001
+      APP_BASE_URL: http://localhost:3000
+      NODE_ENV: development
+      DEV_AUTH_ENABLED: "true"
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/workspace
+      - pnpm-store:/root/.local/share/pnpm/store
+      - root-node-modules:/workspace/node_modules
+      - api-node-modules:/workspace/apps/api/node_modules
+      - database-node-modules:/workspace/packages/database/node_modules
+      - shared-node-modules:/workspace/packages/shared/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    profiles:
+      - app
+
+  webapp:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: >
+      sh -lc "corepack enable &&
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm --filter @kupitnezabyt/webapp dev"
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      TELEGRAM_WEBAPP_URL: http://localhost:3000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/workspace
+      - pnpm-store:/root/.local/share/pnpm/store
+      - root-node-modules:/workspace/node_modules
+      - webapp-node-modules:/workspace/apps/webapp/node_modules
+      - shared-node-modules:/workspace/packages/shared/node_modules
+    depends_on:
+      api:
+        condition: service_started
+    profiles:
+      - app
+
+  bot:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: >
+      sh -lc "corepack enable &&
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm db:generate &&
+      corepack pnpm --filter @kupitnezabyt/bot dev"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-http://localhost:3000}
+      NODE_ENV: development
+    volumes:
+      - .:/workspace
+      - pnpm-store:/root/.local/share/pnpm/store
+      - root-node-modules:/workspace/node_modules
+      - bot-node-modules:/workspace/apps/bot/node_modules
+      - database-node-modules:/workspace/packages/database/node_modules
+      - shared-node-modules:/workspace/packages/shared/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - telegram
+
+  worker:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: >
+      sh -lc "corepack enable &&
+      corepack pnpm install --frozen-lockfile &&
+      corepack pnpm db:generate &&
+      corepack pnpm --filter @kupitnezabyt/worker dev"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-http://localhost:3000}
+      NODE_ENV: development
+    volumes:
+      - .:/workspace
+      - pnpm-store:/root/.local/share/pnpm/store
+      - root-node-modules:/workspace/node_modules
+      - worker-node-modules:/workspace/apps/worker/node_modules
+      - database-node-modules:/workspace/packages/database/node_modules
+      - shared-node-modules:/workspace/packages/shared/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - telegram
+
 volumes:
+  api-node-modules:
+  bot-node-modules:
+  database-node-modules:
   postgres-data:
+  pnpm-store:
   redis-data:
+  root-node-modules:
+  shared-node-modules:
+  webapp-node-modules:
+  worker-node-modules:

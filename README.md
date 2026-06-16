@@ -6,7 +6,8 @@
 
 ## Статус проекта
 
-MVP находится в разработке.
+MVP реализован по вертикальным slice из `docs/IMPLEMENTATION_ROADMAP.md` и
+готов к финальной локальной интеграционной проверке с реальным Telegram-ботом.
 
 Основной интерфейс запускается как Telegram Mini App. Уведомления и быстрые действия доступны через Telegram-бота. Архитектура также должна позволять использовать веб-интерфейс в обычном мобильном браузере.
 
@@ -44,6 +45,7 @@ MVP находится в разработке.
 - `docs/PRODUCT_SPEC.md` - продуктовое и техническое задание;
 - `docs/API.md` - описание API;
 - `docs/ARCHITECTURE.md` - архитектурные решения;
+- `docs/FINAL_INTEGRATION.md` - финальный MVP integration checklist;
 - `AGENTS.md` - правила работы Codex и других AI-агентов с репозиторием.
 
 Если реализация расходится с документацией, сначала нужно проверить `docs/PRODUCT_SPEC.md`, а затем обновить устаревший документ вместе с кодом.
@@ -55,8 +57,7 @@ MVP находится в разработке.
 - Next.js;
 - React;
 - TypeScript;
-- Tailwind CSS;
-- Telegram Mini Apps SDK.
+- Telegram WebApp runtime API.
 
 ### Backend
 
@@ -69,8 +70,7 @@ MVP находится в разработке.
 ### Bot и фоновые задачи
 
 - grammY;
-- Redis;
-- BullMQ.
+- прямой polling напоминаний из PostgreSQL.
 
 ### Инструменты
 
@@ -78,8 +78,7 @@ MVP находится в разработке.
 - Docker Compose;
 - ESLint;
 - TypeScript;
-- Vitest;
-- Playwright.
+- Vitest.
 
 ## Структура репозитория
 
@@ -93,11 +92,11 @@ MVP находится в разработке.
   packages/
     database/           # Prisma schema, migrations и database client
     shared/             # Общие типы и бизнес-логика
-    ui/                 # Переиспользуемые UI-компоненты
   docs/
     PRODUCT_SPEC.md
     API.md
     ARCHITECTURE.md
+    FINAL_INTEGRATION.md
   docker-compose.yml
   pnpm-workspace.yaml
   .env.example
@@ -142,6 +141,8 @@ TELEGRAM_WEBAPP_URL=http://localhost:3000
 
 JWT_SECRET=
 APP_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+API_PORT=3001
 NODE_ENV=development
 
 # Только для локальной разработки.
@@ -185,6 +186,28 @@ pnpm --filter @kupitnezabyt/bot dev
 pnpm --filter @kupitnezabyt/worker dev
 ```
 
+### Альтернатива: запуск через Docker Compose
+
+Инфраструктуру можно поднять отдельно:
+
+```bash
+docker compose up -d postgres redis
+```
+
+Webapp и API можно запускать через compose profile `app`:
+
+```bash
+docker compose --profile app up webapp api
+```
+
+Telegram bot и worker вынесены в profile `telegram`, потому что требуют
+реальный `TELEGRAM_BOT_TOKEN`, публичный `TELEGRAM_WEBAPP_URL` и доступ к
+Telegram API:
+
+```bash
+docker compose --profile telegram up bot worker
+```
+
 ## Основные команды
 
 ```bash
@@ -193,15 +216,17 @@ pnpm build           # Production-сборка
 pnpm typecheck       # Проверка типов
 pnpm lint            # Статический анализ
 pnpm test            # Unit- и integration-тесты
-pnpm test:e2e        # E2E-тесты
 
 pnpm db:generate     # Генерация Prisma Client
 pnpm db:migrate      # Применение локальных миграций
 pnpm db:seed         # Добавление стартовых данных
-pnpm db:studio       # Запуск Prisma Studio
 ```
 
-Команды в этом разделе являются целевым контрактом репозитория. При изменении scripts в `package.json` README нужно обновить в той же задаче.
+`pnpm test:e2e` и Playwright-сценарии пока не настроены в workspace. Этот gap
+зафиксирован в roadmap как часть финальной интеграции.
+
+Команды в этом разделе должны соответствовать `package.json`. При изменении
+scripts README нужно обновить в той же задаче.
 
 ## Переменные окружения
 
@@ -214,6 +239,8 @@ pnpm db:studio       # Запуск Prisma Studio
 | `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App | Да для Telegram |
 | `JWT_SECRET` | Подпись серверной сессии | Да |
 | `APP_BASE_URL` | Базовый URL приложения | Да |
+| `NEXT_PUBLIC_API_BASE_URL` | URL API для webapp | Да для webapp |
+| `API_PORT` | Порт API | Нет |
 | `NODE_ENV` | Режим запуска | Да |
 | `DEV_AUTH_ENABLED` | Локальная авторизация без Telegram | Только для разработки |
 
@@ -254,13 +281,7 @@ pnpm lint
 pnpm test
 ```
 
-Для изменений пользовательского сценария также нужно выполнить:
-
-```bash
-pnpm test:e2e
-```
-
-Минимальный E2E-сценарий MVP:
+Минимальный E2E-сценарий MVP для будущего `test:e2e` setup:
 
 1. Открыть приложение.
 2. Создать категорию.
