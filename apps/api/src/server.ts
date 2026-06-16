@@ -3,6 +3,7 @@ import { prisma } from "@kupitnezabyt/database";
 import {
   aggregateCategoryStatus,
   calculateNextCheckAt,
+  calculateSnoozedUntil,
   isItemStatus
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
@@ -11,7 +12,7 @@ import type { FastifyReply } from "fastify";
 import { getBearerToken, signToken, validateTelegramInitData, verifyToken } from "./auth.js";
 import type { TelegramUser } from "./auth.js";
 import { getConfig } from "./env.js";
-import { markShoppingListItemBought, setItemStatus } from "./services.js";
+import { cancelPendingItemCheckReminders, markShoppingListItemBought, setItemStatus, upsertItemCheckReminder } from "./services.js";
 
 type NamedBody = {
   name?: unknown;
@@ -36,6 +37,10 @@ type UpdateItemBody = {
 
 type StatusBody = {
   status?: unknown;
+};
+
+type SnoozeBody = {
+  days?: unknown;
 };
 
 type DevAuthBody = {
@@ -514,6 +519,60 @@ export function buildServer() {
 
         throw error;
       }
+    }
+  );
+
+  app.post<{ Body: SnoozeBody; Params: { id: string } }>(
+    "/api/items/:id/snooze",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const days = readOptionalPositiveInteger(request.body?.days);
+      if (!days) {
+        await sendError(reply, 400, "SNOOZE_DAYS_REQUIRED", "Positive snooze days are required.");
+        return;
+      }
+
+      const item = await prisma.item.findFirst({
+        where: {
+          id: request.params.id,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!item) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      if (!item.reminderEnabled || item.status === "PAUSED") {
+        await sendError(
+          reply,
+          400,
+          "REMINDER_NOT_AVAILABLE",
+          "Item reminders are disabled or paused."
+        );
+        return;
+      }
+
+      const nextCheckAt = calculateSnoozedUntil(new Date(), days);
+      return prisma.$transaction(async (tx) => {
+        await cancelPendingItemCheckReminders(tx, userId, item.id);
+        await upsertItemCheckReminder(tx, {
+          userId,
+          itemId: item.id,
+          scheduledFor: nextCheckAt
+        });
+
+        return tx.item.update({
+          where: {
+            id: item.id
+          },
+          data: {
+            nextCheckAt
+          }
+        });
+      });
     }
   );
 

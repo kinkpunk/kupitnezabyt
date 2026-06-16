@@ -19,24 +19,30 @@ model User {
 
   categories        Category[]
   items             Item[]
+  reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  userId    String
-  name      String
-  icon      String?
-  sortOrder Int       @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  archivedAt DateTime?
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  icon            String?
+  sortOrder       Int       @default(0)
+  usageCycleDays  Int?
+  nextCheckAt     DateTime?
+  reminderEnabled Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   items             Item[]
+  reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 
   @@index([userId, archivedAt])
+  @@index([userId, nextCheckAt])
 }
 
 model Item {
@@ -59,10 +65,12 @@ model Item {
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 
   @@index([userId, categoryId, archivedAt])
   @@index([userId, status])
+  @@index([userId, nextCheckAt])
 }
 
 model ShoppingListItem {
@@ -85,6 +93,31 @@ model ShoppingListItem {
   @@index([itemId, isCompleted])
 }
 
+model Reminder {
+  id             String         @id @default(cuid())
+  userId         String
+  type           ReminderType
+  itemId         String?
+  categoryId     String?
+  groupId        String?
+  scheduledFor   DateTime
+  status         ReminderStatus @default(PENDING)
+  attemptCount   Int            @default(0)
+  sentAt         DateTime?
+  idempotencyKey String         @unique
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  item     Item?     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, scheduledFor])
+  @@index([itemId, scheduledFor])
+  @@index([categoryId, scheduledFor])
+  @@index([groupId, scheduledFor])
+}
+
 enum ItemStatus {
   IN_STOCK
   LOW
@@ -103,4 +136,18 @@ enum ItemImportance {
 enum ShoppingPriority {
   NORMAL
   URGENT
+}
+
+enum ReminderType {
+  ITEM_CHECK
+  CATEGORY_CHECK
+  GROUP_CHECK
+  SHOPPING_REMINDER
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
 }

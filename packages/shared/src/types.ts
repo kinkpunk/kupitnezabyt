@@ -20,6 +20,19 @@ export const categoryStatuses = ["OK", "ATTENTION", "NEED_BUY", "URGENT"] as con
 
 export type CategoryStatus = (typeof categoryStatuses)[number];
 
+export const reminderTypes = [
+  "ITEM_CHECK",
+  "CATEGORY_CHECK",
+  "GROUP_CHECK",
+  "SHOPPING_REMINDER"
+] as const;
+
+export type ReminderType = (typeof reminderTypes)[number];
+
+export const reminderStatuses = ["PENDING", "SENT", "FAILED", "CANCELLED"] as const;
+
+export type ReminderStatus = (typeof reminderStatuses)[number];
+
 export type ShoppingSyncAction =
   | {
       type: "UPSERT";

@@ -1,5 +1,9 @@
 import type { Item, Prisma, ShoppingListItem } from "@kupitnezabyt/database";
-import { calculateNextCheckAt, getShoppingSyncAction } from "@kupitnezabyt/shared";
+import {
+  calculateNextCheckAt,
+  createReminderIdempotencyKey,
+  getShoppingSyncAction
+} from "@kupitnezabyt/shared";
 import type { ItemStatus } from "@kupitnezabyt/shared";
 
 type TransactionClient = Prisma.TransactionClient;
@@ -91,6 +95,59 @@ export async function markShoppingListItemBought(
   });
 }
 
+export async function upsertItemCheckReminder(
+  tx: TransactionClient,
+  input: {
+    userId: string;
+    itemId: string;
+    scheduledFor: Date;
+  }
+): Promise<void> {
+  const idempotencyKey = createReminderIdempotencyKey({
+    userId: input.userId,
+    type: "ITEM_CHECK",
+    itemId: input.itemId,
+    scheduledFor: input.scheduledFor
+  });
+
+  await tx.reminder.upsert({
+    where: {
+      idempotencyKey
+    },
+    update: {
+      scheduledFor: input.scheduledFor,
+      status: "PENDING",
+      attemptCount: 0,
+      sentAt: null
+    },
+    create: {
+      userId: input.userId,
+      type: "ITEM_CHECK",
+      itemId: input.itemId,
+      scheduledFor: input.scheduledFor,
+      idempotencyKey
+    }
+  });
+}
+
+export async function cancelPendingItemCheckReminders(
+  tx: TransactionClient,
+  userId: string,
+  itemId: string
+): Promise<void> {
+  await tx.reminder.updateMany({
+    where: {
+      userId,
+      itemId,
+      type: "ITEM_CHECK",
+      status: "PENDING"
+    },
+    data: {
+      status: "CANCELLED"
+    }
+  });
+}
+
 async function syncShoppingListItem(
   tx: TransactionClient,
   item: Item,
@@ -106,6 +163,8 @@ async function syncShoppingListItem(
   });
 
   if (action.type === "UPSERT") {
+    await cancelPendingItemCheckReminders(tx, item.userId, item.id);
+
     if (openShoppingListItem) {
       await tx.shoppingListItem.update({
         where: {
@@ -142,5 +201,15 @@ async function syncShoppingListItem(
         completedAt: now
       }
     });
+  }
+
+  if (item.nextCheckAt) {
+    await upsertItemCheckReminder(tx, {
+      userId: item.userId,
+      itemId: item.id,
+      scheduledFor: item.nextCheckAt
+    });
+  } else {
+    await cancelPendingItemCheckReminders(tx, item.userId, item.id);
   }
 }

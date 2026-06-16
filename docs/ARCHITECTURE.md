@@ -78,3 +78,15 @@ Slice 1 includes only:
 
 The database migration adds a PostgreSQL partial unique index to prevent more
 than one open shopping list entry for the same tracked item.
+
+Slice 5 adds reminder scheduling data:
+
+- `Category.usageCycleDays`
+- `Category.nextCheckAt`
+- `Category.reminderEnabled`
+- `Reminder`
+
+Reminder rows include an `idempotencyKey` so later worker slices can avoid
+duplicates for the same user, reminder type, entity, and UTC scheduled date.
+Slice 5 stores and updates reminder data only; it does not send Telegram
+notifications.

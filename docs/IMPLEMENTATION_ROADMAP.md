@@ -198,29 +198,37 @@ Tests:
 
 ## Slice 5: Periodic Checks and Reminder Data
 
+Status: implemented for data and API scheduling, without worker delivery.
+
 Goal: add check scheduling data without sending Telegram reminders yet.
 
 Database:
 
 - Add reminder-related fields already described in `PRODUCT_SPEC` if missing.
-- Add `Reminder` model.
+  Done for category scheduling fields; item scheduling fields already existed.
+- Add `Reminder` model. Done.
 
 Shared:
 
-- Add due-reminder calculation.
-- Add idempotency helpers for reminder keys if using DB-level uniqueness.
+- Add due-reminder calculation. Done.
+- Add idempotency helpers for reminder keys if using DB-level uniqueness. Done.
 
 Backend:
 
-- Implement item snooze endpoint.
-- Implement reminder CRUD or internal service functions needed by worker.
-- Keep all date storage in UTC.
-- Interpret user-facing scheduling through `User.timezone`.
+- Implement item snooze endpoint. Done.
+- Implement reminder CRUD or internal service functions needed by worker. Done
+  for item check reminder upsert/cancel service functions.
+- Keep all date storage in UTC. Done by storing JavaScript `Date` values in
+  PostgreSQL `DateTime`.
+- Interpret user-facing scheduling through `User.timezone`. Deferred until
+  user-configurable reminder times exist; current snooze uses whole UTC day
+  offsets.
 
 Tests:
 
-- Unit tests for due-reminder calculation.
+- Unit tests for due-reminder calculation. Done.
 - Integration tests for duplicate prevention.
+  Still requires a test PostgreSQL setup.
 
 ## Slice 6: Worker and Telegram Notifications
 

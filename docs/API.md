@@ -74,6 +74,7 @@ POST /api/items
 GET /api/items/:id
 PATCH /api/items/:id
 POST /api/items/:id/status
+POST /api/items/:id/snooze
 POST /api/items/:id/archive
 ```
 
@@ -109,6 +110,18 @@ PAUSED
 
 Changing status is transactional: the item is updated and the linked shopping
 list entry is created, updated, or completed according to product rules.
+
+Snooze body:
+
+```json
+{
+  "days": 3
+}
+```
+
+Snoozing sets `Item.nextCheckAt` to `now + days` and recreates the pending
+`ITEM_CHECK` reminder data. It does not send a Telegram message; sending is
+handled by later worker slices.
 
 Update body:
 
