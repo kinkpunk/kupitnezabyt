@@ -21,6 +21,7 @@ export default tseslint.config(
         React: "readonly",
         URLSearchParams: "readonly",
         console: "readonly",
+        document: "readonly",
         globalThis: "readonly",
         process: "readonly",
         window: "readonly"

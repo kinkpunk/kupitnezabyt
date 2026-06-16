@@ -21,6 +21,7 @@ check sessions, recommendations, search, export, onboarding, deployment, and CI.
 ```text
 apps/webapp          Next.js mobile UI
 apps/api             Fastify API
+apps/bot             grammY Telegram bot entry point
 packages/database    Prisma schema and client
 packages/shared      Shared domain types and pure business logic
 ```
@@ -52,6 +53,19 @@ Shared pure functions in `packages/shared` define:
 The API applies those rules inside database transactions. `NEED_BUY` and
 `URGENT` create or update one open shopping list entry per item. Returning an
 item to `IN_STOCK`, `LOW`, or `PAUSED` completes the open entry.
+
+## Telegram Bot
+
+Slice 3 adds a minimal `apps/bot` service with grammY. It currently implements
+only `/start`, `/app`, and `/help`, plus an inline Mini App button. Reminder
+messages and callback status actions are intentionally deferred to later slices.
+
+The bot requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBAPP_URL` when started
+directly:
+
+```bash
+pnpm --filter @kupitnezabyt/bot dev
+```
 
 ## Data Model
 

@@ -13,6 +13,7 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
+        themeParams?: TelegramThemeParams;
         ready?: () => void;
         expand?: () => void;
       };
@@ -22,6 +23,14 @@ declare global {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const tokenStorageKey = "kupitnezabyt.token";
+
+type TelegramThemeParams = {
+  bg_color?: string;
+  button_color?: string;
+  hint_color?: string;
+  secondary_bg_color?: string;
+  text_color?: string;
+};
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -33,11 +42,11 @@ export class ApiError extends Error {
 export async function login(): Promise<string> {
   const savedToken = window.localStorage.getItem(tokenStorageKey);
   if (savedToken) {
+    prepareTelegramWebApp();
     return savedToken;
   }
 
-  window.Telegram?.WebApp?.ready?.();
-  window.Telegram?.WebApp?.expand?.();
+  prepareTelegramWebApp();
 
   const initData = window.Telegram?.WebApp?.initData;
   const response = initData
@@ -49,6 +58,33 @@ export async function login(): Promise<string> {
 
   window.localStorage.setItem(tokenStorageKey, response.token);
   return response.token;
+}
+
+function prepareTelegramWebApp(): void {
+  const webApp = window.Telegram?.WebApp;
+  webApp?.ready?.();
+  webApp?.expand?.();
+  applyTelegramTheme(webApp?.themeParams);
+}
+
+function applyTelegramTheme(themeParams: TelegramThemeParams | undefined): void {
+  if (!themeParams) {
+    return;
+  }
+
+  const root = document.documentElement;
+  setCssVariable(root, "--background", themeParams.bg_color);
+  setCssVariable(root, "--surface", themeParams.secondary_bg_color);
+  setCssVariable(root, "--surface-strong", themeParams.secondary_bg_color);
+  setCssVariable(root, "--text", themeParams.text_color);
+  setCssVariable(root, "--muted", themeParams.hint_color);
+  setCssVariable(root, "--accent", themeParams.button_color);
+}
+
+function setCssVariable(root: HTMLElement, name: string, value: string | undefined): void {
+  if (value) {
+    root.style.setProperty(name, value);
+  }
 }
 
 export function getCategories(token: string): Promise<Category[]> {

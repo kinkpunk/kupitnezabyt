@@ -127,39 +127,42 @@ Tests:
 
 ## Slice 3: Telegram Mini App Auth and Bot Entry Point
 
+Status: implemented for the planned minimal entry point.
+
 Goal: make the app open correctly from Telegram while keeping the browser dev
 fallback.
 
 Backend:
 
-- Harden Telegram `initData` validation.
+- Harden Telegram `initData` validation. Done.
 - Add auth integration tests with valid, expired, and invalid Telegram init data.
-- Ensure logs redact tokens, JWTs, and raw init data.
+  Done as deterministic auth unit tests without a database.
+- Ensure logs redact tokens, JWTs, and raw init data. Done for API request logs.
 - Consider rate limiting auth endpoints if it can be done without broad
   architectural churn.
 
 Bot:
 
-- Create `apps/bot`.
+- Create `apps/bot`. Done.
 - Implement only:
-  - `/start`
-  - `/app`
-  - `/help`
-- Provide an inline button that opens the Mini App.
+  - `/start`. Done.
+  - `/app`. Done.
+  - `/help`. Done.
+- Provide an inline button that opens the Mini App. Done.
 - Do not implement reminders or callback status actions yet.
 
 Webapp:
 
 - Use Telegram WebApp APIs for:
-  - `initData`
-  - theme parameters
-  - ready/expand lifecycle
-- Keep dev-auth browser fallback.
+  - `initData`. Done.
+  - theme parameters. Done.
+  - ready/expand lifecycle. Done.
+- Keep dev-auth browser fallback. Done.
 
 Tests:
 
 - Bot command unit tests where practical.
-- Auth integration tests remain the main acceptance gate.
+- Auth validation tests are currently the main acceptance gate for this slice.
 
 ## Slice 4: Shopping List Completion
 

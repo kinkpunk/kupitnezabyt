@@ -4,6 +4,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/database" },
     { "path": "./apps/api" },
+    { "path": "./apps/bot" },
     { "path": "./apps/webapp" }
   ]
 }

@@ -89,7 +89,8 @@ export function getBearerToken(request: FastifyRequest): string | null {
 export function validateTelegramInitData(
   initData: string,
   botToken: string,
-  maxAgeSeconds = 60 * 60 * 24
+  maxAgeSeconds = 60 * 60 * 24,
+  now = new Date()
 ): TelegramUser | null {
   const params = new URLSearchParams(initData);
   const hash = params.get("hash");
@@ -126,7 +127,7 @@ export function validateTelegramInitData(
     return null;
   }
 
-  const ageSeconds = Math.floor(Date.now() / 1000) - authTimestamp;
+  const ageSeconds = Math.floor(now.getTime() / 1000) - authTimestamp;
   if (ageSeconds < 0 || ageSeconds > maxAgeSeconds) {
     return null;
   }
