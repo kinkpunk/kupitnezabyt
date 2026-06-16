@@ -430,6 +430,8 @@ Tests:
 
 ## Slice 12: Shared UI Package, If Needed
 
+Status: evaluated; not created.
+
 Goal: introduce `packages/ui` only when duplication justifies it.
 
 Create `packages/ui` when the webapp has stable repeated components such as:
@@ -442,6 +444,16 @@ Create `packages/ui` when the webapp has stable repeated components such as:
 - ConfirmDialog
 
 Do not introduce `packages/ui` only for theoretical reuse.
+
+Decision for the current MVP state:
+
+- `packages/ui` is not created in Slice 12.
+- The UI is still a single Next.js webapp with local CSS and local component
+  structure.
+- There is no cross-application or multi-file component reuse that would justify
+  an extra package, build target, and dependency surface.
+- Revisit after Slice 13 only if final integration exposes stable repeated
+  components shared across screens or apps.
 
 ## Slice 13: Final MVP Integration
 

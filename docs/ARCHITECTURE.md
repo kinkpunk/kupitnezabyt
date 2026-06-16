@@ -183,3 +183,14 @@ urgent items, upcoming item checks, and quick category access. The main mobile
 navigation is limited to five product sections: home, categories, shopping,
 check, and settings. Search and groups remain available from quick actions so
 their existing flows are preserved without adding a shared UI package.
+
+## UI Package Decision
+
+Slice 12 intentionally does not create `packages/ui`. The current UI surface is
+implemented by a single Next.js webapp, and the repeated controls are still
+local to one page plus one stylesheet. Introducing a workspace package now would
+add build surface without real cross-package reuse.
+
+Create `packages/ui` later only when stable components are reused across
+multiple files or applications, for example shared buttons, inputs, status
+badges, bottom navigation, modals, or confirmation dialogs.
