@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateNextCheckAt, getShoppingSyncAction } from "./status.js";
+import {
+  aggregateCategoryStatus,
+  calculateNextCheckAt,
+  calculateReadiness,
+  getShoppingSyncAction
+} from "./status.js";
 
 describe("calculateNextCheckAt", () => {
   const now = new Date("2026-06-16T12:00:00.000Z");
@@ -53,5 +58,61 @@ describe("getShoppingSyncAction", () => {
     expect(getShoppingSyncAction("PAUSED")).toEqual({
       type: "COMPLETE_OPEN"
     });
+  });
+});
+
+describe("aggregateCategoryStatus", () => {
+  it("returns URGENT when any active item is urgent", () => {
+    expect(
+      aggregateCategoryStatus([
+        { status: "IN_STOCK" },
+        { status: "URGENT" },
+        { status: "NEED_BUY" }
+      ])
+    ).toBe("URGENT");
+  });
+
+  it("returns NEED_BUY before LOW", () => {
+    expect(
+      aggregateCategoryStatus([
+        { status: "LOW" },
+        { status: "NEED_BUY" }
+      ])
+    ).toBe("NEED_BUY");
+  });
+
+  it("returns ATTENTION for LOW items", () => {
+    expect(
+      aggregateCategoryStatus([
+        { status: "IN_STOCK" },
+        { status: "LOW" }
+      ])
+    ).toBe("ATTENTION");
+  });
+
+  it("ignores archived items", () => {
+    expect(
+      aggregateCategoryStatus([
+        { status: "URGENT", archivedAt: new Date("2026-06-16T00:00:00.000Z") },
+        { status: "IN_STOCK" }
+      ])
+    ).toBe("OK");
+  });
+});
+
+describe("calculateReadiness", () => {
+  it("returns the percent of active non-paused items in stock", () => {
+    expect(
+      calculateReadiness([
+        { status: "IN_STOCK" },
+        { status: "LOW" },
+        { status: "PAUSED" },
+        { status: "IN_STOCK" }
+      ])
+    ).toBe(67);
+  });
+
+  it("returns null when there are no active tracked items", () => {
+    expect(calculateReadiness([{ status: "PAUSED" }])).toBeNull();
   });
 });

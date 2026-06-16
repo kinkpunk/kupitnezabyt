@@ -1,7 +1,7 @@
 # API
 
-This document tracks the implemented API surface. Slice 1 intentionally covers
-only the category -> item -> status -> shopping list flow.
+This document tracks the implemented API surface. The current implementation
+covers the first product flow plus Slice 2 CRUD hardening.
 
 ## Auth
 
@@ -54,6 +54,7 @@ GET /api/categories
 POST /api/categories
 GET /api/categories/:id
 PATCH /api/categories/:id
+POST /api/categories/:id/archive
 ```
 
 Create body:
@@ -70,7 +71,10 @@ Create body:
 ```http
 GET /api/items
 POST /api/items
+GET /api/items/:id
+PATCH /api/items/:id
 POST /api/items/:id/status
+POST /api/items/:id/archive
 ```
 
 Create body:
@@ -106,15 +110,48 @@ PAUSED
 Changing status is transactional: the item is updated and the linked shopping
 list entry is created, updated, or completed according to product rules.
 
+Update body:
+
+```json
+{
+  "name": "Ибупрофен",
+  "categoryId": "...",
+  "brand": "optional",
+  "notes": "optional",
+  "usageCycleDays": 30
+}
+```
+
+Only `name` is required for the current update endpoint. Optional fields are
+preserved when omitted. Archiving an item also completes its open shopping list
+entry.
+
 ## Shopping List
 
 ```http
 GET /api/shopping-list
 POST /api/shopping-list/:id/complete
+DELETE /api/shopping-list/completed
 ```
 
 Completing a shopping list entry linked to an item marks the entry completed and
 sets the item back to `IN_STOCK`.
+
+Deleting completed entries removes only completed shopping list rows for the
+current authenticated user.
+
+## Errors
+
+Errors use this shape:
+
+```json
+{
+  "error": {
+    "code": "ITEM_NOT_FOUND",
+    "message": "Item was not found."
+  }
+}
+```
 
 ## Service
 

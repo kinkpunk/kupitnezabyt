@@ -1,6 +1,12 @@
 import type { ItemStatus } from "@kupitnezabyt/shared";
 
-import type { AuthResponse, Category, Item, ShoppingListEntry } from "./types";
+import type {
+  AuthResponse,
+  Category,
+  DeletedCountResponse,
+  Item,
+  ShoppingListEntry
+} from "./types";
 
 declare global {
   interface Window {
@@ -53,6 +59,10 @@ export function createCategory(token: string, name: string): Promise<Category> {
   return post<Category>("/api/categories", token, { name });
 }
 
+export function archiveCategory(token: string, categoryId: string): Promise<Category> {
+  return post<Category>(`/api/categories/${categoryId}/archive`, token, {});
+}
+
 export function getItems(token: string): Promise<Item[]> {
   return get<Item[]>("/api/items", token);
 }
@@ -65,6 +75,20 @@ export function createItem(
   }
 ): Promise<Item> {
   return post<Item>("/api/items", token, input);
+}
+
+export function updateItem(
+  token: string,
+  itemId: string,
+  input: {
+    name: string;
+  }
+): Promise<Item> {
+  return patch<Item>(`/api/items/${itemId}`, token, input);
+}
+
+export function archiveItem(token: string, itemId: string): Promise<Item> {
+  return post<Item>(`/api/items/${itemId}/archive`, token, {});
 }
 
 export function setItemStatus(
@@ -84,6 +108,10 @@ export function completeShoppingListItem(
   shoppingListItemId: string
 ): Promise<ShoppingListEntry> {
   return post<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}/complete`, token, {});
+}
+
+export function clearCompletedShoppingList(token: string): Promise<DeletedCountResponse> {
+  return del<DeletedCountResponse>("/api/shopping-list/completed", token);
 }
 
 async function get<TResponse>(path: string, token: string): Promise<TResponse> {
@@ -106,10 +134,30 @@ async function post<TResponse>(
   });
 }
 
+async function patch<TResponse>(
+  path: string,
+  token: string,
+  body: unknown
+): Promise<TResponse> {
+  return request<TResponse>(path, {
+    method: "PATCH",
+    token,
+    body
+  });
+}
+
+async function del<TResponse>(path: string, token: string): Promise<TResponse> {
+  return request<TResponse>(path, {
+    method: "DELETE",
+    token,
+    body: undefined
+  });
+}
+
 async function request<TResponse>(
   path: string,
   options: {
-    method: "GET" | "POST";
+    method: "DELETE" | "GET" | "PATCH" | "POST";
     token: string | undefined;
     body: unknown | undefined;
   }
@@ -134,8 +182,14 @@ async function request<TResponse>(
   const response = await fetch(`${apiBaseUrl}${path}`, init);
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
-    throw new ApiError(payload?.error ?? `HTTP_${response.status}`);
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: string | { code?: string; message?: string } }
+      | null;
+    const errorMessage =
+      typeof payload?.error === "string"
+        ? payload.error
+        : payload?.error?.message ?? payload?.error?.code;
+    throw new ApiError(errorMessage ?? `HTTP_${response.status}`);
   }
 
   return (await response.json()) as TResponse;

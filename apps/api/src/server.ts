@@ -1,7 +1,12 @@
 import cors from "@fastify/cors";
 import { prisma } from "@kupitnezabyt/database";
-import { isItemStatus } from "@kupitnezabyt/shared";
+import {
+  aggregateCategoryStatus,
+  calculateNextCheckAt,
+  isItemStatus
+} from "@kupitnezabyt/shared";
 import Fastify from "fastify";
+import type { FastifyReply } from "fastify";
 
 import { getBearerToken, signToken, validateTelegramInitData, verifyToken } from "./auth.js";
 import type { TelegramUser } from "./auth.js";
@@ -14,6 +19,14 @@ type NamedBody = {
 };
 
 type CreateItemBody = {
+  categoryId?: unknown;
+  name?: unknown;
+  brand?: unknown;
+  notes?: unknown;
+  usageCycleDays?: unknown;
+};
+
+type UpdateItemBody = {
   categoryId?: unknown;
   name?: unknown;
   brand?: unknown;
@@ -57,7 +70,7 @@ export function buildServer() {
     const token = getBearerToken(request);
     const payload = token ? verifyToken(token, config) : null;
     if (!payload) {
-      await reply.code(401).send({ error: "UNAUTHORIZED" });
+      await sendError(reply, 401, "UNAUTHORIZED", "Authorization is required.");
       return;
     }
 
@@ -68,7 +81,7 @@ export function buildServer() {
 
   app.post<{ Body: DevAuthBody }>("/api/auth/dev", async (request, reply) => {
     if (config.nodeEnv !== "development" || !config.devAuthEnabled) {
-      await reply.code(404).send({ error: "NOT_FOUND" });
+      await sendError(reply, 404, "NOT_FOUND", "Development auth is not enabled.");
       return;
     }
 
@@ -100,7 +113,7 @@ export function buildServer() {
 
   app.post<{ Body: TelegramAuthBody }>("/api/auth/telegram", async (request, reply) => {
     if (typeof request.body?.initData !== "string" || !config.telegramBotToken) {
-      await reply.code(400).send({ error: "INVALID_TELEGRAM_AUTH" });
+      await sendError(reply, 400, "INVALID_TELEGRAM_AUTH", "Telegram init data is invalid.");
       return;
     }
 
@@ -110,7 +123,7 @@ export function buildServer() {
     );
 
     if (!telegramUser) {
-      await reply.code(401).send({ error: "INVALID_TELEGRAM_AUTH" });
+      await sendError(reply, 401, "INVALID_TELEGRAM_AUTH", "Telegram init data is invalid.");
       return;
     }
 
@@ -130,26 +143,35 @@ export function buildServer() {
   });
 
   app.get("/api/categories", async (request) => {
-    return prisma.category.findMany({
+    const categories = await prisma.category.findMany({
       where: {
         userId: requireUserId(request.userId),
         archivedAt: null
       },
       include: {
-        _count: {
+        items: {
+          where: {
+            archivedAt: null
+          },
           select: {
-            items: true
+            status: true
           }
         }
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
     });
+
+    return categories.map(({ items: categoryItems, ...category }) => ({
+      ...category,
+      itemCount: categoryItems.length,
+      aggregateStatus: aggregateCategoryStatus(categoryItems)
+    }));
   });
 
   app.post<{ Body: NamedBody }>("/api/categories", async (request, reply) => {
     const name = readRequiredString(request.body?.name);
     if (!name) {
-      await reply.code(400).send({ error: "NAME_REQUIRED" });
+      await sendError(reply, 400, "NAME_REQUIRED", "Category name is required.");
       return;
     }
 
@@ -160,7 +182,7 @@ export function buildServer() {
       }
     });
 
-    return prisma.category.create({
+    const category = await prisma.category.create({
       data: {
         userId,
         name,
@@ -168,6 +190,12 @@ export function buildServer() {
         sortOrder: categoryCount
       }
     });
+
+    return {
+      ...category,
+      itemCount: 0,
+      aggregateStatus: "OK"
+    };
   });
 
   app.get<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
@@ -190,7 +218,7 @@ export function buildServer() {
     });
 
     if (!category) {
-      await reply.code(404).send({ error: "CATEGORY_NOT_FOUND" });
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
       return;
     }
 
@@ -202,7 +230,7 @@ export function buildServer() {
     async (request, reply) => {
       const name = readRequiredString(request.body?.name);
       if (!name) {
-        await reply.code(400).send({ error: "NAME_REQUIRED" });
+        await sendError(reply, 400, "NAME_REQUIRED", "Category name is required.");
         return;
       }
 
@@ -215,11 +243,11 @@ export function buildServer() {
       });
 
       if (!category) {
-        await reply.code(404).send({ error: "CATEGORY_NOT_FOUND" });
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
         return;
       }
 
-      return prisma.category.update({
+      const updatedCategory = await prisma.category.update({
         where: {
           id: category.id
         },
@@ -228,8 +256,76 @@ export function buildServer() {
           icon: readOptionalString(request.body?.icon) ?? null
         }
       });
+
+      const categoryItems = await prisma.item.findMany({
+        where: {
+          categoryId: category.id,
+          userId: requireUserId(request.userId),
+          archivedAt: null
+        },
+        select: {
+          status: true
+        }
+      });
+
+      return {
+        ...updatedCategory,
+        itemCount: categoryItems.length,
+        aggregateStatus: aggregateCategoryStatus(categoryItems)
+      };
     }
   );
+
+  app.post<{ Params: { id: string } }>("/api/categories/:id/archive", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const now = new Date();
+    const category = await prisma.category.findFirst({
+      where: {
+        id: request.params.id,
+        userId,
+        archivedAt: null
+      }
+    });
+
+    if (!category) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.item.updateMany({
+        where: {
+          userId,
+          categoryId: category.id,
+          archivedAt: null
+        },
+        data: {
+          archivedAt: now
+        }
+      });
+
+      await tx.shoppingListItem.updateMany({
+        where: {
+          userId,
+          categoryId: category.id,
+          isCompleted: false
+        },
+        data: {
+          isCompleted: true,
+          completedAt: now
+        }
+      });
+
+      return tx.category.update({
+        where: {
+          id: category.id
+        },
+        data: {
+          archivedAt: now
+        }
+      });
+    });
+  });
 
   app.get<{ Querystring: { categoryId?: string } }>("/api/items", async (request) => {
     const categoryId = readOptionalString(request.query.categoryId);
@@ -255,7 +351,12 @@ export function buildServer() {
     const name = readRequiredString(request.body?.name);
 
     if (!categoryId || !name) {
-      await reply.code(400).send({ error: "CATEGORY_AND_NAME_REQUIRED" });
+      await sendError(
+        reply,
+        400,
+        "CATEGORY_AND_NAME_REQUIRED",
+        "Category and item name are required."
+      );
       return;
     }
 
@@ -268,7 +369,7 @@ export function buildServer() {
     });
 
     if (!category) {
-      await reply.code(404).send({ error: "CATEGORY_NOT_FOUND" });
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
       return;
     }
 
@@ -284,12 +385,114 @@ export function buildServer() {
     });
   });
 
+  app.get<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
+    const item = await prisma.item.findFirst({
+      where: {
+        id: request.params.id,
+        userId: requireUserId(request.userId),
+        archivedAt: null
+      },
+      include: {
+        category: true
+      }
+    });
+
+    if (!item) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+
+    return item;
+  });
+
+  app.patch<{ Body: UpdateItemBody; Params: { id: string } }>(
+    "/api/items/:id",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const item = await prisma.item.findFirst({
+        where: {
+          id: request.params.id,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!item) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      const name = readRequiredString(request.body?.name);
+      if (!name) {
+        await sendError(reply, 400, "NAME_REQUIRED", "Item name is required.");
+        return;
+      }
+
+      const categoryId = readOptionalString(request.body?.categoryId);
+      if (categoryId) {
+        const category = await prisma.category.findFirst({
+          where: {
+            id: categoryId,
+            userId,
+            archivedAt: null
+          }
+        });
+
+        if (!category) {
+          await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+          return;
+        }
+      }
+
+      const nextCategoryId = categoryId ?? item.categoryId;
+      const usageCycleDays = hasOwnProperty(request.body, "usageCycleDays")
+        ? readOptionalPositiveInteger(request.body.usageCycleDays) ?? null
+        : item.usageCycleDays;
+      const brand = hasOwnProperty(request.body, "brand")
+        ? readOptionalString(request.body.brand) ?? null
+        : item.brand;
+      const notes = hasOwnProperty(request.body, "notes")
+        ? readOptionalString(request.body.notes) ?? null
+        : item.notes;
+      const now = new Date();
+      return prisma.$transaction(async (tx) => {
+        const updatedItem = await tx.item.update({
+          where: {
+            id: item.id
+          },
+          data: {
+            name,
+            categoryId: nextCategoryId,
+            brand,
+            notes,
+            usageCycleDays,
+            nextCheckAt: calculateNextCheckAt(item.status, now, usageCycleDays)
+          }
+        });
+
+        await tx.shoppingListItem.updateMany({
+          where: {
+            userId,
+            itemId: item.id,
+            isCompleted: false
+          },
+          data: {
+            title: updatedItem.name,
+            categoryId: nextCategoryId
+          }
+        });
+
+        return updatedItem;
+      });
+    }
+  );
+
   app.post<{ Body: StatusBody; Params: { id: string } }>(
     "/api/items/:id/status",
     async (request, reply) => {
       const status = request.body?.status;
       if (typeof status !== "string" || !isItemStatus(status)) {
-        await reply.code(400).send({ error: "INVALID_STATUS" });
+        await sendError(reply, 400, "INVALID_STATUS", "Item status is invalid.");
         return;
       }
 
@@ -299,7 +502,7 @@ export function buildServer() {
         );
       } catch (error) {
         if (error instanceof Error && error.message === "ITEM_NOT_FOUND") {
-          await reply.code(404).send({ error: "ITEM_NOT_FOUND" });
+          await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
           return;
         }
 
@@ -307,6 +510,46 @@ export function buildServer() {
       }
     }
   );
+
+  app.post<{ Params: { id: string } }>("/api/items/:id/archive", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const now = new Date();
+    const item = await prisma.item.findFirst({
+      where: {
+        id: request.params.id,
+        userId,
+        archivedAt: null
+      }
+    });
+
+    if (!item) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.shoppingListItem.updateMany({
+        where: {
+          userId,
+          itemId: item.id,
+          isCompleted: false
+        },
+        data: {
+          isCompleted: true,
+          completedAt: now
+        }
+      });
+
+      return tx.item.update({
+        where: {
+          id: item.id
+        },
+        data: {
+          archivedAt: now
+        }
+      });
+    });
+  });
 
   app.get("/api/shopping-list", async (request) => {
     return prisma.shoppingListItem.findMany({
@@ -331,7 +574,12 @@ export function buildServer() {
         );
       } catch (error) {
         if (error instanceof Error && error.message === "SHOPPING_LIST_ITEM_NOT_FOUND") {
-          await reply.code(404).send({ error: "SHOPPING_LIST_ITEM_NOT_FOUND" });
+          await sendError(
+            reply,
+            404,
+            "SHOPPING_LIST_ITEM_NOT_FOUND",
+            "Shopping list item was not found."
+          );
           return;
         }
 
@@ -340,7 +588,34 @@ export function buildServer() {
     }
   );
 
+  app.delete("/api/shopping-list/completed", async (request) => {
+    const result = await prisma.shoppingListItem.deleteMany({
+      where: {
+        userId: requireUserId(request.userId),
+        isCompleted: true
+      }
+    });
+
+    return {
+      deletedCount: result.count
+    };
+  });
+
   return app;
+}
+
+async function sendError(
+  reply: FastifyReply,
+  statusCode: number,
+  code: string,
+  message: string
+): Promise<void> {
+  await reply.code(statusCode).send({
+    error: {
+      code,
+      message
+    }
+  });
 }
 
 async function upsertTelegramUser(telegramUser: TelegramUser) {
@@ -400,4 +675,11 @@ function readOptionalPositiveInteger(value: unknown): number | undefined {
   }
 
   return parsed;
+}
+
+function hasOwnProperty<TObject extends object, TKey extends PropertyKey>(
+  value: TObject,
+  key: TKey
+): value is TObject & Record<TKey, unknown> {
+  return Object.prototype.hasOwnProperty.call(value, key);
 }

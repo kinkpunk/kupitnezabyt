@@ -1,10 +1,14 @@
 "use client";
 
 import type { ItemStatus } from "@kupitnezabyt/shared";
+import type { CategoryStatus } from "@kupitnezabyt/shared";
 import { useEffect, useMemo, useState } from "react";
 
 import {
   ApiError,
+  archiveCategory,
+  archiveItem,
+  clearCompletedShoppingList,
   completeShoppingListItem,
   createCategory,
   createItem,
@@ -12,7 +16,8 @@ import {
   getItems,
   getShoppingList,
   login,
-  setItemStatus
+  setItemStatus,
+  updateItem
 } from "../lib/api";
 import type { Category, Item, ShoppingListEntry } from "../lib/types";
 
@@ -26,6 +31,13 @@ const statusLabels: Record<ItemStatus, string> = {
 
 const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
 
+const categoryStatusLabels: Record<CategoryStatus, string> = {
+  OK: "OK",
+  ATTENTION: "Внимание",
+  NEED_BUY: "Купить",
+  URGENT: "Срочно"
+};
+
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -35,6 +47,8 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"items" | "shopping">("items");
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemName, setEditingItemName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,6 +141,7 @@ export default function HomePage() {
     });
     setItemName("");
     setItems((current) => [...current, item]);
+    await refreshData(token);
   }
 
   async function handleSetStatus(item: Item, status: ItemStatus) {
@@ -149,6 +164,58 @@ export default function HomePage() {
 
     setError(null);
     await completeShoppingListItem(token, entry.id);
+    await refreshData(token);
+  }
+
+  async function handleUpdateItem(item: Item) {
+    if (!token || !editingItemName.trim()) {
+      return;
+    }
+
+    setError(null);
+    const updatedItem = await updateItem(token, item.id, {
+      name: editingItemName.trim()
+    });
+    setItems((current) =>
+      current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
+    );
+    setEditingItemId(null);
+    setEditingItemName("");
+    await refreshData(token);
+  }
+
+  async function handleArchiveItem(item: Item) {
+    if (!token || !window.confirm(`Архивировать "${item.name}"?`)) {
+      return;
+    }
+
+    setError(null);
+    await archiveItem(token, item.id);
+    await refreshData(token);
+  }
+
+  async function handleArchiveSelectedCategory() {
+    if (!token || !selectedCategory) {
+      return;
+    }
+
+    if (!window.confirm(`Архивировать категорию "${selectedCategory.name}" и ее товары?`)) {
+      return;
+    }
+
+    setError(null);
+    await archiveCategory(token, selectedCategory.id);
+    setSelectedCategoryId(null);
+    await refreshData(token);
+  }
+
+  async function handleClearCompletedShoppingList() {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    await clearCompletedShoppingList(token);
     await refreshData(token);
   }
 
@@ -211,14 +278,37 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setSelectedCategoryId(category.id)}
               >
-                {category.icon ? `${category.icon} ` : ""}
-                {category.name}
+                <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
+                <small>
+                  {categoryStatusLabels[category.aggregateStatus]} · {category.itemCount}
+                </small>
               </button>
             ))}
           </div>
 
           {selectedCategory ? (
             <>
+              <div className="section-heading">
+                <div>
+                  <h2>{selectedCategory.name}</h2>
+                  <p>
+                    {categoryStatusLabels[selectedCategory.aggregateStatus]} ·{" "}
+                    {selectedCategory.itemCount} поз.
+                  </p>
+                </div>
+                <button
+                  className="ghost-button danger-button"
+                  type="button"
+                  onClick={() =>
+                    void handleArchiveSelectedCategory().catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  Архив
+                </button>
+              </div>
+
               <form
                 className="inline-form"
                 onSubmit={(event) => {
@@ -239,10 +329,54 @@ export default function HomePage() {
                 {visibleItems.length ? (
                   visibleItems.map((item) => (
                     <article className="item-card" key={item.id}>
-                      <div>
-                        <h2>{item.name}</h2>
-                        <p>{statusLabels[item.status]}</p>
-                      </div>
+                      {editingItemId === item.id ? (
+                        <form
+                          className="inline-form"
+                          onSubmit={(event) => {
+                            event.preventDefault();
+                            void handleUpdateItem(item).catch((caughtError) =>
+                              setError(formatError(caughtError))
+                            );
+                          }}
+                        >
+                          <input
+                            aria-label="Новое название товара"
+                            value={editingItemName}
+                            onChange={(event) => setEditingItemName(event.target.value)}
+                          />
+                          <button type="submit">Сохранить</button>
+                        </form>
+                      ) : (
+                        <div className="item-card-header">
+                          <div>
+                            <h2>{item.name}</h2>
+                            <p>{statusLabels[item.status]}</p>
+                          </div>
+                          <div className="icon-actions">
+                            <button
+                              className="ghost-button"
+                              type="button"
+                              onClick={() => {
+                                setEditingItemId(item.id);
+                                setEditingItemName(item.name);
+                              }}
+                            >
+                              Изм.
+                            </button>
+                            <button
+                              className="ghost-button danger-button"
+                              type="button"
+                              onClick={() =>
+                                void handleArchiveItem(item).catch((caughtError) =>
+                                  setError(formatError(caughtError))
+                                )
+                              }
+                            >
+                              Архив
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <div className="status-grid">
                         {statusOptions.map((status) => (
                           <button
@@ -272,6 +406,23 @@ export default function HomePage() {
         </section>
       ) : (
         <section className="stack">
+          <div className="section-heading">
+            <div>
+              <h2>Покупки</h2>
+              <p>{shoppingList.length ? `${shoppingList.length} активных` : "Пусто"}</p>
+            </div>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() =>
+                void handleClearCompletedShoppingList().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              Очистить
+            </button>
+          </div>
           {shoppingList.length ? (
             shoppingList.map((entry) => (
               <article className="shopping-row" key={entry.id}>

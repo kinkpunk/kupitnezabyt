@@ -1,10 +1,12 @@
-import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
+import type { CategoryStatus, ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 
 export type Category = {
   id: string;
   name: string;
   icon: string | null;
   sortOrder: number;
+  itemCount: number;
+  aggregateStatus: CategoryStatus;
 };
 
 export type Item = {
@@ -33,4 +35,8 @@ export type ShoppingListEntry = {
 
 export type AuthResponse = {
   token: string;
+};
+
+export type DeletedCountResponse = {
+  deletedCount: number;
 };

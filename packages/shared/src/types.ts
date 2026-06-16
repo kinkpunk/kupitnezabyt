@@ -16,6 +16,10 @@ export const shoppingPriorities = ["NORMAL", "URGENT"] as const;
 
 export type ShoppingPriority = (typeof shoppingPriorities)[number];
 
+export const categoryStatuses = ["OK", "ATTENTION", "NEED_BUY", "URGENT"] as const;
+
+export type CategoryStatus = (typeof categoryStatuses)[number];
+
 export type ShoppingSyncAction =
   | {
       type: "UPSERT";

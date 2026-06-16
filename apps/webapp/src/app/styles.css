@@ -92,6 +92,7 @@ input {
 }
 
 .topbar h1,
+.section-heading h2,
 .item-card h2,
 .shopping-row h2 {
   margin: 0;
@@ -103,6 +104,7 @@ input {
 }
 
 .eyebrow,
+.section-heading p,
 .item-card p,
 .shopping-row p,
 .shopping-row span {
@@ -178,8 +180,34 @@ input {
 }
 
 .category {
+  display: grid;
+  align-content: center;
+  gap: 2px;
   flex: 0 0 auto;
-  padding: 0 14px;
+  padding: 6px 14px;
+  text-align: left;
+}
+
+.category small {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-heading h2 {
+  font-size: 20px;
+}
+
+.section-heading button {
+  flex: 0 0 auto;
 }
 
 .item-list {
@@ -200,6 +228,30 @@ input {
 
 .item-card {
   grid-template-columns: 1fr;
+}
+
+.item-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.icon-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.ghost-button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 12px;
+}
+
+.danger-button {
+  color: var(--danger);
 }
 
 .status-grid {

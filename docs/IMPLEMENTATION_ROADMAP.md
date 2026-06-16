@@ -82,24 +82,26 @@ Follow-up hardening for Slice 1:
 
 ## Slice 2: Slice 1 Hardening and Basic CRUD Completion
 
+Status: partially implemented.
+
 Goal: make the first flow reliable enough to build on.
 
 Backend:
 
-- Add item detail endpoint.
-- Add item update endpoint.
-- Add category archive endpoint.
-- Add item archive endpoint.
+- Add item detail endpoint. Done.
+- Add item update endpoint. Done.
+- Add category archive endpoint. Done.
+- Add item archive endpoint. Done.
 - Add manual shopping list item create/update/delete only if required by UI.
-- Add completed shopping list cleanup.
-- Add consistent API error shape.
+- Add completed shopping list cleanup. Done.
+- Add consistent API error shape. Started for implemented endpoints.
 - Add validation at API boundaries using simple explicit validation first.
 
 Shared:
 
-- Add `aggregateCategoryStatus`.
-- Add `calculateReadiness`.
-- Add unit tests for aggregation and readiness.
+- Add `aggregateCategoryStatus`. Done.
+- Add `calculateReadiness`. Done.
+- Add unit tests for aggregation and readiness. Done.
 
 Database:
 
@@ -110,16 +112,18 @@ Database:
 
 Webapp:
 
-- Add edit item form.
-- Add archive affordances with confirmation where needed.
-- Show category item counts and aggregate status.
+- Add edit item form. Done for item names.
+- Add archive affordances with confirmation where needed. Done for categories
+  and items.
+- Show category item counts and aggregate status. Done.
 - Show empty/loading/error states more consistently.
 
 Tests:
 
 - API integration tests for auth, user isolation, category CRUD, item CRUD, and
   shopping list duplicate protection.
-- Keep `pnpm typecheck`, `pnpm lint`, and `pnpm test` green.
+- Keep `pnpm typecheck`, `pnpm lint`, and `pnpm test` green. Done for the
+  current Slice 2 changes.
 
 ## Slice 3: Telegram Mini App Auth and Bot Entry Point
 
