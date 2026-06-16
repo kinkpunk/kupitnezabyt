@@ -6,6 +6,7 @@ import type {
   CheckSession,
   DeleteResponse,
   DeletedCountResponse,
+  ItemGroup,
   Item,
   ShoppingListEntry
 } from "./types";
@@ -182,11 +183,43 @@ export function clearCompletedShoppingList(token: string): Promise<DeletedCountR
   return del<DeletedCountResponse>("/api/shopping-list/completed", token);
 }
 
+export function getGroups(token: string): Promise<ItemGroup[]> {
+  return get<ItemGroup[]>("/api/groups", token);
+}
+
+export function createGroup(token: string, name: string): Promise<ItemGroup> {
+  return post<ItemGroup>("/api/groups", token, { name });
+}
+
+export function archiveGroup(token: string, groupId: string): Promise<ItemGroup> {
+  return post<ItemGroup>(`/api/groups/${groupId}/archive`, token, {});
+}
+
+export function addGroupItem(
+  token: string,
+  groupId: string,
+  itemId: string
+): Promise<ItemGroup> {
+  return post<ItemGroup>(`/api/groups/${groupId}/items`, token, { itemId });
+}
+
+export function removeGroupItem(
+  token: string,
+  groupId: string,
+  itemId: string
+): Promise<ItemGroup> {
+  return del<ItemGroup>(`/api/groups/${groupId}/items/${itemId}`, token);
+}
+
 export function startCategoryCheckSession(
   token: string,
   categoryId: string
 ): Promise<CheckSession> {
   return post<CheckSession>(`/api/check/category/${categoryId}/start`, token, {});
+}
+
+export function startGroupCheckSession(token: string, groupId: string): Promise<CheckSession> {
+  return post<CheckSession>(`/api/check/group/${groupId}/start`, token, {});
 }
 
 export function setCheckSessionItemStatus(

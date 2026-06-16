@@ -58,6 +58,10 @@ type ShoppingListBody = {
   priority?: unknown;
 };
 
+type GroupItemBody = {
+  itemId?: unknown;
+};
+
 const config = getConfig();
 
 export function buildServer() {
@@ -375,6 +379,247 @@ export function buildServer() {
           categoryId: category.id,
           items: {
             create: items.map((item, index) => ({
+              itemId: item.id,
+              sortOrder: index
+            }))
+          }
+        },
+        include: checkSessionInclude
+      });
+    }
+  );
+
+  app.get("/api/groups", async (request) => {
+    return prisma.itemGroup.findMany({
+      where: {
+        userId: requireUserId(request.userId),
+        archivedAt: null
+      },
+      include: groupInclude,
+      orderBy: {
+        createdAt: "asc"
+      }
+    });
+  });
+
+  app.post<{ Body: NamedBody }>("/api/groups", async (request, reply) => {
+    const name = readRequiredString(request.body?.name);
+    if (!name) {
+      await sendError(reply, 400, "NAME_REQUIRED", "Group name is required.");
+      return;
+    }
+
+    return prisma.itemGroup.create({
+      data: {
+        userId: requireUserId(request.userId),
+        name,
+        icon: readOptionalString(request.body?.icon) ?? null
+      },
+      include: groupInclude
+    });
+  });
+
+  app.get<{ Params: { id: string } }>("/api/groups/:id", async (request, reply) => {
+    const group = await prisma.itemGroup.findFirst({
+      where: {
+        id: request.params.id,
+        userId: requireUserId(request.userId),
+        archivedAt: null
+      },
+      include: groupInclude
+    });
+
+    if (!group) {
+      await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+      return;
+    }
+
+    return group;
+  });
+
+  app.patch<{ Body: NamedBody; Params: { id: string } }>(
+    "/api/groups/:id",
+    async (request, reply) => {
+      const name = readRequiredString(request.body?.name);
+      if (!name) {
+        await sendError(reply, 400, "NAME_REQUIRED", "Group name is required.");
+        return;
+      }
+
+      const group = await prisma.itemGroup.findFirst({
+        where: {
+          id: request.params.id,
+          userId: requireUserId(request.userId),
+          archivedAt: null
+        }
+      });
+
+      if (!group) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+
+      return prisma.itemGroup.update({
+        where: {
+          id: group.id
+        },
+        data: {
+          name,
+          icon: readOptionalString(request.body?.icon) ?? null
+        },
+        include: groupInclude
+      });
+    }
+  );
+
+  app.post<{ Params: { id: string } }>("/api/groups/:id/archive", async (request, reply) => {
+    const group = await prisma.itemGroup.findFirst({
+      where: {
+        id: request.params.id,
+        userId: requireUserId(request.userId),
+        archivedAt: null
+      }
+    });
+
+    if (!group) {
+      await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+      return;
+    }
+
+    return prisma.itemGroup.update({
+      where: {
+        id: group.id
+      },
+      data: {
+        archivedAt: new Date()
+      },
+      include: groupInclude
+    });
+  });
+
+  app.post<{ Body: GroupItemBody; Params: { id: string } }>(
+    "/api/groups/:id/items",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const itemId = readRequiredString(request.body?.itemId);
+      if (!itemId) {
+        await sendError(reply, 400, "ITEM_ID_REQUIRED", "Item id is required.");
+        return;
+      }
+
+      const group = await prisma.itemGroup.findFirst({
+        where: {
+          id: request.params.id,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!group) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+
+      const item = await prisma.item.findFirst({
+        where: {
+          id: itemId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!item) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      await prisma.itemGroupItem.upsert({
+        where: {
+          groupId_itemId: {
+            groupId: group.id,
+            itemId: item.id
+          }
+        },
+        update: {},
+        create: {
+          groupId: group.id,
+          itemId: item.id
+        }
+      });
+
+      return prisma.itemGroup.findUniqueOrThrow({
+        where: {
+          id: group.id
+        },
+        include: groupInclude
+      });
+    }
+  );
+
+  app.delete<{ Params: { id: string; itemId: string } }>(
+    "/api/groups/:id/items/:itemId",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const group = await prisma.itemGroup.findFirst({
+        where: {
+          id: request.params.id,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!group) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+
+      await prisma.itemGroupItem.deleteMany({
+        where: {
+          groupId: group.id,
+          itemId: request.params.itemId,
+          item: {
+            userId
+          }
+        }
+      });
+
+      return prisma.itemGroup.findUniqueOrThrow({
+        where: {
+          id: group.id
+        },
+        include: groupInclude
+      });
+    }
+  );
+
+  app.post<{ Params: { groupId: string } }>(
+    "/api/check/group/:groupId/start",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const group = await prisma.itemGroup.findFirst({
+        where: {
+          id: request.params.groupId,
+          userId,
+          archivedAt: null
+        },
+        include: groupInclude
+      });
+
+      if (!group) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+
+      const activeItems = group.items
+        .map((groupItem) => groupItem.item)
+        .filter((item) => item.archivedAt === null && item.status !== "PAUSED");
+
+      return prisma.checkSession.create({
+        data: {
+          userId,
+          groupId: group.id,
+          items: {
+            create: activeItems.map((item, index) => ({
               itemId: item.id,
               sortOrder: index
             }))
@@ -1019,12 +1264,24 @@ export function buildServer() {
 
 const checkSessionInclude = {
   category: true,
+  group: true,
   items: {
     include: {
       item: true
     },
     orderBy: {
       sortOrder: "asc"
+    }
+  }
+} as const;
+
+const groupInclude = {
+  items: {
+    include: {
+      item: true
+    },
+    orderBy: {
+      createdAt: "asc"
     }
   }
 } as const;

@@ -19,6 +19,7 @@ model User {
 
   categories        Category[]
   checkSessions     CheckSession[]
+  groups            ItemGroup[]
   items             Item[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
@@ -68,6 +69,7 @@ model Item {
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   checkSessionItems CheckSessionItem[]
+  groupItems        ItemGroupItem[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 
@@ -121,6 +123,39 @@ model Reminder {
   @@index([groupId, scheduledFor])
 }
 
+model ItemGroup {
+  id              String    @id @default(cuid())
+  userId          String
+  name            String
+  icon            String?
+  usageCycleDays  Int?
+  nextCheckAt     DateTime?
+  reminderEnabled Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  archivedAt      DateTime?
+
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkSessions CheckSession[]
+  items         ItemGroupItem[]
+
+  @@index([userId, archivedAt])
+  @@index([userId, nextCheckAt])
+}
+
+model ItemGroupItem {
+  id        String   @id @default(cuid())
+  groupId   String
+  itemId    String
+  createdAt DateTime @default(now())
+
+  group ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  item  Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, itemId])
+  @@index([itemId])
+}
+
 model CheckSession {
   id          String             @id @default(cuid())
   userId      String
@@ -132,6 +167,7 @@ model CheckSession {
 
   user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  group    ItemGroup?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   items    CheckSessionItem[]
 
   @@index([userId, status, startedAt])

@@ -6,27 +6,33 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   ApiError,
+  addGroupItem,
   archiveCategory,
+  archiveGroup,
   archiveItem,
   cancelCheckSession,
   clearCompletedShoppingList,
   completeCheckSession,
   completeShoppingListItem,
   createCategory,
+  createGroup,
   createItem,
   createShoppingListItem,
   deleteShoppingListItem,
   getCategories,
+  getGroups,
   getItems,
   getShoppingList,
   login,
+  removeGroupItem,
   setItemStatus,
   setCheckSessionItemStatus,
   startCategoryCheckSession,
+  startGroupCheckSession,
   updateItem,
   updateShoppingListItem
 } from "../lib/api";
-import type { Category, CheckSession, Item, ShoppingListEntry } from "../lib/types";
+import type { Category, CheckSession, Item, ItemGroup, ShoppingListEntry } from "../lib/types";
 
 const statusLabels: Record<ItemStatus, string> = {
   IN_STOCK: "Есть",
@@ -49,11 +55,15 @@ export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"check" | "items" | "shopping">("items");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"check" | "groups" | "items" | "shopping">("items");
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
+  const [groupName, setGroupName] = useState("");
+  const [groupItemId, setGroupItemId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
   const [manualShoppingTitle, setManualShoppingTitle] = useState("");
@@ -68,6 +78,11 @@ export default function HomePage() {
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
     [categories, selectedCategoryId]
+  );
+
+  const selectedGroup = useMemo(
+    () => groups.find((group) => group.id === selectedGroupId) ?? groups[0],
+    [groups, selectedGroupId]
   );
 
   const visibleItems = useMemo(
@@ -147,15 +162,17 @@ export default function HomePage() {
       return;
     }
 
-    const [nextCategories, nextItems, nextShoppingList] = await Promise.all([
+    const [nextCategories, nextItems, nextShoppingList, nextGroups] = await Promise.all([
       getCategories(authToken),
       getItems(authToken),
-      getShoppingList(authToken)
+      getShoppingList(authToken),
+      getGroups(authToken)
     ]);
 
     setCategories(nextCategories);
     setItems(nextItems);
     setShoppingList(nextShoppingList);
+    setGroups(nextGroups);
   }
 
   async function handleCreateCategory() {
@@ -314,6 +331,61 @@ export default function HomePage() {
     setActiveTab("check");
   }
 
+  async function handleCreateGroup() {
+    if (!token || !groupName.trim()) {
+      return;
+    }
+
+    setError(null);
+    const group = await createGroup(token, groupName.trim());
+    setGroupName("");
+    setGroups((current) => [...current, group]);
+    setSelectedGroupId(group.id);
+  }
+
+  async function handleArchiveSelectedGroup() {
+    if (!token || !selectedGroup || !window.confirm(`Архивировать набор "${selectedGroup.name}"?`)) {
+      return;
+    }
+
+    setError(null);
+    await archiveGroup(token, selectedGroup.id);
+    setSelectedGroupId(null);
+    await refreshData(token);
+  }
+
+  async function handleAddGroupItem() {
+    if (!token || !selectedGroup || !groupItemId) {
+      return;
+    }
+
+    setError(null);
+    const group = await addGroupItem(token, selectedGroup.id, groupItemId);
+    setGroups((current) => current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup)));
+    setGroupItemId("");
+  }
+
+  async function handleRemoveGroupItem(itemId: string) {
+    if (!token || !selectedGroup) {
+      return;
+    }
+
+    setError(null);
+    const group = await removeGroupItem(token, selectedGroup.id, itemId);
+    setGroups((current) => current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup)));
+  }
+
+  async function handleStartGroupCheck() {
+    if (!token || !selectedGroup) {
+      return;
+    }
+
+    setError(null);
+    const session = await startGroupCheckSession(token, selectedGroup.id);
+    setCheckSession(session);
+    setActiveTab("check");
+  }
+
   async function handleCheckStatus(status: ItemStatus) {
     if (!token || !checkSession || !currentCheckItem) {
       return;
@@ -377,6 +449,13 @@ export default function HomePage() {
           onClick={() => setActiveTab("shopping")}
         >
           Покупки
+        </button>
+        <button
+          className={activeTab === "groups" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("groups")}
+        >
+          Наборы
         </button>
         <button
           className={activeTab === "check" ? "active" : ""}
@@ -689,6 +768,128 @@ export default function HomePage() {
             <p className="empty">Список покупок пуст.</p>
           )}
         </section>
+      ) : activeTab === "groups" ? (
+        <section className="stack">
+          <form
+            className="inline-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleCreateGroup().catch((caughtError) => setError(formatError(caughtError)));
+            }}
+          >
+            <input
+              aria-label="Название набора"
+              placeholder="Новый набор"
+              value={groupName}
+              onChange={(event) => setGroupName(event.target.value)}
+            />
+            <button type="submit">Добавить</button>
+          </form>
+
+          <div className="category-row" aria-label="Наборы">
+            {groups.map((group) => (
+              <button
+                className={selectedGroup?.id === group.id ? "category active" : "category"}
+                key={group.id}
+                type="button"
+                onClick={() => setSelectedGroupId(group.id)}
+              >
+                <span>{group.icon ? `${group.icon} ` : ""}{group.name}</span>
+                <small>{group.items.length} поз.</small>
+              </button>
+            ))}
+          </div>
+
+          {selectedGroup ? (
+            <>
+              <div className="section-heading">
+                <div>
+                  <h2>{selectedGroup.name}</h2>
+                  <p>{selectedGroup.items.length} поз.</p>
+                </div>
+                <div className="icon-actions">
+                  <button
+                    className="ghost-button"
+                    type="button"
+                    onClick={() =>
+                      void handleStartGroupCheck().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Проверить
+                  </button>
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    onClick={() =>
+                      void handleArchiveSelectedGroup().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Архив
+                  </button>
+                </div>
+              </div>
+
+              <form
+                className="inline-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleAddGroupItem().catch((caughtError) => setError(formatError(caughtError)));
+                }}
+              >
+                <select
+                  aria-label="Товар для набора"
+                  value={groupItemId}
+                  onChange={(event) => setGroupItemId(event.target.value)}
+                >
+                  <option value="">Выберите товар</option>
+                  {items
+                    .filter(
+                      (item) =>
+                        !selectedGroup.items.some((groupItem) => groupItem.itemId === item.id)
+                    )
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                </select>
+                <button type="submit">Добавить</button>
+              </form>
+
+              <div className="item-list">
+                {selectedGroup.items.length ? (
+                  selectedGroup.items.map((groupItem) => (
+                    <article className="shopping-row" key={groupItem.id}>
+                      <div>
+                        <h2>{groupItem.item.name}</h2>
+                        <span>{statusLabels[groupItem.item.status]}</span>
+                      </div>
+                      <button
+                        className="ghost-button danger-button"
+                        type="button"
+                        onClick={() =>
+                          void handleRemoveGroupItem(groupItem.itemId).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Убрать
+                      </button>
+                    </article>
+                  ))
+                ) : (
+                  <p className="empty">Добавьте товары в набор.</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="empty">Создайте набор для совместной проверки товаров.</p>
+          )}
+        </section>
       ) : (
         <section className="stack">
           <div className="section-heading">
@@ -719,7 +920,9 @@ export default function HomePage() {
             <p className="empty">Проверка отменена.</p>
           ) : currentCheckItem ? (
             <article className="check-card">
-              <p className="eyebrow">{checkSession?.category?.name ?? "Категория"}</p>
+              <p className="eyebrow">
+                {checkSession?.category?.name ?? checkSession?.group?.name ?? "Проверка"}
+              </p>
               <h2>{currentCheckItem.item.name}</h2>
               <div className="status-grid">
                 {statusOptions.map((status) => (

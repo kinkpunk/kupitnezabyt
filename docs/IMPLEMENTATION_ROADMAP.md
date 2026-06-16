@@ -304,29 +304,32 @@ Tests:
 
 ## Slice 8: Groups
 
+Status: implemented.
+
 Goal: add user-defined sets of items.
 
 Database:
 
-- Add `ItemGroup`.
-- Add `ItemGroupItem`.
+- Add `ItemGroup`. Done.
+- Add `ItemGroupItem`. Done.
 
 Backend:
 
-- Implement group CRUD.
-- Implement add/remove group items.
-- Implement group check sessions by reusing Slice 7 session logic.
+- Implement group CRUD. Done.
+- Implement add/remove group items. Done.
+- Implement group check sessions by reusing Slice 7 session logic. Done.
 
 Webapp:
 
-- Add groups list.
-- Add group detail and item management.
-- Add group check entry point.
+- Add groups list. Done.
+- Add group detail and item management. Done.
+- Add group check entry point. Done.
 
 Tests:
 
 - Unit and integration tests for group membership uniqueness.
 - Check-session tests for group sessions.
+  DB-backed tests still require PostgreSQL integration setup.
 
 ## Slice 9: Rule-Based Recommendations
 

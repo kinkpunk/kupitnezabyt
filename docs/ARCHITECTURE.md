@@ -122,4 +122,14 @@ Starting a category check creates a snapshot of active non-archived,
 non-`PAUSED` items. Each status selection calls the same item status workflow
 used elsewhere, so shopping list sync and reminder sync remain centralized.
 
-Group check sessions are deferred until groups exist.
+Group check sessions are implemented in Slice 8 after groups are introduced.
+
+## Groups
+
+Slice 8 adds user-defined item groups with `ItemGroup` and `ItemGroupItem`.
+Groups are owned by a single user and can include items from any category owned
+by that user. Membership is unique by `(groupId, itemId)`.
+
+Group check sessions reuse the same `CheckSession` and `CheckSessionItem`
+models introduced for category checks. Starting a group check snapshots active,
+non-archived, non-`PAUSED` group items.

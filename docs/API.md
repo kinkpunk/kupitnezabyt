@@ -173,10 +173,42 @@ deleted through the shopping list endpoints.
 Deleting completed entries removes only completed shopping list rows for the
 current authenticated user.
 
+## Groups
+
+```http
+GET    /api/groups
+POST   /api/groups
+GET    /api/groups/:id
+PATCH  /api/groups/:id
+POST   /api/groups/:id/archive
+POST   /api/groups/:id/items
+DELETE /api/groups/:id/items/:itemId
+```
+
+Create/update body:
+
+```json
+{
+  "name": "Аптечка",
+  "icon": "optional"
+}
+```
+
+Add item body:
+
+```json
+{
+  "itemId": "..."
+}
+```
+
+Group membership is unique by `(groupId, itemId)`.
+
 ## Check Sessions
 
 ```http
 POST /api/check/category/:categoryId/start
+POST /api/check/group/:groupId/start
 GET  /api/check/session/:sessionId
 POST /api/check/session/:sessionId/item/:itemId/status
 POST /api/check/session/:sessionId/complete
@@ -184,8 +216,9 @@ POST /api/check/session/:sessionId/cancel
 ```
 
 Starting a category check session snapshots active, non-archived, non-`PAUSED`
-items from the category. Updating an item status reuses the same backend item
-status workflow as the webapp cards and bot callbacks.
+items from the category. Starting a group check session snapshots active,
+non-archived, non-`PAUSED` items from that group. Updating an item status reuses
+the same backend item status workflow as the webapp cards and bot callbacks.
 
 Status body:
 

@@ -53,7 +53,29 @@ export type CheckSession = {
   startedAt: string;
   completedAt: string | null;
   category: Category | null;
+  group: ItemGroup | null;
   items: CheckSessionItem[];
+};
+
+export type ItemGroupItem = {
+  id: string;
+  groupId: string;
+  itemId: string;
+  createdAt: string;
+  item: Item;
+};
+
+export type ItemGroup = {
+  id: string;
+  name: string;
+  icon: string | null;
+  usageCycleDays: number | null;
+  nextCheckAt: string | null;
+  reminderEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
+  items: ItemGroupItem[];
 };
 
 export type AuthResponse = {
