@@ -1,15 +1,40 @@
 # Implementation Roadmap for `kupitnezabyt`
 
 This roadmap follows `README.md`, `AGENTS.md`, `docs/PRODUCT_SPEC.md`, and the
-current Slice 1 implementation.
+current implementation.
 
 The project should move in vertical slices: each slice must preserve the rule
 that the backend is the source of truth for identity, status transitions,
 `nextCheckAt`, and shopping list synchronization.
 
-## Current Baseline
+## Roadmap Status
 
-Implemented in Slice 1:
+Core MVP slices are implemented enough to exercise the main product loop:
+Telegram-compatible auth, categories, tracked items, status transitions,
+shopping list sync, item reminders, check sessions, groups, recommendations,
+search, export, and account deletion.
+
+This does not mean full compliance with `docs/PRODUCT_SPEC.md`. The product spec
+remains the source of the complete target. The remaining work is tracked as
+finalization/follow-up work rather than as new foundational product slices.
+
+Remaining `PRODUCT_SPEC` gaps:
+
+- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` reminder scheduling,
+  rendering, worker delivery, and bot callbacks.
+- Telegram bot commands `/shopping`, `/check`, and `/settings`.
+- UI/API flows for configuring check cycles and `reminderEnabled` for items,
+  categories, and groups.
+- Continuing an unfinished check session after webapp reload or returning later.
+- Rate limiting for auth and other sensitive endpoints.
+- Explicit delete/reorder contracts for categories/items where the spec requires
+  them; current MVP primarily uses archive flows.
+- Recommendation action `Скрыть похожие`.
+- `test:e2e` plus DB-backed API integration tests.
+
+## Slice 1 Baseline
+
+Historical baseline implemented in Slice 1:
 
 - `pnpm` workspace with `apps/*` and `packages/*`.
 - TypeScript base config and ESLint.
@@ -39,11 +64,11 @@ Implemented in Slice 1:
   - mark shopping entry bought
 - Minimal `docs/API.md` and `docs/ARCHITECTURE.md`.
 
-Known baseline constraints:
+Known Slice 1 baseline constraints at that point:
 
 - `packages/ui` is intentionally not created yet.
 - Telegram bot, worker, reminders, groups, check sessions, recommendations,
-  search, export, onboarding, deployment, and CI are not implemented yet.
+  search, export, onboarding, deployment, and CI were not implemented yet.
 - Dev auth is available only when `NODE_ENV=development` and
   `DEV_AUTH_ENABLED=true`.
 - Local full smoke testing requires Docker/PostgreSQL.
@@ -198,7 +223,8 @@ Tests:
 
 ## Slice 5: Periodic Checks and Reminder Data
 
-Status: implemented for data and API scheduling, without worker delivery.
+Status: implemented for item reminder data and API scheduling, without category,
+group, or shopping reminder delivery.
 
 Goal: add check scheduling data without sending Telegram reminders yet.
 
@@ -232,7 +258,7 @@ Tests:
 
 ## Slice 6: Worker and Telegram Notifications
 
-Status: implemented for `ITEM_CHECK` reminders.
+Status: implemented for `ITEM_CHECK` reminders only.
 
 Goal: send reminder messages through Telegram with duplicate protection.
 
@@ -240,6 +266,8 @@ Worker:
 
 - Create `apps/worker`. Done.
 - Implement due reminder polling. Done for `ITEM_CHECK`.
+- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` remain follow-up work
+  from `PRODUCT_SPEC`.
 - Send jobs through BullMQ/Redis or direct worker flow, depending on the simplest
   maintainable path at the time. Done with direct DB polling; BullMQ remains
   unnecessary until queue complexity is justified.
@@ -261,6 +289,7 @@ Bot:
 - Callback actions must call the same backend status logic used by the webapp.
   Done by moving item status workflows into `packages/database` and using them
   from both API and bot callbacks.
+- Category/group reminder callbacks remain follow-up work.
 
 Tests:
 
@@ -395,7 +424,7 @@ Tests:
 
 ## Slice 11: Onboarding and Product Polish
 
-Status: implemented.
+Status: implemented for the current local onboarding model.
 
 Goal: make first-run UX match the product spec.
 
@@ -422,6 +451,8 @@ Database:
 
 - Add onboarding state only if needed. Not needed for MVP; webapp stores local
   completion state in `localStorage`.
+- Persisted per-user onboarding state remains a possible follow-up if multiple
+  users/devices need first-run state to be synchronized.
 
 Tests:
 
@@ -457,10 +488,11 @@ Decision for the current MVP state:
 
 ## Slice 13: Final MVP Integration
 
-Status: implemented for local verification; external Telegram smoke requires
-real credentials and a public HTTPS Mini App URL.
+Status: implemented for local core-MVP verification; external Telegram smoke
+requires real credentials and a public HTTPS Mini App URL.
 
-Goal: verify the complete MVP as one product.
+Goal: verify the implemented core MVP as one product and make remaining
+`PRODUCT_SPEC` gaps explicit.
 
 Tasks:
 
@@ -484,6 +516,17 @@ Tasks:
   raw Telegram init data; manual log review remains in final checklist.
 - Update `README.md`, `docs/API.md`, and `docs/ARCHITECTURE.md` where behavior
   changed. Done for README and architecture; API behavior did not change.
+
+Finalization work after Slice 13:
+
+- Run the full local Docker smoke from `docs/FINAL_INTEGRATION.md`.
+- Add and run `pnpm test:e2e` for the main dev-auth product flow.
+- Add DB-backed integration tests for auth/user isolation, CRUD, shopping
+  duplicate prevention, check sessions, groups, recommendations, search, export,
+  and account deletion.
+- Run Telegram smoke with a real bot token and public HTTPS Mini App URL.
+- Decide whether remaining `PRODUCT_SPEC` gaps are in-scope for the first
+  release or should be explicitly deferred in a release note.
 
 ## Dependency Policy
 

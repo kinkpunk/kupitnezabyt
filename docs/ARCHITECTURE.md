@@ -1,5 +1,21 @@
 # Architecture
 
+## Implementation Status
+
+The current architecture supports the implemented core MVP slices. It should not
+be read as full compliance with every requirement in `docs/PRODUCT_SPEC.md`.
+The product spec remains the complete target; the remaining gaps are tracked in
+`docs/IMPLEMENTATION_ROADMAP.md` and summarized here as follow-up work:
+
+- reminder delivery beyond `ITEM_CHECK`;
+- Telegram bot commands beyond `/start`, `/app`, and `/help`;
+- UI/API configuration for check cycles and reminder toggles;
+- persisted continuation of unfinished check sessions;
+- auth/sensitive endpoint rate limiting;
+- explicit category/item delete and reorder flows where required by the spec;
+- the recommendation action `Скрыть похожие`;
+- browser e2e and DB-backed API integration tests.
+
 ## Slice 1 Scope
 
 The first vertical slice implements only:
@@ -58,8 +74,10 @@ item to `IN_STOCK`, `LOW`, or `PAUSED` completes the open entry.
 ## Telegram Bot
 
 Slice 3 adds a minimal `apps/bot` service with grammY. It currently implements
-only `/start`, `/app`, and `/help`, plus an inline Mini App button. Reminder
-messages and callback status actions are intentionally deferred to later slices.
+only `/start`, `/app`, and `/help`, plus an inline Mini App button. Slice 6 adds
+item reminder callback handling for `ITEM_CHECK` notifications. The MVP spec
+also lists `/shopping`, `/check`, `/settings`, category/group reminder actions,
+and shopping reminder actions; those remain follow-up work.
 
 The bot requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBAPP_URL` when started
 directly:
@@ -70,7 +88,7 @@ pnpm --filter @kupitnezabyt/bot dev
 
 ## Data Model
 
-Slice 1 includes only:
+The Slice 1 data-model baseline included only:
 
 - `User`
 - `Category`
@@ -98,8 +116,9 @@ Bot API, and updates reminder status to `SENT`, `FAILED`, or `CANCELLED`.
 Temporary failures are retried by moving `scheduledFor` forward with bounded
 backoff. User data mutations are not rolled back when Telegram delivery fails.
 
-The worker currently handles `ITEM_CHECK` reminders. Other reminder types are
-left for later slices when their product flows exist.
+The worker currently handles `ITEM_CHECK` reminders. `CATEGORY_CHECK`,
+`GROUP_CHECK`, and `SHOPPING_REMINDER` exist in the data model but are not yet
+delivered by the worker.
 
 ```bash
 pnpm --filter @kupitnezabyt/worker dev
@@ -121,6 +140,10 @@ Slice 7 adds guided category checks with `CheckSession` and `CheckSessionItem`.
 Starting a category check creates a snapshot of active non-archived,
 non-`PAUSED` items. Each status selection calls the same item status workflow
 used elsewhere, so shopping list sync and reminder sync remain centralized.
+
+The API can fetch a session by id, but the current webapp does not yet persist or
+discover unfinished sessions after reload. Continuing an unfinished session later
+is a product-spec follow-up.
 
 Group check sessions are implemented in Slice 8 after groups are introduced.
 
@@ -203,6 +226,7 @@ against Compose PostgreSQL and Redis. Telegram-facing services are behind a
 separate `telegram` profile because they require a real bot token, a public
 Mini App URL, and network access to Telegram.
 
-The final integration checklist lives in `docs/FINAL_INTEGRATION.md`. Automated
-unit/type/lint checks are available in the workspace today; full browser e2e and
-DB-backed API integration tests remain explicit follow-up work.
+The final integration checklist lives in `docs/FINAL_INTEGRATION.md`. It
+verifies the implemented core MVP and highlights remaining `PRODUCT_SPEC` gaps.
+Automated unit/type/lint checks are available in the workspace today; full
+browser e2e and DB-backed API integration tests remain explicit follow-up work.

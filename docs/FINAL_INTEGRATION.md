@@ -1,6 +1,11 @@
 # Final MVP Integration
 
-This document records the Slice 13 integration checklist for the current MVP.
+This document records the Slice 13 integration checklist for the implemented
+core MVP. Passing this checklist proves that the current product core works
+together locally and with Telegram smoke credentials; it does not mean full
+compliance with every requirement in `docs/PRODUCT_SPEC.md`.
+
+Remaining product-spec gaps are tracked in `docs/IMPLEMENTATION_ROADMAP.md`.
 
 ## Local Compose
 
@@ -36,6 +41,9 @@ The `telegram` profile requires a real `TELEGRAM_BOT_TOKEN`, a public
 - `pnpm db:migrate`
 - API health check at `http://localhost:3001/health`
 - Webapp opens at `http://localhost:3000`
+
+These checks should be treated as release-readiness checks for the implemented
+core MVP, not as acceptance of the full product spec.
 
 ## Product Smoke Checklist
 
@@ -82,10 +90,22 @@ Requires real Telegram credentials:
 - DB-backed integration tests for API user isolation still require a dedicated
   PostgreSQL test harness.
 - Telegram end-to-end checks require external credentials and a public HTTPS URL.
+- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` reminder delivery are
+  not implemented yet.
+- Telegram bot commands `/shopping`, `/check`, and `/settings` are not
+  implemented yet.
+- UI/API flows for configuring item/category/group check cycles and reminder
+  toggles are incomplete.
+- Unfinished check sessions are not persisted/discovered in the webapp after
+  reload.
+- Rate limiting for auth and other sensitive endpoints is still follow-up work.
+- Category/item delete and reorder flows are not fully implemented where the
+  product spec requires them; current flows prefer archiving.
+- Recommendation action `Скрыть похожие` is not implemented yet.
 
-## Latest Local Verification
+## Previous Local Verification
 
-Current Slice 13 local verification:
+Previous Slice 13 local verification recorded during implementation:
 
 - `pnpm typecheck` passed.
 - `pnpm lint` passed.
@@ -94,3 +114,7 @@ Current Slice 13 local verification:
 - `pnpm test:e2e` could not run because the script is not configured.
 - Docker Compose smoke could not run in the current environment because the
   `docker` CLI is unavailable.
+
+Before any release-readiness decision, rerun the checklist above in the current
+workspace and record the fresh results. This section is historical context, not
+a guarantee that the current working tree is clean.
