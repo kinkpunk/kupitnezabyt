@@ -692,7 +692,7 @@ export default function HomePage() {
   if (showOnboarding) {
     return (
       <main className="app-shell onboarding-shell">
-        {error ? <div className="notice">{error}</div> : null}
+        <ErrorNotice message={error} onClose={() => setError(null)} />
         <section className="onboarding-panel">
           <p className="eyebrow">Шаг {onboardingStep + 1} из 4</p>
 
@@ -829,7 +829,7 @@ export default function HomePage() {
         <span className="counter">{shoppingList.length}</span>
       </header>
 
-      {error ? <div className="notice">{error}</div> : null}
+      <ErrorNotice message={error} onClose={() => setError(null)} />
 
       <nav className="tabs" aria-label="Основные разделы">
         <button
@@ -1799,6 +1799,32 @@ function formatError(error: unknown): string {
   }
 
   return "Что-то пошло не так.";
+}
+
+function ErrorNotice({
+  message,
+  onClose
+}: {
+  message: string | null;
+  onClose: () => void;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="notice" role="alert">
+      <span>{message}</span>
+      <button
+        className="notice-close"
+        type="button"
+        aria-label="Закрыть ошибку"
+        onClick={onClose}
+      >
+        Закрыть
+      </button>
+    </div>
+  );
 }
 
 function formatDate(value: string | null): string {

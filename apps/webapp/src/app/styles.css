@@ -137,12 +137,26 @@ select {
 }
 
 .notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   margin-bottom: 12px;
   border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
   padding: 12px;
+}
+
+.notice-close {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  background: transparent;
+  color: var(--danger);
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 .tabs {

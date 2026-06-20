@@ -362,9 +362,7 @@ async function request<TResponse>(
     body: unknown | undefined;
   }
 ): Promise<TResponse> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json"
-  };
+  const headers: Record<string, string> = {};
 
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
@@ -376,6 +374,7 @@ async function request<TResponse>(
   };
 
   if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
     init.body = JSON.stringify(options.body);
   }
 
