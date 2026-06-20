@@ -23,6 +23,13 @@ const mockTx = vi.hoisted(() => ({
   },
   item: {
     findMany: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn()
+  },
+  recommendationDismissal: {
+    deleteMany: vi.fn()
+  },
+  shoppingListItem: {
     updateMany: vi.fn()
   }
 }));
@@ -228,6 +235,49 @@ describe("archive routes", () => {
       include: {
         category: true,
         item: true
+      }
+    });
+
+    await app.close();
+  });
+
+  it("clears matching recommendation dismissals when archiving an item", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.item.findFirst.mockResolvedValue({
+      id: "item-1",
+      userId: "user-1",
+      categoryId: "category-1",
+      name: "Кофе",
+      createdAt: new Date("2026-06-20T10:00:00.000Z"),
+      lastBoughtAt: null,
+      archivedAt: null
+    });
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.item.findMany.mockResolvedValue([{ id: "item-1", name: "Кофе" }]);
+    mockTx.recommendationDismissal.deleteMany.mockResolvedValue({ count: 1 });
+    mockTx.shoppingListItem.updateMany.mockResolvedValue({ count: 0 });
+    mockTx.item.update.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items/item-1/archive",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.recommendationDismissal.deleteMany).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1",
+        OR: [
+          { ruleId: "coffee-basics", suggestedItem: "Фильтры для кофе" },
+          { ruleId: "coffee-basics", suggestedItem: "Молоко" },
+          { ruleId: "coffee-basics", suggestedItem: "Овсяное молоко" }
+        ]
       }
     });
 

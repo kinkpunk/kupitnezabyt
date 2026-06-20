@@ -86,6 +86,17 @@ type ActiveTab =
   | "settings"
   | "shopping";
 
+const navTabs: { id: ActiveTab; icon: string; label: string }[] = [
+  { id: "home", icon: "⌂", label: "Главная" },
+  { id: "items", icon: "▦", label: "Категории" },
+  { id: "shopping", icon: "□", label: "Покупки" },
+  { id: "check", icon: "✓", label: "Проверка" },
+  { id: "search", icon: "⌕", label: "Поиск" },
+  { id: "groups", icon: "◎", label: "Наборы" },
+  { id: "settings", icon: "⚙", label: "Настройки" },
+  { id: "archive", icon: "◷", label: "Архив" }
+];
+
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -832,48 +843,17 @@ export default function HomePage() {
       <ErrorNotice message={error} onClose={() => setError(null)} />
 
       <nav className="tabs" aria-label="Основные разделы">
-        <button
-          className={activeTab === "home" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("home")}
-        >
-          Главная
-        </button>
-        <button
-          className={activeTab === "items" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("items")}
-        >
-          Категории
-        </button>
-        <button
-          className={activeTab === "shopping" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("shopping")}
-        >
-          Покупки
-        </button>
-        <button
-          className={activeTab === "check" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("check")}
-        >
-          Проверка
-        </button>
-        <button
-          className={activeTab === "settings" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("settings")}
-        >
-          Настройки
-        </button>
-        <button
-          className={activeTab === "archive" ? "active" : ""}
-          type="button"
-          onClick={() => setActiveTab("archive")}
-        >
-          Архив
-        </button>
+        {navTabs.map((tab) => (
+          <button
+            className={activeTab === tab.id ? "active" : ""}
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span aria-hidden="true">{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </nav>
 
       {activeTab === "home" ? (
@@ -1755,12 +1735,6 @@ export default function HomePage() {
           </div>
 
           <div className="settings-actions">
-            <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
-              Поиск товаров
-            </button>
-            <button className="ghost-button" type="button" onClick={() => setActiveTab("groups")}>
-              Наборы товаров
-            </button>
             <button
               type="button"
               onClick={() =>

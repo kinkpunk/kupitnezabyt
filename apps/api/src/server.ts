@@ -439,6 +439,34 @@ export function buildServer() {
     }
 
     return prisma.$transaction(async (tx) => {
+      const [itemsToArchive, activeItems] = await Promise.all([
+        tx.item.findMany({
+          where: {
+            userId,
+            categoryId: category.id,
+            archivedAt: null
+          },
+          select: {
+            id: true,
+            name: true,
+            createdAt: true,
+            lastBoughtAt: true
+          }
+        }),
+        tx.item.findMany({
+          where: {
+            userId,
+            archivedAt: null
+          },
+          select: {
+            id: true,
+            name: true
+          }
+        })
+      ]);
+
+      await clearRecommendationDismissalsForItems(tx, userId, itemsToArchive, activeItems);
+
       await tx.item.updateMany({
         where: {
           userId,
@@ -1325,6 +1353,19 @@ export function buildServer() {
     }
 
     return prisma.$transaction(async (tx) => {
+      const activeItems = await tx.item.findMany({
+        where: {
+          userId,
+          archivedAt: null
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      });
+
+      await clearRecommendationDismissalsForItems(tx, userId, [item], activeItems);
+
       await tx.shoppingListItem.updateMany({
         where: {
           userId,
@@ -1847,6 +1888,55 @@ async function getRecommendationsForItem(
     userItems: activeItems,
     dismissals,
     limit: 5
+  });
+}
+
+async function clearRecommendationDismissalsForItems(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  triggerItems: {
+    id: string;
+    name: string;
+    createdAt?: Date | null;
+    lastBoughtAt?: Date | null;
+  }[],
+  activeItems: {
+    id: string;
+    name: string;
+  }[]
+): Promise<void> {
+  const dismissalKeys = new Map<string, { ruleId: string; suggestedItem: string }>();
+
+  for (const triggerItem of triggerItems) {
+    const suggestions = getRuleBasedRecommendations({
+      triggerItem,
+      userItems: activeItems,
+      dismissals: [],
+      limit: 50
+    });
+
+    for (const suggestion of suggestions) {
+      dismissalKeys.set(`${suggestion.ruleId}:${normalizeName(suggestion.suggestedItem)}`, {
+        ruleId: suggestion.ruleId,
+        suggestedItem: suggestion.suggestedItem
+      });
+    }
+  }
+
+  const dismissalFilters = [...dismissalKeys.values()].map((dismissal) => ({
+    ruleId: dismissal.ruleId,
+    suggestedItem: dismissal.suggestedItem
+  }));
+
+  if (!dismissalFilters.length) {
+    return;
+  }
+
+  await tx.recommendationDismissal.deleteMany({
+    where: {
+      userId,
+      OR: dismissalFilters
+    }
   });
 }
 

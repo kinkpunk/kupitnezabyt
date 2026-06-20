@@ -161,8 +161,8 @@ select {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
   margin-bottom: 16px;
 }
 
@@ -172,6 +172,21 @@ select {
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--text);
+}
+
+.tabs button {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 4px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.tabs button span:first-child {
+  font-size: 17px;
+  line-height: 1;
 }
 
 .tabs button.active,
@@ -480,7 +495,7 @@ select {
 
 @media (min-width: 520px) {
   .tabs {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   .shopping-form {
