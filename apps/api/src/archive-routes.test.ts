@@ -22,6 +22,7 @@ const mockTx = vi.hoisted(() => ({
     update: vi.fn()
   },
   item: {
+    create: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
     updateMany: vi.fn()
@@ -30,6 +31,7 @@ const mockTx = vi.hoisted(() => ({
     deleteMany: vi.fn()
   },
   shoppingListItem: {
+    create: vi.fn(),
     updateMany: vi.fn()
   }
 }));
@@ -278,6 +280,64 @@ describe("archive routes", () => {
           { ruleId: "coffee-basics", suggestedItem: "Молоко" },
           { ruleId: "coffee-basics", suggestedItem: "Овсяное молоко" }
         ]
+      }
+    });
+
+    await app.close();
+  });
+
+  it("creates new items as need-buy shopping entries", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      userId: "user-1",
+      archivedAt: null
+    });
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.item.create.mockResolvedValue({
+      id: "item-1",
+      userId: "user-1",
+      categoryId: "category-1",
+      name: "Кофе",
+      status: "NEED_BUY"
+    });
+    mockTx.shoppingListItem.create.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        categoryId: "category-1",
+        name: "Кофе"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().status).toBe("NEED_BUY");
+    expect(mockTx.item.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        categoryId: "category-1",
+        name: "Кофе",
+        status: "NEED_BUY",
+        brand: null,
+        notes: null,
+        usageCycleDays: null
+      }
+    });
+    expect(mockTx.shoppingListItem.create).toHaveBeenCalledWith({
+      data: {
+        userId: "user-1",
+        itemId: "item-1",
+        title: "Кофе",
+        categoryId: "category-1",
+        priority: "NORMAL"
       }
     });
 

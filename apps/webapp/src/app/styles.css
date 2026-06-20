@@ -184,9 +184,10 @@ select {
   line-height: 1.1;
 }
 
-.tabs button span:first-child {
-  font-size: 17px;
-  line-height: 1;
+.tabs button svg {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
 }
 
 .tabs button.active,

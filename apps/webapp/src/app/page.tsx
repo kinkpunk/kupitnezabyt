@@ -3,6 +3,17 @@
 import { calculateReadiness } from "@kupitnezabyt/shared";
 import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
+import {
+  Archive,
+  Boxes,
+  Home,
+  ListChecks,
+  Search,
+  Settings,
+  ShoppingCart,
+  Tags
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -86,15 +97,15 @@ type ActiveTab =
   | "settings"
   | "shopping";
 
-const navTabs: { id: ActiveTab; icon: string; label: string }[] = [
-  { id: "home", icon: "⌂", label: "Главная" },
-  { id: "items", icon: "▦", label: "Категории" },
-  { id: "shopping", icon: "□", label: "Покупки" },
-  { id: "check", icon: "✓", label: "Проверка" },
-  { id: "search", icon: "⌕", label: "Поиск" },
-  { id: "groups", icon: "◎", label: "Наборы" },
-  { id: "settings", icon: "⚙", label: "Настройки" },
-  { id: "archive", icon: "◷", label: "Архив" }
+const navTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
+  { id: "home", icon: Home, label: "Главная" },
+  { id: "items", icon: Tags, label: "Категории" },
+  { id: "shopping", icon: ShoppingCart, label: "Покупки" },
+  { id: "check", icon: ListChecks, label: "Проверка" },
+  { id: "search", icon: Search, label: "Поиск" },
+  { id: "groups", icon: Boxes, label: "Наборы" },
+  { id: "settings", icon: Settings, label: "Настройки" },
+  { id: "archive", icon: Archive, label: "Архив" }
 ];
 
 export default function HomePage() {
@@ -843,17 +854,21 @@ export default function HomePage() {
       <ErrorNotice message={error} onClose={() => setError(null)} />
 
       <nav className="tabs" aria-label="Основные разделы">
-        {navTabs.map((tab) => (
-          <button
-            className={activeTab === tab.id ? "active" : ""}
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <span aria-hidden="true">{tab.icon}</span>
-            <span>{tab.label}</span>
-          </button>
-        ))}
+        {navTabs.map((tab) => {
+          const Icon = tab.icon;
+
+          return (
+            <button
+              className={activeTab === tab.id ? "active" : ""}
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
       {activeTab === "home" ? (

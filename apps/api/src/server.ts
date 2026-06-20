@@ -983,15 +983,30 @@ export function buildServer() {
       return;
     }
 
-    return prisma.item.create({
-      data: {
-        userId,
-        categoryId,
-        name,
-        brand: readOptionalString(request.body?.brand) ?? null,
-        notes: readOptionalString(request.body?.notes) ?? null,
-        usageCycleDays: readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null
-      }
+    return prisma.$transaction(async (tx) => {
+      const item = await tx.item.create({
+        data: {
+          userId,
+          categoryId,
+          name,
+          status: "NEED_BUY",
+          brand: readOptionalString(request.body?.brand) ?? null,
+          notes: readOptionalString(request.body?.notes) ?? null,
+          usageCycleDays: readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null
+        }
+      });
+
+      await tx.shoppingListItem.create({
+        data: {
+          userId,
+          itemId: item.id,
+          title: item.name,
+          categoryId: item.categoryId,
+          priority: "NORMAL"
+        }
+      });
+
+      return item;
     });
   });
 
@@ -1089,12 +1104,27 @@ export function buildServer() {
         return;
       }
 
-      return prisma.item.create({
-        data: {
-          userId,
-          categoryId: category.id,
-          name: suggestion.suggestedItem
-        }
+      return prisma.$transaction(async (tx) => {
+        const item = await tx.item.create({
+          data: {
+            userId,
+            categoryId: category.id,
+            name: suggestion.suggestedItem,
+            status: "NEED_BUY"
+          }
+        });
+
+        await tx.shoppingListItem.create({
+          data: {
+            userId,
+            itemId: item.id,
+            title: item.name,
+            categoryId: item.categoryId,
+            priority: "NORMAL"
+          }
+        });
+
+        return item;
       });
     }
   );
