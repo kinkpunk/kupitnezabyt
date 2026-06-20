@@ -342,8 +342,11 @@ export default function HomePage() {
     }
 
     setError(null);
-    await completeShoppingListItem(token, entry.id);
+    const completedEntry = await completeShoppingListItem(token, entry.id);
     await refreshData(token);
+    if (completedEntry.item) {
+      await refreshRecommendations(token, completedEntry.item);
+    }
   }
 
   async function handleCreateManualShoppingItem() {

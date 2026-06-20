@@ -1752,6 +1752,8 @@ async function getRecommendationsForItem(
   triggerItem: {
     id: string;
     name: string;
+    createdAt?: Date | null;
+    lastBoughtAt?: Date | null;
   }
 ) {
   const [activeItems, dismissals] = await Promise.all([
@@ -1771,7 +1773,8 @@ async function getRecommendationsForItem(
       },
       select: {
         ruleId: true,
-        suggestedItem: true
+        suggestedItem: true,
+        createdAt: true
       }
     })
   ]);

@@ -9,11 +9,14 @@ export type RecommendationRule = {
 export type RecommendationSourceItem = {
   id: string;
   name: string;
+  createdAt?: Date | string | null;
+  lastBoughtAt?: Date | string | null;
 };
 
 export type RecommendationDismissalInput = {
   ruleId: string;
   suggestedItem: string;
+  createdAt?: Date | string | null;
 };
 
 export type RecommendationSuggestion = {
@@ -107,10 +110,11 @@ export function getRuleBasedRecommendations(input: {
   const normalizedUserItemNames = new Set(
     input.userItems.map((item) => normalizeName(item.name))
   );
+  const recommendationCycleStartedAt = getRecommendationCycleStartedAt(input.triggerItem);
   const dismissedKeys = new Set(
-    input.dismissals.map(
-      (dismissal) => `${dismissal.ruleId}:${normalizeName(dismissal.suggestedItem)}`
-    )
+    input.dismissals
+      .filter((dismissal) => dismissalAppliesToCurrentCycle(dismissal, recommendationCycleStartedAt))
+      .map((dismissal) => `${dismissal.ruleId}:${normalizeName(dismissal.suggestedItem)}`)
   );
   const suggestions: RecommendationSuggestion[] = [];
   const emittedNames = new Set<string>();
@@ -149,6 +153,31 @@ export function getRuleBasedRecommendations(input: {
   }
 
   return suggestions;
+}
+
+function getRecommendationCycleStartedAt(item: RecommendationSourceItem): Date | null {
+  return toDate(item.lastBoughtAt) ?? toDate(item.createdAt);
+}
+
+function dismissalAppliesToCurrentCycle(
+  dismissal: RecommendationDismissalInput,
+  recommendationCycleStartedAt: Date | null
+): boolean {
+  const dismissedAt = toDate(dismissal.createdAt);
+  if (!dismissedAt || !recommendationCycleStartedAt) {
+    return true;
+  }
+
+  return dismissedAt >= recommendationCycleStartedAt;
+}
+
+function toDate(value: Date | string | null | undefined): Date | null {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function matchesRule(

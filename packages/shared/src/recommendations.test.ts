@@ -55,7 +55,8 @@ describe("getRuleBasedRecommendations", () => {
     const suggestions = getRuleBasedRecommendations({
       triggerItem: {
         id: "item-1",
-        name: "Кофе"
+        name: "Кофе",
+        createdAt: "2026-06-20T10:00:00.000Z"
       },
       userItems: [
         { id: "item-1", name: "Кофе" },
@@ -64,7 +65,8 @@ describe("getRuleBasedRecommendations", () => {
       dismissals: [
         {
           ruleId: "coffee-basics",
-          suggestedItem: "Фильтры для кофе"
+          suggestedItem: "Фильтры для кофе",
+          createdAt: "2026-06-20T10:05:00.000Z"
         }
       ]
     });
@@ -72,6 +74,51 @@ describe("getRuleBasedRecommendations", () => {
     expect(suggestions.map((suggestion) => suggestion.suggestedItem)).toEqual([
       "Овсяное молоко"
     ]);
+  });
+
+  it("ignores dismissals from before the item was bought again", () => {
+    const suggestions = getRuleBasedRecommendations({
+      triggerItem: {
+        id: "item-1",
+        name: "Кофе",
+        createdAt: "2026-06-20T10:00:00.000Z",
+        lastBoughtAt: "2026-06-21T10:00:00.000Z"
+      },
+      userItems: [{ id: "item-1", name: "Кофе" }],
+      dismissals: [
+        {
+          ruleId: "coffee-basics",
+          suggestedItem: "Фильтры для кофе",
+          createdAt: "2026-06-20T10:05:00.000Z"
+        }
+      ]
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.suggestedItem)).toContain(
+      "Фильтры для кофе"
+    );
+  });
+
+  it("ignores dismissals from before a new matching item was added", () => {
+    const suggestions = getRuleBasedRecommendations({
+      triggerItem: {
+        id: "item-2",
+        name: "Кофе",
+        createdAt: "2026-06-21T10:00:00.000Z"
+      },
+      userItems: [{ id: "item-2", name: "Кофе" }],
+      dismissals: [
+        {
+          ruleId: "coffee-basics",
+          suggestedItem: "Фильтры для кофе",
+          createdAt: "2026-06-20T10:05:00.000Z"
+        }
+      ]
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.suggestedItem)).toContain(
+      "Фильтры для кофе"
+    );
   });
 
   it("honors required terms", () => {
