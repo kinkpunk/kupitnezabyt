@@ -67,6 +67,7 @@ GET /api/categories/:id
 PATCH /api/categories/:id
 POST /api/categories/:id/archive
 POST /api/categories/:id/restore
+DELETE /api/categories/:id
 ```
 
 Create body:
@@ -91,6 +92,7 @@ POST /api/items/:id/status
 POST /api/items/:id/snooze
 POST /api/items/:id/archive
 POST /api/items/:id/restore
+DELETE /api/items/:id
 ```
 
 Create body:
@@ -161,7 +163,8 @@ entry.
 `GET /api/categories?archived=true` and `GET /api/items?archived=true` return
 archived records for the authenticated user. Restoring a category also restores
 items that were archived by that category archive action. Restoring an item
-requires its category to be active.
+requires its category to be active. Deleting categories or items through these
+endpoints is allowed only for archived records.
 
 ## Shopping List
 

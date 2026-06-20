@@ -543,6 +543,33 @@ export function buildServer() {
     });
   });
 
+  app.delete<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
+    const category = await prisma.category.findFirst({
+      where: {
+        id: request.params.id,
+        userId: requireUserId(request.userId),
+        archivedAt: {
+          not: null
+        }
+      }
+    });
+
+    if (!category) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Archived category was not found.");
+      return;
+    }
+
+    await prisma.category.delete({
+      where: {
+        id: category.id
+      }
+    });
+
+    return {
+      deleted: true
+    };
+  });
+
   app.post<{ Params: { categoryId: string } }>(
     "/api/check/category/:categoryId/start",
     async (request, reply) => {
@@ -1369,6 +1396,33 @@ export function buildServer() {
     });
   });
 
+  app.delete<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
+    const item = await prisma.item.findFirst({
+      where: {
+        id: request.params.id,
+        userId: requireUserId(request.userId),
+        archivedAt: {
+          not: null
+        }
+      }
+    });
+
+    if (!item) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Archived item was not found.");
+      return;
+    }
+
+    await prisma.item.delete({
+      where: {
+        id: item.id
+      }
+    });
+
+    return {
+      deleted: true
+    };
+  });
+
   app.get("/api/shopping-list", async (request) => {
     return prisma.shoppingListItem.findMany({
       where: {
@@ -1512,9 +1566,18 @@ export function buildServer() {
     "/api/shopping-list/:id/complete",
     async (request, reply) => {
       try {
-        return await prisma.$transaction((tx) =>
+        const completedItem = await prisma.$transaction((tx) =>
           markShoppingListItemBought(tx, requireUserId(request.userId), request.params.id)
         );
+        return prisma.shoppingListItem.findUniqueOrThrow({
+          where: {
+            id: completedItem.id
+          },
+          include: {
+            category: true,
+            item: true
+          }
+        });
       } catch (error) {
         if (error instanceof Error && error.message === "SHOPPING_LIST_ITEM_NOT_FOUND") {
           await sendError(

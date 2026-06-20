@@ -116,6 +116,10 @@ export function restoreCategory(token: string, categoryId: string): Promise<Cate
   return post<Category>(`/api/categories/${categoryId}/restore`, token, {});
 }
 
+export function deleteArchivedCategory(token: string, categoryId: string): Promise<DeleteResponse> {
+  return del<DeleteResponse>(`/api/categories/${categoryId}`, token);
+}
+
 export function getItems(token: string): Promise<Item[]> {
   return get<Item[]>("/api/items", token);
 }
@@ -154,6 +158,10 @@ export function archiveItem(token: string, itemId: string): Promise<Item> {
 
 export function restoreItem(token: string, itemId: string): Promise<Item> {
   return post<Item>(`/api/items/${itemId}/restore`, token, {});
+}
+
+export function deleteArchivedItem(token: string, itemId: string): Promise<DeleteResponse> {
+  return del<DeleteResponse>(`/api/items/${itemId}`, token);
 }
 
 export function setItemStatus(

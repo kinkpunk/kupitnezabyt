@@ -23,6 +23,8 @@ import {
   clearSavedToken,
   deleteShoppingListItem,
   deleteAccount,
+  deleteArchivedCategory,
+  deleteArchivedItem,
   dismissRecommendation,
   exportUserData,
   getArchivedCategories,
@@ -110,6 +112,7 @@ export default function HomePage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
+  const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -272,6 +275,7 @@ export default function HomePage() {
     setError(null);
     const category = await createCategory(token, categoryName.trim());
     setCategoryName("");
+    setShowCategoryForm(false);
     setCategories((current) => [...current, category]);
     setSelectedCategoryId(category.id);
   }
@@ -455,6 +459,26 @@ export default function HomePage() {
     const restoredItem = await restoreItem(token, item.id);
     setSelectedCategoryId(restoredItem.categoryId);
     setActiveTab("items");
+    await refreshData(token);
+  }
+
+  async function handleDeleteArchivedCategory(category: Category) {
+    if (!token || !window.confirm(`Удалить категорию "${category.name}" из архива навсегда?`)) {
+      return;
+    }
+
+    setError(null);
+    await deleteArchivedCategory(token, category.id);
+    await refreshData(token);
+  }
+
+  async function handleDeleteArchivedItem(item: Item) {
+    if (!token || !window.confirm(`Удалить товар "${item.name}" из архива навсегда?`)) {
+      return;
+    }
+
+    setError(null);
+    await deleteArchivedItem(token, item.id);
     await refreshData(token);
   }
 
@@ -983,21 +1007,39 @@ export default function HomePage() {
         </section>
       ) : activeTab === "items" ? (
         <section className="stack">
-          <form
-            className="inline-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleCreateCategory().catch((caughtError) => setError(formatError(caughtError)));
-            }}
-          >
-            <input
-              aria-label="Название категории"
-              placeholder="Новая категория"
-              value={categoryName}
-              onChange={(event) => setCategoryName(event.target.value)}
-            />
-            <button type="submit">Добавить</button>
-          </form>
+          <div className="section-heading">
+            <div>
+              <h2>Категории</h2>
+              <p>{categories.length ? `${categories.length} активных` : "Пока нет"}</p>
+            </div>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => setShowCategoryForm((current) => !current)}
+            >
+              {showCategoryForm ? "Скрыть" : "Новая"}
+            </button>
+          </div>
+
+          {showCategoryForm ? (
+            <form
+              className="inline-form category-create-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleCreateCategory().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                );
+              }}
+            >
+              <input
+                aria-label="Название категории"
+                placeholder="Название категории"
+                value={categoryName}
+                onChange={(event) => setCategoryName(event.target.value)}
+              />
+              <button type="submit">Создать</button>
+            </form>
+          ) : null}
 
           <div className="category-row" aria-label="Категории">
             {categories.map((category) => (
@@ -1005,7 +1047,10 @@ export default function HomePage() {
                 className={selectedCategory?.id === category.id ? "category active" : "category"}
                 key={category.id}
                 type="button"
-                onClick={() => setSelectedCategoryId(category.id)}
+                onClick={() => {
+                  setSelectedCategoryId(category.id);
+                  setShowCategoryForm(false);
+                }}
               >
                 <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
                 <small>
@@ -1052,7 +1097,7 @@ export default function HomePage() {
               </div>
 
               <form
-                className="inline-form"
+                className="inline-form item-create-form"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void handleCreateItem().catch((caughtError) => setError(formatError(caughtError)));
@@ -1060,7 +1105,7 @@ export default function HomePage() {
               >
                 <input
                   aria-label="Название товара"
-                  placeholder={`Товар в "${selectedCategory.name}"`}
+                  placeholder={`Товар: ${selectedCategory.name}`}
                   value={itemName}
                   onChange={(event) => setItemName(event.target.value)}
                 />
@@ -1617,17 +1662,30 @@ export default function HomePage() {
                       <h2>{category.icon ? `${category.icon} ` : ""}{category.name}</h2>
                       <span>{formatDate(category.archivedAt)}</span>
                     </div>
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={() =>
-                        void handleRestoreCategory(category).catch((caughtError) =>
-                          setError(formatError(caughtError))
-                        )
-                      }
-                    >
-                      Вернуть
-                    </button>
+                    <div className="shopping-actions">
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() =>
+                          void handleRestoreCategory(category).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Вернуть
+                      </button>
+                      <button
+                        className="ghost-button danger-button"
+                        type="button"
+                        onClick={() =>
+                          void handleDeleteArchivedCategory(category).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Удалить
+                      </button>
+                    </div>
                   </article>
                 ))
               ) : (
@@ -1655,17 +1713,30 @@ export default function HomePage() {
                         {statusLabels[item.status]} · {formatDate(item.archivedAt)}
                       </span>
                     </div>
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={() =>
-                        void handleRestoreItem(item).catch((caughtError) =>
-                          setError(formatError(caughtError))
-                        )
-                      }
-                    >
-                      Вернуть
-                    </button>
+                    <div className="shopping-actions">
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() =>
+                          void handleRestoreItem(item).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Вернуть
+                      </button>
+                      <button
+                        className="ghost-button danger-button"
+                        type="button"
+                        onClick={() =>
+                          void handleDeleteArchivedItem(item).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Удалить
+                      </button>
+                    </div>
                   </article>
                 ))
               ) : (

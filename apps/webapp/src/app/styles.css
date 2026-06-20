@@ -260,6 +260,16 @@ select {
   gap: 8px;
 }
 
+.category-create-form {
+  border-left: 3px solid var(--line);
+  padding-left: 10px;
+}
+
+.item-create-form {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+
 .category-row {
   display: flex;
   gap: 8px;
