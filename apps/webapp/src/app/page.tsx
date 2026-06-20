@@ -25,6 +25,8 @@ import {
   deleteAccount,
   dismissRecommendation,
   exportUserData,
+  getArchivedCategories,
+  getArchivedItems,
   getCategories,
   getGroups,
   getItems,
@@ -32,6 +34,8 @@ import {
   getShoppingList,
   login,
   removeGroupItem,
+  restoreCategory,
+  restoreItem,
   searchItems,
   setItemStatus,
   setCheckSessionItemStatus,
@@ -70,12 +74,22 @@ const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
 
-type ActiveTab = "check" | "groups" | "home" | "items" | "search" | "settings" | "shopping";
+type ActiveTab =
+  | "archive"
+  | "check"
+  | "groups"
+  | "home"
+  | "items"
+  | "search"
+  | "settings"
+  | "shopping";
 
 export default function HomePage() {
   const [token, setToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [archivedCategories, setArchivedCategories] = useState<Category[]>([]);
+  const [archivedItems, setArchivedItems] = useState<Item[]>([]);
   const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
@@ -127,6 +141,11 @@ export default function HomePage() {
         ? items.filter((item) => item.categoryId === selectedCategory.id)
         : [],
     [items, selectedCategory]
+  );
+
+  const archivedStandaloneItems = useMemo(
+    () => archivedItems.filter((item) => !item.category?.archivedAt),
+    [archivedItems]
   );
 
   const shoppingGroups = useMemo(() => {
@@ -215,15 +234,26 @@ export default function HomePage() {
       return;
     }
 
-    const [nextCategories, nextItems, nextShoppingList, nextGroups] = await Promise.all([
+    const [
+      nextCategories,
+      nextItems,
+      nextArchivedCategories,
+      nextArchivedItems,
+      nextShoppingList,
+      nextGroups
+    ] = await Promise.all([
       getCategories(authToken),
       getItems(authToken),
+      getArchivedCategories(authToken),
+      getArchivedItems(authToken),
       getShoppingList(authToken),
       getGroups(authToken)
     ]);
 
     setCategories(nextCategories);
     setItems(nextItems);
+    setArchivedCategories(nextArchivedCategories);
+    setArchivedItems(nextArchivedItems);
     setShoppingList(nextShoppingList);
     setGroups(nextGroups);
   }
@@ -272,7 +302,7 @@ export default function HomePage() {
     setItems((current) =>
       current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
     );
-    setShoppingList(await getShoppingList(token));
+    await refreshData(token);
     await refreshRecommendations(token, updatedItem);
   }
 
@@ -398,6 +428,30 @@ export default function HomePage() {
     setError(null);
     await archiveCategory(token, selectedCategory.id);
     setSelectedCategoryId(null);
+    await refreshData(token);
+  }
+
+  async function handleRestoreCategory(category: Category) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    const restoredCategory = await restoreCategory(token, category.id);
+    setSelectedCategoryId(restoredCategory.id);
+    setActiveTab("items");
+    await refreshData(token);
+  }
+
+  async function handleRestoreItem(item: Item) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    const restoredItem = await restoreItem(token, item.id);
+    setSelectedCategoryId(restoredItem.categoryId);
+    setActiveTab("items");
     await refreshData(token);
   }
 
@@ -785,6 +839,13 @@ export default function HomePage() {
           onClick={() => setActiveTab("settings")}
         >
           Настройки
+        </button>
+        <button
+          className={activeTab === "archive" ? "active" : ""}
+          type="button"
+          onClick={() => setActiveTab("archive")}
+        >
+          Архив
         </button>
       </nav>
 
@@ -1411,6 +1472,33 @@ export default function HomePage() {
             ) : null}
           </div>
 
+          {checkSession?.status !== "IN_PROGRESS" ? (
+            <form
+              className="inline-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleStartCategoryCheck().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                );
+              }}
+            >
+              <select
+                aria-label="Категория для проверки"
+                value={selectedCategory?.id ?? ""}
+                onChange={(event) => setSelectedCategoryId(event.target.value)}
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" disabled={!selectedCategory}>
+                Начать
+              </button>
+            </form>
+          ) : null}
+
           {checkSession?.status === "COMPLETED" ? (
             <p className="empty">Проверка завершена.</p>
           ) : checkSession?.status === "CANCELLED" ? (
@@ -1439,7 +1527,7 @@ export default function HomePage() {
             </article>
           ) : (
             <p className="empty">
-              Откройте категорию и нажмите «Проверить», чтобы начать пошаговую проверку.
+              Выберите категорию и начните пошаговую проверку.
             </p>
           )}
         </section>
@@ -1495,6 +1583,93 @@ export default function HomePage() {
               <p className="empty">Введите запрос, чтобы найти отслеживаемые товары.</p>
             )}
           </div>
+        </section>
+      ) : activeTab === "archive" ? (
+        <section className="stack">
+          <div className="section-heading">
+            <div>
+              <h2>Архив</h2>
+              <p>
+                {archivedCategories.length + archivedStandaloneItems.length
+                  ? `${archivedCategories.length} кат. · ${archivedStandaloneItems.length} тов.`
+                  : "Архив пуст"}
+              </p>
+            </div>
+          </div>
+
+          <section className="archive-section" aria-label="Архивные категории">
+            <div className="section-heading">
+              <div>
+                <h2>Категории</h2>
+                <p>Вернутся вместе с товарами, архивированными в тот же момент.</p>
+              </div>
+            </div>
+
+            <div className="item-list">
+              {archivedCategories.length ? (
+                archivedCategories.map((category) => (
+                  <article className="shopping-row" key={category.id}>
+                    <div>
+                      <p>{category.itemCount} поз.</p>
+                      <h2>{category.icon ? `${category.icon} ` : ""}{category.name}</h2>
+                      <span>{formatDate(category.archivedAt)}</span>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() =>
+                        void handleRestoreCategory(category).catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
+                    >
+                      Вернуть
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <p className="empty">Архивных категорий нет.</p>
+              )}
+            </div>
+          </section>
+
+          <section className="archive-section" aria-label="Архивные товары">
+            <div className="section-heading">
+              <div>
+                <h2>Товары</h2>
+                <p>Отдельно архивированные товары из активных категорий.</p>
+              </div>
+            </div>
+
+            <div className="item-list">
+              {archivedStandaloneItems.length ? (
+                archivedStandaloneItems.map((item) => (
+                  <article className="shopping-row" key={item.id}>
+                    <div>
+                      <p>{item.category?.name ?? "Без категории"}</p>
+                      <h2>{item.name}</h2>
+                      <span>
+                        {statusLabels[item.status]} · {formatDate(item.archivedAt)}
+                      </span>
+                    </div>
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() =>
+                        void handleRestoreItem(item).catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
+                    >
+                      Вернуть
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <p className="empty">Отдельно архивированных товаров нет.</p>
+              )}
+            </div>
+          </section>
         </section>
       ) : (
         <section className="stack">

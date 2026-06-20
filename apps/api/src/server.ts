@@ -1,9 +1,11 @@
 import cors from "@fastify/cors";
 import { prisma } from "@kupitnezabyt/database";
+import type { Prisma } from "@kupitnezabyt/database";
 import {
   aggregateCategoryStatus,
   calculateNextCheckAt,
   calculateSnoozedUntil,
+  getShoppingSyncAction,
   getRuleBasedRecommendations,
   isItemStatus,
   normalizeName,
@@ -69,6 +71,10 @@ type GroupItemBody = {
 
 type AcceptRecommendationBody = {
   categoryId?: unknown;
+};
+
+type ArchivedQuery = {
+  archived?: string;
 };
 
 const config = getConfig();
@@ -281,16 +287,17 @@ export function buildServer() {
     });
   });
 
-  app.get("/api/categories", async (request) => {
+  app.get<{ Querystring: ArchivedQuery }>("/api/categories", async (request) => {
+    const archived = readBooleanFlag(request.query.archived);
     const categories = await prisma.category.findMany({
       where: {
         userId: requireUserId(request.userId),
-        archivedAt: null
+        archivedAt: archived ? { not: null } : null
       },
       include: {
         items: {
           where: {
-            archivedAt: null
+            archivedAt: archived ? { not: null } : null
           },
           select: {
             status: true
@@ -463,6 +470,76 @@ export function buildServer() {
           archivedAt: now
         }
       });
+    });
+  });
+
+  app.post<{ Params: { id: string } }>("/api/categories/:id/restore", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const category = await prisma.category.findFirst({
+      where: {
+        id: request.params.id,
+        userId,
+        archivedAt: {
+          not: null
+        }
+      }
+    });
+
+    if (!category || !category.archivedAt) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Archived category was not found.");
+      return;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const itemsToRestore = await tx.item.findMany({
+        where: {
+          userId,
+          categoryId: category.id,
+          archivedAt: category.archivedAt
+        }
+      });
+
+      await tx.category.update({
+        where: {
+          id: category.id
+        },
+        data: {
+          archivedAt: null
+        }
+      });
+
+      await tx.item.updateMany({
+        where: {
+          userId,
+          categoryId: category.id,
+          archivedAt: category.archivedAt
+        },
+        data: {
+          archivedAt: null
+        }
+      });
+
+      for (const item of itemsToRestore) {
+        await syncRestoredItem(tx, item);
+      }
+
+      const categoryItems = await tx.item.findMany({
+        where: {
+          categoryId: category.id,
+          userId,
+          archivedAt: null
+        },
+        select: {
+          status: true
+        }
+      });
+
+      return {
+        ...category,
+        archivedAt: null,
+        itemCount: categoryItems.length,
+        aggregateStatus: aggregateCategoryStatus(categoryItems)
+      };
     });
   });
 
@@ -754,14 +831,15 @@ export function buildServer() {
     }
   );
 
-  app.get<{ Querystring: { categoryId?: string } }>("/api/items", async (request) => {
+  app.get<{ Querystring: { categoryId?: string } & ArchivedQuery }>("/api/items", async (request) => {
     const categoryId = readOptionalString(request.query.categoryId);
+    const archived = readBooleanFlag(request.query.archived);
 
     return prisma.item.findMany({
       where: {
         userId: requireUserId(request.userId),
         ...(categoryId ? { categoryId } : {}),
-        archivedAt: null
+        archivedAt: archived ? { not: null } : null
       },
       include: {
         category: true
@@ -1243,6 +1321,54 @@ export function buildServer() {
     });
   });
 
+  app.post<{ Params: { id: string } }>("/api/items/:id/restore", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const item = await prisma.item.findFirst({
+      where: {
+        id: request.params.id,
+        userId,
+        archivedAt: {
+          not: null
+        }
+      },
+      include: {
+        category: true
+      }
+    });
+
+    if (!item) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Archived item was not found.");
+      return;
+    }
+
+    if (item.category.archivedAt) {
+      await sendError(
+        reply,
+        409,
+        "CATEGORY_ARCHIVED",
+        "Restore the category before restoring this item."
+      );
+      return;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updatedItem = await tx.item.update({
+        where: {
+          id: item.id
+        },
+        data: {
+          archivedAt: null
+        },
+        include: {
+          category: true
+        }
+      });
+
+      await syncRestoredItem(tx, updatedItem);
+      return updatedItem;
+    });
+  });
+
   app.get("/api/shopping-list", async (request) => {
     return prisma.shoppingListItem.findMany({
       where: {
@@ -1658,6 +1784,65 @@ async function getRecommendationsForItem(
   });
 }
 
+async function syncRestoredItem(
+  tx: Prisma.TransactionClient,
+  item: {
+    id: string;
+    userId: string;
+    categoryId: string;
+    name: string;
+    status: string;
+    nextCheckAt: Date | null;
+  }
+): Promise<void> {
+  if (!isItemStatus(item.status)) {
+    return;
+  }
+
+  const action = getShoppingSyncAction(item.status);
+
+  if (action.type === "UPSERT") {
+    const openShoppingListItem = await tx.shoppingListItem.findFirst({
+      where: {
+        userId: item.userId,
+        itemId: item.id,
+        isCompleted: false
+      }
+    });
+
+    if (openShoppingListItem) {
+      await tx.shoppingListItem.update({
+        where: {
+          id: openShoppingListItem.id
+        },
+        data: {
+          title: item.name,
+          categoryId: item.categoryId,
+          priority: action.priority
+        }
+      });
+    } else {
+      await tx.shoppingListItem.create({
+        data: {
+          userId: item.userId,
+          itemId: item.id,
+          title: item.name,
+          categoryId: item.categoryId,
+          priority: action.priority
+        }
+      });
+    }
+  }
+
+  if (item.nextCheckAt) {
+    await upsertItemCheckReminder(tx, {
+      userId: item.userId,
+      itemId: item.id,
+      scheduledFor: item.nextCheckAt
+    });
+  }
+}
+
 async function sendError(
   reply: FastifyReply,
   statusCode: number,
@@ -1729,6 +1914,10 @@ function readOptionalPositiveInteger(value: unknown): number | undefined {
   }
 
   return parsed;
+}
+
+function readBooleanFlag(value: unknown): boolean {
+  return value === "true" || value === "1";
 }
 
 function readShoppingPriority(value: unknown): "NORMAL" | "URGENT" | null {

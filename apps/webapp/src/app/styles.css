@@ -303,6 +303,11 @@ select {
   gap: 12px;
 }
 
+.archive-section {
+  display: grid;
+  gap: 10px;
+}
+
 .recommendations {
   display: grid;
   gap: 10px;

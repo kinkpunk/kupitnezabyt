@@ -61,10 +61,12 @@ through database cascades and becomes inaccessible through the API.
 
 ```http
 GET /api/categories
+GET /api/categories?archived=true
 POST /api/categories
 GET /api/categories/:id
 PATCH /api/categories/:id
 POST /api/categories/:id/archive
+POST /api/categories/:id/restore
 ```
 
 Create body:
@@ -80,6 +82,7 @@ Create body:
 
 ```http
 GET /api/items
+GET /api/items?archived=true
 GET /api/items/search?q=...
 POST /api/items
 GET /api/items/:id
@@ -87,6 +90,7 @@ PATCH /api/items/:id
 POST /api/items/:id/status
 POST /api/items/:id/snooze
 POST /api/items/:id/archive
+POST /api/items/:id/restore
 ```
 
 Create body:
@@ -153,6 +157,11 @@ Update body:
 Only `name` is required for the current update endpoint. Optional fields are
 preserved when omitted. Archiving an item also completes its open shopping list
 entry.
+
+`GET /api/categories?archived=true` and `GET /api/items?archived=true` return
+archived records for the authenticated user. Restoring a category also restores
+items that were archived by that category archive action. Restoring an item
+requires its category to be active.
 
 ## Shopping List
 

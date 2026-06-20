@@ -100,6 +100,10 @@ export function getCategories(token: string): Promise<Category[]> {
   return get<Category[]>("/api/categories", token);
 }
 
+export function getArchivedCategories(token: string): Promise<Category[]> {
+  return get<Category[]>("/api/categories?archived=true", token);
+}
+
 export function createCategory(token: string, name: string): Promise<Category> {
   return post<Category>("/api/categories", token, { name });
 }
@@ -108,8 +112,16 @@ export function archiveCategory(token: string, categoryId: string): Promise<Cate
   return post<Category>(`/api/categories/${categoryId}/archive`, token, {});
 }
 
+export function restoreCategory(token: string, categoryId: string): Promise<Category> {
+  return post<Category>(`/api/categories/${categoryId}/restore`, token, {});
+}
+
 export function getItems(token: string): Promise<Item[]> {
   return get<Item[]>("/api/items", token);
+}
+
+export function getArchivedItems(token: string): Promise<Item[]> {
+  return get<Item[]>("/api/items?archived=true", token);
 }
 
 export function searchItems(token: string, query: string): Promise<Item[]> {
@@ -138,6 +150,10 @@ export function updateItem(
 
 export function archiveItem(token: string, itemId: string): Promise<Item> {
   return post<Item>(`/api/items/${itemId}/archive`, token, {});
+}
+
+export function restoreItem(token: string, itemId: string): Promise<Item> {
+  return post<Item>(`/api/items/${itemId}/restore`, token, {});
 }
 
 export function setItemStatus(

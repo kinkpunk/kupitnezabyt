@@ -5,6 +5,7 @@ export type Category = {
   name: string;
   icon: string | null;
   sortOrder: number;
+  archivedAt: string | null;
   itemCount: number;
   aggregateStatus: CategoryStatus;
 };
@@ -21,6 +22,7 @@ export type Item = {
   lastCheckedAt: string | null;
   lastBoughtAt: string | null;
   nextCheckAt: string | null;
+  archivedAt: string | null;
   category?: Category | null;
 };
 
