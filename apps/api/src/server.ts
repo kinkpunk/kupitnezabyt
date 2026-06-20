@@ -83,7 +83,8 @@ export function buildServer() {
 
   void app.register(cors, {
     origin: config.appBaseUrl,
-    credentials: true
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
   });
 
   app.addHook("preHandler", async (request, reply) => {
