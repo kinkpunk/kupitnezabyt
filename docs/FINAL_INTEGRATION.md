@@ -102,6 +102,8 @@ Requires real Telegram credentials:
 - Category/item delete and reorder flows are not fully implemented where the
   product spec requires them; current flows prefer archiving.
 - Recommendation action `Скрыть похожие` is not implemented yet.
+- Browser/PWA sign-in without Telegram is not implemented yet. The preferred
+  follow-up is passwordless email magic links with Telegram account linking.
 
 ## Previous Local Verification
 

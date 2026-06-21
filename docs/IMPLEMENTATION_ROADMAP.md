@@ -31,6 +31,8 @@ Remaining `PRODUCT_SPEC` gaps:
   them; current MVP primarily uses archive flows.
 - Recommendation action `Скрыть похожие`.
 - `test:e2e` plus DB-backed API integration tests.
+- Optional non-Telegram browser/PWA sign-in: passwordless email magic links,
+  Telegram account linking, and iPhone home-screen usage.
 
 ## Slice 1 Baseline
 
