@@ -22,6 +22,11 @@ export type TelegramUser = {
   language_code?: string;
 };
 
+export type MagicLinkTokenRecord = {
+  consumedAt: Date | null;
+  expiresAt: Date;
+};
+
 function base64UrlEncode(input: Buffer | string): string {
   return Buffer.from(input)
     .toString("base64")
@@ -84,6 +89,44 @@ export function getBearerToken(request: FastifyRequest): string | null {
   }
 
   return header.slice("Bearer ".length);
+}
+
+export function normalizeEmail(value: string): string | null {
+  const email = value.trim().toLowerCase();
+  if (!email || email.length > 254) {
+    return null;
+  }
+
+  const atIndex = email.indexOf("@");
+  if (atIndex <= 0 || atIndex !== email.lastIndexOf("@") || atIndex === email.length - 1) {
+    return null;
+  }
+
+  const [localPart, domain] = email.split("@");
+  if (!localPart || !domain || !domain.includes(".") || /\s/.test(email)) {
+    return null;
+  }
+
+  return email;
+}
+
+export function generateMagicLinkToken(): string {
+  return base64UrlEncode(crypto.randomBytes(32));
+}
+
+export function hashMagicLinkToken(token: string, config: ApiConfig): string {
+  return crypto.createHmac("sha256", config.jwtSecret).update(token).digest("hex");
+}
+
+export function calculateMagicLinkExpiresAt(now: Date, ttlMinutes: number): Date {
+  return new Date(now.getTime() + ttlMinutes * 60 * 1000);
+}
+
+export function isUsableMagicLinkToken(
+  token: MagicLinkTokenRecord | null,
+  now = new Date()
+): token is MagicLinkTokenRecord {
+  return Boolean(token && !token.consumedAt && token.expiresAt.getTime() > now.getTime());
 }
 
 export function validateTelegramInitData(

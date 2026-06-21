@@ -56,6 +56,11 @@ button {
   font-weight: 700;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 button:focus-visible,
 input:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
@@ -226,6 +231,11 @@ select {
 .onboarding-panel p {
   color: var(--muted);
   line-height: 1.45;
+}
+
+.dev-magic-link {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .choice-grid,

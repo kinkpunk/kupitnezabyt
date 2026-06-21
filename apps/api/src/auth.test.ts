@@ -2,12 +2,23 @@ import crypto from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { signToken, validateTelegramInitData, verifyToken } from "./auth.js";
+import {
+  calculateMagicLinkExpiresAt,
+  hashMagicLinkToken,
+  isUsableMagicLinkToken,
+  normalizeEmail,
+  signToken,
+  validateTelegramInitData,
+  verifyToken
+} from "./auth.js";
 import type { ApiConfig } from "./env.js";
 
 const config: ApiConfig = {
   appBaseUrl: "http://localhost:3000",
+  emailFrom: undefined,
+  emailProviderApiKey: undefined,
   jwtSecret: "test-secret",
+  magicLinkTokenTtlMinutes: 15,
   nodeEnv: "test",
   devAuthEnabled: false,
   telegramBotToken: "bot-token",
@@ -26,6 +37,37 @@ describe("JWT auth", () => {
     const tamperedToken = `${token.slice(0, -1)}x`;
 
     expect(verifyToken(tamperedToken, config)).toBeNull();
+  });
+});
+
+describe("email magic link auth helpers", () => {
+  it("normalizes valid email addresses", () => {
+    expect(normalizeEmail("  USER@Example.COM ")).toBe("user@example.com");
+  });
+
+  it("rejects invalid email addresses", () => {
+    expect(normalizeEmail("missing-at")).toBeNull();
+    expect(normalizeEmail("a@b")).toBeNull();
+    expect(normalizeEmail("a b@example.com")).toBeNull();
+  });
+
+  it("hashes tokens without exposing the raw token", () => {
+    const hash = hashMagicLinkToken("raw-token", config);
+
+    expect(hash).not.toBe("raw-token");
+    expect(hash).toBe(hashMagicLinkToken("raw-token", config));
+    expect(hash).not.toBe(hashMagicLinkToken("other-token", config));
+  });
+
+  it("calculates expiry and rejects expired or consumed tokens", () => {
+    const now = new Date("2026-06-21T12:00:00.000Z");
+    const expiresAt = calculateMagicLinkExpiresAt(now, 15);
+
+    expect(expiresAt.toISOString()).toBe("2026-06-21T12:15:00.000Z");
+    expect(isUsableMagicLinkToken({ consumedAt: null, expiresAt }, now)).toBe(true);
+    expect(isUsableMagicLinkToken({ consumedAt: now, expiresAt }, now)).toBe(false);
+    expect(isUsableMagicLinkToken({ consumedAt: null, expiresAt: now }, now)).toBe(false);
+    expect(isUsableMagicLinkToken(null, now)).toBe(false);
   });
 });
 

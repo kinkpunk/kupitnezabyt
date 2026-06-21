@@ -16,8 +16,19 @@ import {
 import Fastify from "fastify";
 import type { FastifyReply } from "fastify";
 
-import { getBearerToken, signToken, validateTelegramInitData, verifyToken } from "./auth.js";
+import {
+  calculateMagicLinkExpiresAt,
+  generateMagicLinkToken,
+  getBearerToken,
+  hashMagicLinkToken,
+  isUsableMagicLinkToken,
+  normalizeEmail,
+  signToken,
+  validateTelegramInitData,
+  verifyToken
+} from "./auth.js";
 import type { TelegramUser } from "./auth.js";
+import { sendMagicLinkEmail } from "./email.js";
 import { getConfig } from "./env.js";
 import { cancelPendingItemCheckReminders, markShoppingListItemBought, setItemStatus, upsertItemCheckReminder } from "./services.js";
 
@@ -59,6 +70,14 @@ type TelegramAuthBody = {
   initData?: unknown;
 };
 
+type EmailAuthRequestBody = {
+  email?: unknown;
+};
+
+type EmailAuthVerifyBody = {
+  token?: unknown;
+};
+
 type ShoppingListBody = {
   title?: unknown;
   categoryId?: unknown;
@@ -78,12 +97,15 @@ type ArchivedQuery = {
 };
 
 const config = getConfig();
+const authRateLimitWindowMs = 15 * 60 * 1000;
+const authRateLimitMaxAttempts = 10;
+const authRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export function buildServer() {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
-      redact: ["req.headers.authorization", "req.body.initData"]
+      redact: ["req.headers.authorization", "req.body.initData", "req.body.token"]
     }
   });
 
@@ -162,6 +184,118 @@ export function buildServer() {
     return {
       token: signToken(user.id, config),
       user
+    };
+  });
+
+  app.post<{ Body: EmailAuthRequestBody }>("/api/auth/email/request", async (request, reply) => {
+    const email =
+      typeof request.body?.email === "string" ? normalizeEmail(request.body.email) : null;
+    const rateLimitKey = email ? `email:${email}` : `ip:${request.ip}`;
+
+    if (!checkAuthRateLimit(rateLimitKey)) {
+      await sendError(reply, 429, "RATE_LIMITED", "Too many sign-in attempts.");
+      return;
+    }
+
+    if (!email) {
+      await sendError(reply, 400, "INVALID_EMAIL", "Email is invalid.");
+      return;
+    }
+
+    const rawToken = generateMagicLinkToken();
+    const tokenHash = hashMagicLinkToken(rawToken, config);
+    const expiresAt = calculateMagicLinkExpiresAt(
+      new Date(),
+      config.magicLinkTokenTtlMinutes
+    );
+    const magicLink = `${config.appBaseUrl}/?magic_token=${encodeURIComponent(rawToken)}`;
+
+    await prisma.magicLinkToken.create({
+      data: {
+        email,
+        tokenHash,
+        expiresAt
+      }
+    });
+
+    try {
+      const emailResult = await sendMagicLinkEmail({
+        config,
+        email,
+        magicLink
+      });
+
+      return {
+        sent: true,
+        ...(emailResult.devMagicLink ? { devMagicLink: emailResult.devMagicLink } : {})
+      };
+    } catch (error) {
+      request.log.error({ error }, "Failed to send magic link email");
+      await sendError(reply, 503, "EMAIL_SEND_FAILED", "Unable to send sign-in email.");
+      return;
+    }
+  });
+
+  app.post<{ Body: EmailAuthVerifyBody }>("/api/auth/email/verify", async (request, reply) => {
+    if (typeof request.body?.token !== "string" || !request.body.token.trim()) {
+      await sendError(reply, 400, "INVALID_MAGIC_LINK", "Magic link is invalid.");
+      return;
+    }
+
+    const now = new Date();
+    const tokenHash = hashMagicLinkToken(request.body.token.trim(), config);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const magicLinkToken = await tx.magicLinkToken.findUnique({
+        where: {
+          tokenHash
+        }
+      });
+
+      if (!isUsableMagicLinkToken(magicLinkToken, now)) {
+        return null;
+      }
+
+      const consumeResult = await tx.magicLinkToken.updateMany({
+        where: {
+          id: magicLinkToken.id,
+          consumedAt: null
+        },
+        data: {
+          consumedAt: now
+        }
+      });
+
+      if (consumeResult.count !== 1) {
+        return null;
+      }
+
+      const user = await tx.user.upsert({
+        where: {
+          email: magicLinkToken.email
+        },
+        update: {
+          emailVerifiedAt: now
+        },
+        create: {
+          email: magicLinkToken.email,
+          emailVerifiedAt: now,
+          language: "ru",
+          timezone: "Europe/Minsk"
+        }
+      });
+
+      return user;
+    });
+
+    if (!result) {
+      await sendError(reply, 401, "INVALID_MAGIC_LINK", "Magic link is invalid or expired.");
+      return;
+    }
+
+    return {
+      token: signToken(result.id, config),
+      user: result
     };
   });
 
@@ -2069,6 +2203,24 @@ function requireUserId(userId: string | undefined): string {
   }
 
   return userId;
+}
+
+function checkAuthRateLimit(key: string, now = Date.now()): boolean {
+  const bucket = authRateLimitBuckets.get(key);
+  if (!bucket || bucket.resetAt <= now) {
+    authRateLimitBuckets.set(key, {
+      count: 1,
+      resetAt: now + authRateLimitWindowMs
+    });
+    return true;
+  }
+
+  if (bucket.count >= authRateLimitMaxAttempts) {
+    return false;
+  }
+
+  bucket.count += 1;
+  return true;
 }
 
 function readRequiredString(value: unknown): string | null {

@@ -47,6 +47,7 @@ import {
   getShoppingList,
   login,
   removeGroupItem,
+  requestMagicLink,
   restoreCategory,
   restoreItem,
   searchItems,
@@ -149,6 +150,10 @@ export default function HomePage() {
   const [checkSession, setCheckSession] = useState<CheckSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [emailAuthMessage, setEmailAuthMessage] = useState<string | null>(null);
+  const [devMagicLink, setDevMagicLink] = useState<string | null>(null);
+  const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -232,7 +237,10 @@ export default function HomePage() {
         setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
       } catch (caughtError) {
         if (isMounted) {
-          setError(formatError(caughtError));
+          const message = formatError(caughtError);
+          if (message !== "EMAIL_AUTH_REQUIRED") {
+            setError(message);
+          }
         }
       } finally {
         if (isMounted) {
@@ -707,8 +715,69 @@ export default function HomePage() {
     setActiveTab("home");
   }
 
+  async function handleRequestMagicLink() {
+    if (!email.trim()) {
+      setError("Введите email.");
+      return;
+    }
+
+    setError(null);
+    setEmailAuthMessage(null);
+    setDevMagicLink(null);
+    setIsRequestingMagicLink(true);
+
+    try {
+      const response = await requestMagicLink(email.trim());
+      if (response.sent) {
+        setEmailAuthMessage("Письмо для входа отправлено. Откройте ссылку в этом браузере.");
+        setDevMagicLink(response.devMagicLink ?? null);
+      }
+    } finally {
+      setIsRequestingMagicLink(false);
+    }
+  }
+
   if (isLoading) {
     return <main className="app-shell centered">Загрузка...</main>;
+  }
+
+  if (!token) {
+    return (
+      <main className="app-shell onboarding-shell">
+        <ErrorNotice message={error} onClose={() => setError(null)} />
+        <section className="onboarding-panel">
+          <p className="eyebrow">Вход</p>
+          <h1>kupitnezabyt</h1>
+          <p>Введите email, и мы отправим одноразовую ссылку для входа.</p>
+          <input
+            aria-label="Email"
+            autoComplete="email"
+            inputMode="email"
+            placeholder="you@example.com"
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+          <button
+            type="button"
+            disabled={isRequestingMagicLink}
+            onClick={() =>
+              void handleRequestMagicLink().catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+          >
+            {isRequestingMagicLink ? "Отправляем..." : "Получить ссылку"}
+          </button>
+          {emailAuthMessage ? <p>{emailAuthMessage}</p> : null}
+          {devMagicLink ? (
+            <a className="dev-magic-link" href={devMagicLink}>
+              Открыть dev magic link
+            </a>
+          ) : null}
+        </section>
+      </main>
+    );
   }
 
   if (showOnboarding) {
@@ -808,8 +877,8 @@ export default function HomePage() {
             <>
               <h1>Напоминания</h1>
               <p>
-                Я буду присылать напоминания в Telegram, когда пора проверить
-                запасы. Это не системное push-разрешение: сообщения отправляет бот.
+                Я буду показывать напоминания внутри приложения, когда пора
+                проверить запасы.
               </p>
               <div className="onboarding-actions">
                 <button
@@ -845,7 +914,7 @@ export default function HomePage() {
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Mini App</p>
+          <p className="eyebrow">Web app</p>
           <h1>kupitnezabyt</h1>
         </div>
         <span className="counter">{shoppingList.length}</span>

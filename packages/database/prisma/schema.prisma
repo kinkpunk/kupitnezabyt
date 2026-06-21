@@ -9,7 +9,10 @@ datasource db {
 
 model User {
   id               String   @id @default(cuid())
-  telegramUserId   String   @unique
+  email            String?  @unique
+  emailVerifiedAt  DateTime?
+  displayName      String?
+  telegramUserId   String?  @unique
   telegramUsername String?
   firstName        String?
   language         String   @default("ru")
@@ -24,6 +27,18 @@ model User {
   recommendationDismissals RecommendationDismissal[]
   reminders                Reminder[]
   shoppingListItems        ShoppingListItem[]
+}
+
+model MagicLinkToken {
+  id         String    @id @default(cuid())
+  email      String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@index([expiresAt])
 }
 
 model Category {

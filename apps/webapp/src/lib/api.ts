@@ -8,6 +8,7 @@ import type {
   DeletedCountResponse,
   ItemGroup,
   Item,
+  MagicLinkRequestResponse,
   RecommendationSuggestion,
   ShoppingListEntry,
   UserDataExport
@@ -53,20 +54,41 @@ export async function login(): Promise<string> {
 
   prepareTelegramWebApp();
 
-  const initData = window.Telegram?.WebApp?.initData;
-  const response = initData
-    ? await post<AuthResponse>("/api/auth/telegram", undefined, { initData })
-    : await post<AuthResponse>("/api/auth/dev", undefined, {
-        telegramUserId: "local",
-        firstName: "Dev"
-      });
+  const magicToken = new URLSearchParams(window.location.search).get("magic_token");
+  if (magicToken) {
+    const response = await post<AuthResponse>("/api/auth/email/verify", undefined, {
+      token: magicToken
+    });
+    window.localStorage.setItem(tokenStorageKey, response.token);
+    window.history.replaceState({}, "", window.location.pathname);
+    return response.token;
+  }
 
-  window.localStorage.setItem(tokenStorageKey, response.token);
-  return response.token;
+  const initData = window.Telegram?.WebApp?.initData;
+  if (initData) {
+    const response = await post<AuthResponse>("/api/auth/telegram", undefined, { initData });
+    window.localStorage.setItem(tokenStorageKey, response.token);
+    return response.token;
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    const response = await post<AuthResponse>("/api/auth/dev", undefined, {
+      telegramUserId: "local",
+      firstName: "Dev"
+    });
+    window.localStorage.setItem(tokenStorageKey, response.token);
+    return response.token;
+  }
+
+  throw new ApiError("EMAIL_AUTH_REQUIRED");
 }
 
 export function clearSavedToken(): void {
   window.localStorage.removeItem(tokenStorageKey);
+}
+
+export function requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
+  return post<MagicLinkRequestResponse>("/api/auth/email/request", undefined, { email });
 }
 
 function prepareTelegramWebApp(): void {

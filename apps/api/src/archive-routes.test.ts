@@ -85,7 +85,10 @@ describe("archive routes", () => {
       {
         appBaseUrl: "http://localhost:3000",
         devAuthEnabled: false,
+        emailFrom: undefined,
+        emailProviderApiKey: undefined,
         jwtSecret: "test-secret",
+        magicLinkTokenTtlMinutes: 15,
         nodeEnv: "test",
         port: 3001,
         telegramBotToken: undefined
@@ -351,7 +354,10 @@ function createToken(signToken: typeof import("./auth.js").signToken): string {
     {
       appBaseUrl: "http://localhost:3000",
       devAuthEnabled: false,
+      emailFrom: undefined,
+      emailProviderApiKey: undefined,
       jwtSecret: "test-secret",
+      magicLinkTokenTtlMinutes: 15,
       nodeEnv: "test",
       port: 3001,
       telegramBotToken: undefined

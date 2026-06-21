@@ -92,6 +92,11 @@ export type AuthResponse = {
   token: string;
 };
 
+export type MagicLinkRequestResponse = {
+  sent: boolean;
+  devMagicLink?: string;
+};
+
 export type DeletedCountResponse = {
   deletedCount: number;
 };
