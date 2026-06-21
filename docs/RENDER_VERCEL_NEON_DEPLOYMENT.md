@@ -73,8 +73,11 @@ kupitnezabyt-api
 Build command:
 
 ```bash
-corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @kupitnezabyt/shared build && corepack pnpm --filter @kupitnezabyt/database build && corepack pnpm --filter @kupitnezabyt/api build
+corepack pnpm install --frozen-lockfile --prod=false --force && corepack pnpm db:generate && corepack pnpm --filter @kupitnezabyt/shared build && corepack pnpm --filter @kupitnezabyt/database build && corepack pnpm --filter @kupitnezabyt/api build
 ```
+
+If Render previously cached a production-only install and the build fails with
+`prisma: not found`, run **Manual Deploy -> Clear build cache & deploy** once.
 
 Start command:
 
@@ -175,7 +178,7 @@ The worker currently delivers `ITEM_CHECK` reminders only.
 Run after the Neon database is created and before product smoke testing:
 
 ```bash
-corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm db:generate && corepack pnpm db:deploy
+corepack pnpm install --frozen-lockfile --prod=false --force && corepack pnpm db:generate && corepack pnpm db:deploy
 ```
 
 The job must have `DATABASE_URL` set to the Neon PostgreSQL connection string.
