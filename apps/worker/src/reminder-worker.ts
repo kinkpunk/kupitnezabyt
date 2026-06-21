@@ -27,7 +27,12 @@ export async function processDueReminders(config: WorkerConfig, now = new Date()
   let processedCount = 0;
 
   for (const reminder of reminders) {
-    if (reminder.type !== "ITEM_CHECK" || !reminder.item || reminder.item.archivedAt) {
+    if (
+      reminder.type !== "ITEM_CHECK" ||
+      !reminder.item ||
+      reminder.item.archivedAt ||
+      !reminder.user.telegramUserId
+    ) {
       await prisma.reminder.update({
         where: {
           id: reminder.id

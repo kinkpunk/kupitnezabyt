@@ -5,6 +5,7 @@ import {
   aggregateCategoryStatus,
   calculateNextCheckAt,
   calculateSnoozedUntil,
+  getInAppReminders,
   getShoppingSyncAction,
   getRuleBasedRecommendations,
   isItemStatus,
@@ -37,6 +38,14 @@ type NamedBody = {
   icon?: unknown;
 };
 
+type CheckSettingsBody = {
+  name?: unknown;
+  icon?: unknown;
+  usageCycleDays?: unknown;
+  nextCheckAt?: unknown;
+  reminderEnabled?: unknown;
+};
+
 type CreateItemBody = {
   categoryId?: unknown;
   name?: unknown;
@@ -51,6 +60,8 @@ type UpdateItemBody = {
   brand?: unknown;
   notes?: unknown;
   usageCycleDays?: unknown;
+  nextCheckAt?: unknown;
+  reminderEnabled?: unknown;
 };
 
 type StatusBody = {
@@ -96,6 +107,10 @@ type ArchivedQuery = {
   archived?: string;
 };
 
+type RemindersQuery = {
+  days?: string;
+};
+
 const config = getConfig();
 const authRateLimitWindowMs = 15 * 60 * 1000;
 const authRateLimitMaxAttempts = 10;
@@ -131,6 +146,93 @@ export function buildServer() {
   });
 
   app.get("/health", async () => ({ ok: true }));
+
+  app.get<{ Querystring: RemindersQuery }>("/api/reminders/in-app", async (request) => {
+    const userId = requireUserId(request.userId);
+    const now = new Date();
+    const upcomingWindowDays = readOptionalPositiveInteger(request.query.days) ?? 7;
+    const [categories, groups, items] = await Promise.all([
+      prisma.category.findMany({
+        where: {
+          userId,
+          archivedAt: null
+        },
+        select: {
+          id: true,
+          name: true,
+          nextCheckAt: true,
+          reminderEnabled: true,
+          archivedAt: true
+        }
+      }),
+      prisma.itemGroup.findMany({
+        where: {
+          userId,
+          archivedAt: null
+        },
+        select: {
+          id: true,
+          name: true,
+          nextCheckAt: true,
+          reminderEnabled: true,
+          archivedAt: true
+        }
+      }),
+      prisma.item.findMany({
+        where: {
+          userId,
+          archivedAt: null
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          nextCheckAt: true,
+          reminderEnabled: true,
+          archivedAt: true
+        }
+      })
+    ]);
+
+    return getInAppReminders(
+      [
+        ...categories.map((category) => ({
+          id: category.id,
+          entityType: "CATEGORY" as const,
+          title: category.name,
+          nextCheckAt: category.nextCheckAt,
+          reminderEnabled: category.reminderEnabled,
+          archivedAt: category.archivedAt
+        })),
+        ...groups.map((group) => ({
+          id: group.id,
+          entityType: "GROUP" as const,
+          title: group.name,
+          nextCheckAt: group.nextCheckAt,
+          reminderEnabled: group.reminderEnabled,
+          archivedAt: group.archivedAt
+        })),
+        ...items.map((item) => ({
+          id: item.id,
+          entityType: "ITEM" as const,
+          title: item.name,
+          nextCheckAt: item.nextCheckAt,
+          reminderEnabled: item.reminderEnabled,
+          archivedAt: item.archivedAt,
+          status: item.status
+        }))
+      ],
+      now,
+      upcomingWindowDays
+    ).map((reminder) => ({
+      id: `${reminder.entityType}:${reminder.id}`,
+      entityId: reminder.id,
+      entityType: reminder.entityType,
+      title: reminder.title,
+      nextCheckAt: reminder.nextCheckAt,
+      timing: reminder.timing
+    }));
+  });
 
   app.post<{ Body: DevAuthBody }>("/api/auth/dev", async (request, reply) => {
     if (config.nodeEnv !== "development" || !config.devAuthEnabled) {
@@ -505,15 +607,9 @@ export function buildServer() {
     return category;
   });
 
-  app.patch<{ Body: NamedBody; Params: { id: string } }>(
+  app.patch<{ Body: CheckSettingsBody; Params: { id: string } }>(
     "/api/categories/:id",
     async (request, reply) => {
-      const name = readRequiredString(request.body?.name);
-      if (!name) {
-        await sendError(reply, 400, "NAME_REQUIRED", "Category name is required.");
-        return;
-      }
-
       const category = await prisma.category.findFirst({
         where: {
           id: request.params.id,
@@ -527,13 +623,46 @@ export function buildServer() {
         return;
       }
 
+      const body = request.body ?? {};
+      const name = hasOwnProperty(body, "name")
+        ? readRequiredString(body.name)
+        : category.name;
+      if (!name) {
+        await sendError(reply, 400, "NAME_REQUIRED", "Category name is required.");
+        return;
+      }
+
+      const usageCycleDays = hasOwnProperty(body, "usageCycleDays")
+        ? readOptionalPositiveInteger(body.usageCycleDays) ?? null
+        : category.usageCycleDays;
+      const hasNextCheckAt = hasOwnProperty(body, "nextCheckAt");
+      const nextCheckAtResult = hasNextCheckAt ? readNullableDate(body.nextCheckAt) : null;
+      if (nextCheckAtResult?.invalid) {
+        await sendError(reply, 400, "INVALID_NEXT_CHECK_AT", "Next check date is invalid.");
+        return;
+      }
+
+      const nextCheckAt = hasNextCheckAt
+        ? nextCheckAtResult?.value ?? null
+        : hasOwnProperty(body, "usageCycleDays")
+          ? calculateConfiguredNextCheckAt(new Date(), usageCycleDays)
+          : category.nextCheckAt;
+      const reminderEnabled = hasOwnProperty(body, "reminderEnabled")
+        ? readOptionalBoolean(body.reminderEnabled) ?? category.reminderEnabled
+        : category.reminderEnabled;
+
       const updatedCategory = await prisma.category.update({
         where: {
           id: category.id
         },
         data: {
           name,
-          icon: readOptionalString(request.body?.icon) ?? null
+          icon: hasOwnProperty(body, "icon")
+            ? readOptionalString(body.icon) ?? null
+            : category.icon,
+          usageCycleDays,
+          nextCheckAt,
+          reminderEnabled
         }
       });
 
@@ -827,15 +956,9 @@ export function buildServer() {
     return group;
   });
 
-  app.patch<{ Body: NamedBody; Params: { id: string } }>(
+  app.patch<{ Body: CheckSettingsBody; Params: { id: string } }>(
     "/api/groups/:id",
     async (request, reply) => {
-      const name = readRequiredString(request.body?.name);
-      if (!name) {
-        await sendError(reply, 400, "NAME_REQUIRED", "Group name is required.");
-        return;
-      }
-
       const group = await prisma.itemGroup.findFirst({
         where: {
           id: request.params.id,
@@ -849,13 +972,42 @@ export function buildServer() {
         return;
       }
 
+      const body = request.body ?? {};
+      const name = hasOwnProperty(body, "name") ? readRequiredString(body.name) : group.name;
+      if (!name) {
+        await sendError(reply, 400, "NAME_REQUIRED", "Group name is required.");
+        return;
+      }
+
+      const usageCycleDays = hasOwnProperty(body, "usageCycleDays")
+        ? readOptionalPositiveInteger(body.usageCycleDays) ?? null
+        : group.usageCycleDays;
+      const hasNextCheckAt = hasOwnProperty(body, "nextCheckAt");
+      const nextCheckAtResult = hasNextCheckAt ? readNullableDate(body.nextCheckAt) : null;
+      if (nextCheckAtResult?.invalid) {
+        await sendError(reply, 400, "INVALID_NEXT_CHECK_AT", "Next check date is invalid.");
+        return;
+      }
+
+      const nextCheckAt = hasNextCheckAt
+        ? nextCheckAtResult?.value ?? null
+        : hasOwnProperty(body, "usageCycleDays")
+          ? calculateConfiguredNextCheckAt(new Date(), usageCycleDays)
+          : group.nextCheckAt;
+      const reminderEnabled = hasOwnProperty(body, "reminderEnabled")
+        ? readOptionalBoolean(body.reminderEnabled) ?? group.reminderEnabled
+        : group.reminderEnabled;
+
       return prisma.itemGroup.update({
         where: {
           id: group.id
         },
         data: {
           name,
-          icon: readOptionalString(request.body?.icon) ?? null
+          icon: hasOwnProperty(body, "icon") ? readOptionalString(body.icon) ?? null : group.icon,
+          usageCycleDays,
+          nextCheckAt,
+          reminderEnabled
         },
         include: groupInclude
       });
@@ -1357,13 +1509,16 @@ export function buildServer() {
         return;
       }
 
-      const name = readRequiredString(request.body?.name);
+      const body = request.body ?? {};
+      const name = hasOwnProperty(body, "name") ? readRequiredString(body.name) : item.name;
       if (!name) {
         await sendError(reply, 400, "NAME_REQUIRED", "Item name is required.");
         return;
       }
 
-      const categoryId = readOptionalString(request.body?.categoryId);
+      const categoryId = hasOwnProperty(body, "categoryId")
+        ? readOptionalString(body.categoryId)
+        : undefined;
       if (categoryId) {
         const category = await prisma.category.findFirst({
           where: {
@@ -1380,16 +1535,31 @@ export function buildServer() {
       }
 
       const nextCategoryId = categoryId ?? item.categoryId;
-      const usageCycleDays = hasOwnProperty(request.body, "usageCycleDays")
-        ? readOptionalPositiveInteger(request.body.usageCycleDays) ?? null
+      const usageCycleDays = hasOwnProperty(body, "usageCycleDays")
+        ? readOptionalPositiveInteger(body.usageCycleDays) ?? null
         : item.usageCycleDays;
-      const brand = hasOwnProperty(request.body, "brand")
-        ? readOptionalString(request.body.brand) ?? null
+      const brand = hasOwnProperty(body, "brand")
+        ? readOptionalString(body.brand) ?? null
         : item.brand;
-      const notes = hasOwnProperty(request.body, "notes")
-        ? readOptionalString(request.body.notes) ?? null
+      const notes = hasOwnProperty(body, "notes")
+        ? readOptionalString(body.notes) ?? null
         : item.notes;
+      const hasNextCheckAt = hasOwnProperty(body, "nextCheckAt");
+      const nextCheckAtResult = hasNextCheckAt ? readNullableDate(body.nextCheckAt) : null;
+      if (nextCheckAtResult?.invalid) {
+        await sendError(reply, 400, "INVALID_NEXT_CHECK_AT", "Next check date is invalid.");
+        return;
+      }
+
+      const reminderEnabled = hasOwnProperty(body, "reminderEnabled")
+        ? readOptionalBoolean(body.reminderEnabled) ?? item.reminderEnabled
+        : item.reminderEnabled;
       const now = new Date();
+      const nextCheckAt = hasNextCheckAt
+        ? nextCheckAtResult?.value ?? null
+        : hasOwnProperty(body, "usageCycleDays")
+          ? calculateNextCheckAt(item.status, now, usageCycleDays)
+          : item.nextCheckAt;
       return prisma.$transaction(async (tx) => {
         const updatedItem = await tx.item.update({
           where: {
@@ -1401,7 +1571,8 @@ export function buildServer() {
             brand,
             notes,
             usageCycleDays,
-            nextCheckAt: calculateNextCheckAt(item.status, now, usageCycleDays)
+            nextCheckAt,
+            reminderEnabled
           }
         });
 
@@ -1416,6 +1587,16 @@ export function buildServer() {
             categoryId: nextCategoryId
           }
         });
+
+        if (updatedItem.nextCheckAt && updatedItem.reminderEnabled && updatedItem.status !== "PAUSED") {
+          await upsertItemCheckReminder(tx, {
+            userId,
+            itemId: updatedItem.id,
+            scheduledFor: updatedItem.nextCheckAt
+          });
+        } else {
+          await cancelPendingItemCheckReminders(tx, userId, updatedItem.id);
+        }
 
         return updatedItem;
       });
@@ -2252,6 +2433,35 @@ function readOptionalPositiveInteger(value: unknown): number | undefined {
   }
 
   return parsed;
+}
+
+function readOptionalBoolean(value: unknown): boolean | undefined {
+  if (typeof value !== "boolean") {
+    return undefined;
+  }
+
+  return value;
+}
+
+function readNullableDate(value: unknown): { value: Date | null; invalid: boolean } {
+  if (value === null || value === "") {
+    return { value: null, invalid: false };
+  }
+
+  if (typeof value !== "string") {
+    return { value: null, invalid: true };
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { value: null, invalid: true };
+  }
+
+  return { value: date, invalid: false };
+}
+
+function calculateConfiguredNextCheckAt(now: Date, usageCycleDays: number | null): Date | null {
+  return usageCycleDays ? calculateNextCheckAt("IN_STOCK", now, usageCycleDays) : null;
 }
 
 function readBooleanFlag(value: unknown): boolean {

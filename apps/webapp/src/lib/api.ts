@@ -6,6 +6,7 @@ import type {
   CheckSession,
   DeleteResponse,
   DeletedCountResponse,
+  InAppReminder,
   ItemGroup,
   Item,
   MagicLinkRequestResponse,
@@ -134,6 +135,19 @@ export function archiveCategory(token: string, categoryId: string): Promise<Cate
   return post<Category>(`/api/categories/${categoryId}/archive`, token, {});
 }
 
+export function updateCategory(
+  token: string,
+  categoryId: string,
+  input: {
+    name?: string;
+    usageCycleDays?: number | null;
+    nextCheckAt?: string | null;
+    reminderEnabled?: boolean;
+  }
+): Promise<Category> {
+  return patch<Category>(`/api/categories/${categoryId}`, token, input);
+}
+
 export function restoreCategory(token: string, categoryId: string): Promise<Category> {
   return post<Category>(`/api/categories/${categoryId}/restore`, token, {});
 }
@@ -168,10 +182,20 @@ export function updateItem(
   token: string,
   itemId: string,
   input: {
-    name: string;
+    name?: string;
+    categoryId?: string;
+    brand?: string | null;
+    notes?: string | null;
+    usageCycleDays?: number | null;
+    nextCheckAt?: string | null;
+    reminderEnabled?: boolean;
   }
 ): Promise<Item> {
   return patch<Item>(`/api/items/${itemId}`, token, input);
+}
+
+export function getInAppReminders(token: string): Promise<InAppReminder[]> {
+  return get<InAppReminder[]>("/api/reminders/in-app", token);
 }
 
 export function archiveItem(token: string, itemId: string): Promise<Item> {
@@ -280,6 +304,19 @@ export function createGroup(token: string, name: string): Promise<ItemGroup> {
 
 export function archiveGroup(token: string, groupId: string): Promise<ItemGroup> {
   return post<ItemGroup>(`/api/groups/${groupId}/archive`, token, {});
+}
+
+export function updateGroup(
+  token: string,
+  groupId: string,
+  input: {
+    name?: string;
+    usageCycleDays?: number | null;
+    nextCheckAt?: string | null;
+    reminderEnabled?: boolean;
+  }
+): Promise<ItemGroup> {
+  return patch<ItemGroup>(`/api/groups/${groupId}`, token, input);
 }
 
 export function addGroupItem(

@@ -504,6 +504,64 @@ select {
   gap: 8px;
 }
 
+.reminder-settings {
+  display: grid;
+  gap: 14px;
+}
+
+.reminder-settings-group {
+  display: grid;
+  gap: 8px;
+}
+
+.reminder-settings-group h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.reminder-settings-list {
+  display: grid;
+  gap: 8px;
+}
+
+.reminder-settings-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.reminder-settings-row h4,
+.reminder-settings-row p {
+  margin: 0;
+}
+
+.reminder-settings-row p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.reminder-settings-row input[type="number"] {
+  width: 100%;
+}
+
+.reminder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.reminder-toggle input {
+  min-height: auto;
+}
+
 @media (min-width: 520px) {
   .tabs {
     grid-template-columns: repeat(8, minmax(0, 1fr));
@@ -519,6 +577,11 @@ select {
 
   .recommendation-row {
     grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .reminder-settings-row {
+    grid-template-columns: 1fr 80px 96px auto;
     align-items: center;
   }
 }

@@ -42,6 +42,7 @@ import {
   getArchivedItems,
   getCategories,
   getGroups,
+  getInAppReminders,
   getItems,
   getRecommendations,
   getShoppingList,
@@ -55,12 +56,15 @@ import {
   setCheckSessionItemStatus,
   startCategoryCheckSession,
   startGroupCheckSession,
+  updateCategory,
+  updateGroup,
   updateItem,
   updateShoppingListItem
 } from "../lib/api";
 import type {
   Category,
   CheckSession,
+  InAppReminder,
   Item,
   ItemGroup,
   RecommendationSuggestion,
@@ -84,9 +88,20 @@ const categoryStatusLabels: Record<CategoryStatus, string> = {
   URGENT: "Срочно"
 };
 
+const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
+  CATEGORY: "Категория",
+  GROUP: "Набор",
+  ITEM: "Товар"
+};
+
 const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
+
+type ReminderDraft = {
+  usageCycleDays: string;
+  reminderEnabled: boolean;
+};
 
 type ActiveTab =
   | "archive"
@@ -117,6 +132,7 @@ export default function HomePage() {
   const [archivedItems, setArchivedItems] = useState<Item[]>([]);
   const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
+  const [inAppReminders, setInAppReminders] = useState<InAppReminder[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
     null
@@ -154,6 +170,7 @@ export default function HomePage() {
   const [emailAuthMessage, setEmailAuthMessage] = useState<string | null>(null);
   const [devMagicLink, setDevMagicLink] = useState<string | null>(null);
   const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
+  const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -213,15 +230,6 @@ export default function HomePage() {
     [items]
   );
 
-  const upcomingChecks = useMemo(() => {
-    return items
-      .filter((item) => item.nextCheckAt)
-      .sort((first, second) =>
-        String(first.nextCheckAt).localeCompare(String(second.nextCheckAt))
-      )
-      .slice(0, 5);
-  }, [items]);
-
   useEffect(() => {
     let isMounted = true;
 
@@ -262,6 +270,33 @@ export default function HomePage() {
     }
   }, [categories, selectedCategoryId]);
 
+  useEffect(() => {
+    const nextDrafts: Record<string, ReminderDraft> = {};
+
+    for (const category of categories) {
+      nextDrafts[getReminderDraftKey("CATEGORY", category.id)] = {
+        usageCycleDays: String(category.usageCycleDays ?? ""),
+        reminderEnabled: category.reminderEnabled
+      };
+    }
+
+    for (const group of groups) {
+      nextDrafts[getReminderDraftKey("GROUP", group.id)] = {
+        usageCycleDays: String(group.usageCycleDays ?? ""),
+        reminderEnabled: group.reminderEnabled
+      };
+    }
+
+    for (const item of items) {
+      nextDrafts[getReminderDraftKey("ITEM", item.id)] = {
+        usageCycleDays: String(item.usageCycleDays ?? ""),
+        reminderEnabled: item.reminderEnabled
+      };
+    }
+
+    setReminderDrafts(nextDrafts);
+  }, [categories, groups, items]);
+
   async function refreshData(authToken = token) {
     if (!authToken) {
       return;
@@ -273,14 +308,16 @@ export default function HomePage() {
       nextArchivedCategories,
       nextArchivedItems,
       nextShoppingList,
-      nextGroups
+      nextGroups,
+      nextInAppReminders
     ] = await Promise.all([
       getCategories(authToken),
       getItems(authToken),
       getArchivedCategories(authToken),
       getArchivedItems(authToken),
       getShoppingList(authToken),
-      getGroups(authToken)
+      getGroups(authToken),
+      getInAppReminders(authToken)
     ]);
 
     setCategories(nextCategories);
@@ -289,6 +326,7 @@ export default function HomePage() {
     setArchivedItems(nextArchivedItems);
     setShoppingList(nextShoppingList);
     setGroups(nextGroups);
+    setInAppReminders(nextInAppReminders);
   }
 
   async function refreshRecommendations(authToken: string, item: Item) {
@@ -441,6 +479,69 @@ export default function HomePage() {
     setEditingItemId(null);
     setEditingItemName("");
     await refreshData(token);
+  }
+
+  function updateReminderDraft(key: string, draft: ReminderDraft) {
+    setReminderDrafts((current) => ({
+      ...current,
+      [key]: draft
+    }));
+  }
+
+  async function handleSaveReminderSettings(
+    entityType: InAppReminder["entityType"],
+    entityId: string
+  ) {
+    if (!token) {
+      return;
+    }
+
+    const draft = reminderDrafts[getReminderDraftKey(entityType, entityId)];
+    if (!draft) {
+      return;
+    }
+
+    const trimmedDays = draft.usageCycleDays.trim();
+    const usageCycleDays = trimmedDays ? Number(trimmedDays) : null;
+    if (usageCycleDays !== null && (!Number.isInteger(usageCycleDays) || usageCycleDays <= 0)) {
+      setError("Цикл проверки должен быть целым числом дней.");
+      return;
+    }
+
+    const input = {
+      usageCycleDays,
+      reminderEnabled: draft.reminderEnabled
+    };
+
+    if (entityType === "CATEGORY") {
+      await updateCategory(token, entityId, input);
+    } else if (entityType === "GROUP") {
+      await updateGroup(token, entityId, input);
+    } else {
+      await updateItem(token, entityId, input);
+    }
+
+    await refreshData(token);
+  }
+
+  function handleOpenReminder(reminder: InAppReminder) {
+    if (reminder.entityType === "CATEGORY") {
+      setSelectedCategoryId(reminder.entityId);
+      setActiveTab("items");
+      return;
+    }
+
+    if (reminder.entityType === "GROUP") {
+      setSelectedGroupId(reminder.entityId);
+      setActiveTab("groups");
+      return;
+    }
+
+    const item = items.find((candidate) => candidate.id === reminder.entityId);
+    if (item) {
+      setSelectedCategoryId(item.categoryId);
+      setActiveTab("items");
+    }
   }
 
   async function handleArchiveItem(item: Item) {
@@ -1011,26 +1112,28 @@ export default function HomePage() {
           <section className="home-section">
             <div className="section-heading">
               <div>
-                <h2>Ближайшие проверки</h2>
-                <p>{upcomingChecks.length ? `${upcomingChecks.length} поз.` : "Нет дат"}</p>
+                <h2>Напоминания</h2>
+                <p>
+                  {inAppReminders.length ? `${inAppReminders.length} активных` : "Нет дат"}
+                </p>
               </div>
             </div>
-            {upcomingChecks.length ? (
+            {inAppReminders.length ? (
               <div className="item-list">
-                {upcomingChecks.map((item) => (
-                  <article className="shopping-row" key={item.id}>
+                {inAppReminders.map((reminder) => (
+                  <article className="shopping-row" key={reminder.id}>
                     <div>
-                      <p>{formatDate(item.nextCheckAt)}</p>
-                      <h2>{item.name}</h2>
-                      <span>{statusLabels[item.status]}</span>
+                      <p className={reminder.timing === "DUE" ? "urgent" : "normal"}>
+                        {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
+                        {formatDate(reminder.nextCheckAt)}
+                      </p>
+                      <h2>{reminder.title}</h2>
+                      <span>{reminderEntityLabels[reminder.entityType]}</span>
                     </div>
                     <button
                       className="ghost-button"
                       type="button"
-                      onClick={() => {
-                        setSelectedCategoryId(item.categoryId);
-                        setActiveTab("items");
-                      }}
+                      onClick={() => handleOpenReminder(reminder)}
                     >
                       Открыть
                     </button>
@@ -1814,9 +1917,78 @@ export default function HomePage() {
           <div className="section-heading">
             <div>
               <h2>Настройки</h2>
-              <p>Экспорт и удаление данных</p>
+              <p>Проверки, экспорт и удаление данных</p>
             </div>
           </div>
+
+          <section className="reminder-settings" aria-label="Настройки проверок">
+            <div className="section-heading">
+              <div>
+                <h2>Проверки</h2>
+                <p>Циклы для напоминаний внутри приложения</p>
+              </div>
+            </div>
+
+            <ReminderSettingsGroup
+              title="Категории"
+              emptyMessage="Создайте категорию, чтобы настроить цикл проверки."
+              rows={categories.map((category) => ({
+                id: category.id,
+                entityType: "CATEGORY",
+                title: category.name,
+                subtitle: category.nextCheckAt
+                  ? `Следующая: ${formatDate(category.nextCheckAt)}`
+                  : "Дата не задана"
+              }))}
+              drafts={reminderDrafts}
+              onDraftChange={updateReminderDraft}
+              onSave={(entityType, entityId) =>
+                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            />
+
+            <ReminderSettingsGroup
+              title="Наборы"
+              emptyMessage="Создайте набор, чтобы настроить совместную проверку."
+              rows={groups.map((group) => ({
+                id: group.id,
+                entityType: "GROUP",
+                title: group.name,
+                subtitle: group.nextCheckAt
+                  ? `Следующая: ${formatDate(group.nextCheckAt)}`
+                  : "Дата не задана"
+              }))}
+              drafts={reminderDrafts}
+              onDraftChange={updateReminderDraft}
+              onSave={(entityType, entityId) =>
+                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            />
+
+            <ReminderSettingsGroup
+              title="Товары"
+              emptyMessage="Добавьте товар, чтобы настроить индивидуальную проверку."
+              rows={items.map((item) => ({
+                id: item.id,
+                entityType: "ITEM",
+                title: item.name,
+                subtitle: item.nextCheckAt
+                  ? `Следующая: ${formatDate(item.nextCheckAt)}`
+                  : "Дата не задана"
+              }))}
+              drafts={reminderDrafts}
+              onDraftChange={updateReminderDraft}
+              onSave={(entityType, entityId) =>
+                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            />
+          </section>
 
           <div className="settings-actions">
             <button
@@ -1844,6 +2016,94 @@ export default function HomePage() {
         </section>
       )}
     </main>
+  );
+}
+
+function getReminderDraftKey(entityType: InAppReminder["entityType"], entityId: string): string {
+  return `${entityType}:${entityId}`;
+}
+
+function ReminderSettingsGroup({
+  title,
+  emptyMessage,
+  rows,
+  drafts,
+  onDraftChange,
+  onSave
+}: {
+  title: string;
+  emptyMessage: string;
+  rows: {
+    id: string;
+    entityType: InAppReminder["entityType"];
+    title: string;
+    subtitle: string;
+  }[];
+  drafts: Record<string, ReminderDraft>;
+  onDraftChange: (key: string, draft: ReminderDraft) => void;
+  onSave: (entityType: InAppReminder["entityType"], entityId: string) => void;
+}) {
+  return (
+    <section className="reminder-settings-group">
+      <h3>{title}</h3>
+      {rows.length ? (
+        <div className="reminder-settings-list">
+          {rows.map((row) => {
+            const key = getReminderDraftKey(row.entityType, row.id);
+            const draft = drafts[key] ?? {
+              usageCycleDays: "",
+              reminderEnabled: true
+            };
+
+            return (
+              <article className="reminder-settings-row" key={key}>
+                <div>
+                  <h4>{row.title}</h4>
+                  <p>{row.subtitle}</p>
+                </div>
+                <label className="reminder-toggle">
+                  <input
+                    aria-label={`Напоминания: ${row.title}`}
+                    checked={draft.reminderEnabled}
+                    type="checkbox"
+                    onChange={(event) =>
+                      onDraftChange(key, {
+                        ...draft,
+                        reminderEnabled: event.target.checked
+                      })
+                    }
+                  />
+                  <span>Вкл.</span>
+                </label>
+                <input
+                  aria-label={`Цикл проверки: ${row.title}`}
+                  inputMode="numeric"
+                  min="1"
+                  placeholder="Дней"
+                  type="number"
+                  value={draft.usageCycleDays}
+                  onChange={(event) =>
+                    onDraftChange(key, {
+                      ...draft,
+                      usageCycleDays: event.target.value
+                    })
+                  }
+                />
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => onSave(row.entityType, row.id)}
+                >
+                  Сохранить
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      ) : (
+        <p className="empty">{emptyMessage}</p>
+      )}
+    </section>
   );
 }
 

@@ -5,6 +5,9 @@ export type Category = {
   name: string;
   icon: string | null;
   sortOrder: number;
+  usageCycleDays: number | null;
+  nextCheckAt: string | null;
+  reminderEnabled: boolean;
   archivedAt: string | null;
   itemCount: number;
   aggregateStatus: CategoryStatus;
@@ -19,6 +22,7 @@ export type Item = {
   notes: string | null;
   status: ItemStatus;
   usageCycleDays: number | null;
+  reminderEnabled: boolean;
   lastCheckedAt: string | null;
   lastBoughtAt: string | null;
   nextCheckAt: string | null;
@@ -79,6 +83,15 @@ export type ItemGroup = {
   updatedAt: string;
   archivedAt: string | null;
   items: ItemGroupItem[];
+};
+
+export type InAppReminder = {
+  id: string;
+  entityId: string;
+  entityType: "CATEGORY" | "GROUP" | "ITEM";
+  title: string;
+  nextCheckAt: string;
+  timing: "DUE" | "UPCOMING";
 };
 
 export type RecommendationSuggestion = {

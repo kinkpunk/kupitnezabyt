@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   calculateSnoozedUntil,
   createReminderIdempotencyKey,
-  getDueReminderCandidates
+  getDueReminderCandidates,
+  getInAppReminders
 } from "./reminders.js";
 
 describe("calculateSnoozedUntil", () => {
@@ -62,5 +63,117 @@ describe("createReminderIdempotencyKey", () => {
         scheduledFor: new Date("2026-06-16T23:30:00.000Z")
       })
     ).toBe("user-1:ITEM_CHECK:item-1:2026-06-16");
+  });
+});
+
+describe("getInAppReminders", () => {
+  const now = new Date("2026-06-16T12:00:00.000Z");
+
+  it("returns due and upcoming enabled checks sorted by check date", () => {
+    const reminders = getInAppReminders(
+      [
+        {
+          id: "future",
+          entityType: "ITEM",
+          title: "Rice",
+          nextCheckAt: new Date("2026-06-18T12:00:00.000Z"),
+          reminderEnabled: true
+        },
+        {
+          id: "due",
+          entityType: "CATEGORY",
+          title: "Pharmacy",
+          nextCheckAt: new Date("2026-06-16T11:00:00.000Z"),
+          reminderEnabled: true
+        }
+      ],
+      now
+    );
+
+    expect(reminders.map((reminder) => [reminder.id, reminder.timing])).toEqual([
+      ["due", "DUE"],
+      ["future", "UPCOMING"]
+    ]);
+  });
+
+  it("excludes disabled, archived, paused, unscheduled, and distant checks", () => {
+    const reminders = getInAppReminders(
+      [
+        {
+          id: "enabled",
+          entityType: "GROUP",
+          title: "Travel",
+          nextCheckAt: new Date("2026-06-20T12:00:00.000Z"),
+          reminderEnabled: true
+        },
+        {
+          id: "disabled",
+          entityType: "ITEM",
+          title: "Coffee",
+          nextCheckAt: new Date("2026-06-17T12:00:00.000Z"),
+          reminderEnabled: false
+        },
+        {
+          id: "archived",
+          entityType: "ITEM",
+          title: "Archived",
+          nextCheckAt: new Date("2026-06-17T12:00:00.000Z"),
+          reminderEnabled: true,
+          archivedAt: new Date("2026-06-15T12:00:00.000Z")
+        },
+        {
+          id: "paused",
+          entityType: "ITEM",
+          title: "Paused",
+          nextCheckAt: new Date("2026-06-17T12:00:00.000Z"),
+          reminderEnabled: true,
+          status: "PAUSED"
+        },
+        {
+          id: "unscheduled",
+          entityType: "CATEGORY",
+          title: "No date",
+          nextCheckAt: null,
+          reminderEnabled: true
+        },
+        {
+          id: "distant",
+          entityType: "CATEGORY",
+          title: "Later",
+          nextCheckAt: new Date("2026-07-01T12:00:00.000Z"),
+          reminderEnabled: true
+        }
+      ],
+      now,
+      7
+    );
+
+    expect(reminders.map((reminder) => reminder.id)).toEqual(["enabled"]);
+  });
+
+  it("respects the reminder limit", () => {
+    const reminders = getInAppReminders(
+      [
+        {
+          id: "first",
+          entityType: "ITEM",
+          title: "First",
+          nextCheckAt: new Date("2026-06-17T12:00:00.000Z"),
+          reminderEnabled: true
+        },
+        {
+          id: "second",
+          entityType: "ITEM",
+          title: "Second",
+          nextCheckAt: new Date("2026-06-18T12:00:00.000Z"),
+          reminderEnabled: true
+        }
+      ],
+      now,
+      7,
+      1
+    );
+
+    expect(reminders.map((reminder) => reminder.id)).toEqual(["first"]);
   });
 });
