@@ -1,7 +1,8 @@
 # Render + Vercel + Neon Deployment
 
-This document describes the planned staging deployment for the implemented core
-MVP. It does not change the product scope in `docs/PRODUCT_SPEC.md`.
+This document describes the free-friendly staging deployment for the web-first
+MVP. Telegram bot and worker services are optional integrations, not required
+for the first browser release.
 
 ## Target Topology
 
@@ -11,15 +12,15 @@ Vercel:
 
 Render:
   kupitnezabyt-api       web service
-  kupitnezabyt-bot       background worker
-  kupitnezabyt-worker    background worker
 
 Neon:
   kupitnezabyt-postgres
 ```
 
-Redis is not required for the current implementation. Reminder delivery uses
-PostgreSQL polling in `apps/worker`.
+No always-on Render background worker is required for the web-first MVP. In-app
+reminders are shown by the webapp/API when the user opens the product. Optional
+Telegram delivery can be deployed later if paid worker infrastructure is
+accepted.
 
 ## Repository Preparation
 
@@ -99,16 +100,23 @@ NODE_ENV=production
 DEV_AUTH_ENABLED=false
 DATABASE_URL=
 JWT_SECRET=
-TELEGRAM_BOT_TOKEN=
 APP_BASE_URL=https://<vercel-webapp-host>
 API_PORT=3001
 LOG_LEVEL=info
+EMAIL_FROM=
+EMAIL_PROVIDER_API_KEY=
+MAGIC_LINK_TOKEN_TTL_MINUTES=15
+# Optional Telegram integration only:
+TELEGRAM_BOT_TOKEN=
 ```
 
 After the API URL is known, set the Vercel webapp variable
 `NEXT_PUBLIC_API_BASE_URL` to that URL.
 
-### Bot Background Worker
+### Optional Bot Background Worker
+
+This service is not required for the free-friendly web-first MVP. Create it only
+when Telegram integration is intentionally enabled.
 
 Suggested name:
 
@@ -140,7 +148,10 @@ TELEGRAM_WEBAPP_URL=https://<vercel-webapp-host>
 The bot currently uses Telegram polling, so no public webhook endpoint is
 required.
 
-### Reminder Worker Background Worker
+### Optional Reminder Worker Background Worker
+
+This service is not required for the free-friendly web-first MVP. Create it only
+when external Telegram reminder delivery is intentionally enabled.
 
 Suggested name:
 
@@ -220,13 +231,12 @@ Environment variables:
 
 ```env
 NEXT_PUBLIC_API_BASE_URL=https://<render-api-host>
-TELEGRAM_WEBAPP_URL=https://<vercel-webapp-host>
 ```
 
 After changing `NEXT_PUBLIC_API_BASE_URL`, redeploy the webapp because this value
 is embedded at build time.
 
-## Telegram Setup
+## Optional Telegram Setup
 
 In BotFather:
 
@@ -241,22 +251,21 @@ that opens `TELEGRAM_WEBAPP_URL`.
 
 1. API `GET /health` returns `200`.
 2. Migration job completes successfully.
-3. Bot service starts and responds to `/start`.
-4. Webapp opens from Telegram.
-5. API validates Telegram WebApp `initData`.
+3. Webapp opens by direct HTTPS URL.
+4. Email magic link request sends a test email.
+5. Magic link verify creates an authenticated session.
 6. Create a category.
 7. Add an item.
 8. Set item status to `NEED_BUY`.
 9. Confirm the item appears in the shopping list.
 10. Mark the item bought and confirm it returns to `IN_STOCK`.
-11. Seed or create a due `ITEM_CHECK` reminder.
-12. Confirm worker sends one Telegram message and does not duplicate it.
+11. Confirm due/upcoming checks appear as in-app reminders.
 
 ## Known Deployment Limitations
 
 - `DEV_AUTH_ENABLED` must remain `false` outside local development.
 - Webapp public env vars are build-time values.
-- The current bot implements `/start`, `/app`, and `/help`.
-- The current worker handles `ITEM_CHECK` reminders only.
-- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` remain follow-up
-  product-spec gaps.
+- Email magic link auth is the release target and must be implemented before
+  production browser smoke can pass.
+- The optional bot implements `/start`, `/app`, and `/help`.
+- The optional worker handles `ITEM_CHECK` Telegram reminders only.

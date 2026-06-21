@@ -1,9 +1,10 @@
 # Final MVP Integration
 
-This document records the Slice 13 integration checklist for the implemented
-core MVP. Passing this checklist proves that the current product core works
-together locally and with Telegram smoke credentials; it does not mean full
-compliance with every requirement in `docs/PRODUCT_SPEC.md`.
+This document records the integration checklist for the implemented core MVP
+and the new web-first release path. Passing this checklist proves that the
+current product core works together locally and can be prepared for browser
+release; it does not mean full compliance with every requirement in
+`docs/PRODUCT_SPEC.md`.
 
 Remaining product-spec gaps are tracked in `docs/IMPLEMENTATION_ROADMAP.md`.
 
@@ -21,14 +22,15 @@ Webapp and API:
 docker compose --profile app up webapp api
 ```
 
-Telegram services:
+Optional Telegram services:
 
 ```bash
 docker compose --profile telegram up bot worker
 ```
 
-The `telegram` profile requires a real `TELEGRAM_BOT_TOKEN`, a public
-`TELEGRAM_WEBAPP_URL`, and network access to Telegram APIs.
+The `telegram` profile is not required for the web-first MVP. It requires a
+real `TELEGRAM_BOT_TOKEN`, a public `TELEGRAM_WEBAPP_URL`, network access to
+Telegram APIs, and an always-on process.
 
 ## Verification Checklist
 
@@ -68,9 +70,29 @@ Minimum browser smoke:
 10. Search for an item.
 11. Export JSON from settings.
 
-## Telegram Smoke Checklist
+## Web-First Smoke Checklist
 
-Requires real Telegram credentials:
+Target release smoke after email auth is implemented:
+
+1. Open the deployed webapp HTTPS URL in a mobile browser.
+2. Request a magic link for a real test email.
+3. Open the magic link and confirm authenticated session is created.
+4. Confirm `GET /api/me` resolves the email-authenticated user.
+5. Complete or skip onboarding.
+6. Create a category.
+7. Add an item with `usageCycleDays`.
+8. Confirm the item appears in upcoming in-app reminders when due or near due.
+9. Snooze or update the reminder and confirm no duplicate shopping/reminder
+   entries are created.
+10. Change item status to `NEED_BUY`.
+11. Confirm the item appears in shopping list.
+12. Mark the shopping item bought.
+13. Confirm the tracked item returns to `IN_STOCK`.
+14. Export JSON from settings.
+
+## Optional Telegram Smoke Checklist
+
+Requires real Telegram credentials and deployed bot/worker services:
 
 1. Set `TELEGRAM_BOT_TOKEN`.
 2. Set `TELEGRAM_WEBAPP_URL` to a public HTTPS URL serving the webapp.
@@ -89,11 +111,10 @@ Requires real Telegram credentials:
 - `pnpm test:e2e` is not configured yet.
 - DB-backed integration tests for API user isolation still require a dedicated
   PostgreSQL test harness.
-- Telegram end-to-end checks require external credentials and a public HTTPS URL.
-- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` reminder delivery are
-  not implemented yet.
-- Telegram bot commands `/shopping`, `/check`, and `/settings` are not
-  implemented yet.
+- Email magic link auth is not implemented yet.
+- In-app reminder settings and due/upcoming reminder surfaces are incomplete.
+- Telegram end-to-end checks are optional and require external credentials,
+  deployed bot/worker services, and a public HTTPS URL.
 - UI/API flows for configuring item/category/group check cycles and reminder
   toggles are incomplete.
 - Unfinished check sessions are not persisted/discovered in the webapp after
@@ -102,8 +123,7 @@ Requires real Telegram credentials:
 - Category/item delete and reorder flows are not fully implemented where the
   product spec requires them; current flows prefer archiving.
 - Recommendation action `Скрыть похожие` is not implemented yet.
-- Browser/PWA sign-in without Telegram is not implemented yet. The preferred
-  follow-up is passwordless email magic links with Telegram account linking.
+- Telegram account linking can be added later as optional integration.
 
 ## Previous Local Verification
 

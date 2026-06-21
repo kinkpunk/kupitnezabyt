@@ -1,7 +1,9 @@
 # API
 
-This document tracks the implemented API surface. The current implementation
-covers the first product flow plus Slice 2 CRUD hardening.
+This document tracks the implemented API surface and the next planned web-first
+auth surface. The current implementation covers the core product flow with
+development and Telegram-compatible auth. The release target is email magic link
+auth for browser users; Telegram auth remains optional integration.
 
 ## Auth
 
@@ -23,8 +25,9 @@ Development-only endpoint. It is available only when `NODE_ENV=development` and
 POST /api/auth/telegram
 ```
 
-Production auth boundary for Telegram Mini App `initData`. The backend validates
-the Telegram signature and returns the same bearer token shape as dev auth.
+Optional Telegram integration auth boundary for Telegram Mini App `initData`.
+The backend validates the Telegram signature and returns the same bearer token
+shape as dev auth.
 
 ```json
 {
@@ -32,7 +35,38 @@ the Telegram signature and returns the same bearer token shape as dev auth.
 }
 ```
 
-Both endpoints return:
+Planned web-first auth endpoints:
+
+```http
+POST /api/auth/email/request
+POST /api/auth/email/verify
+```
+
+Request body:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+The request endpoint returns a generic success response whether or not an
+account already exists, creates a short-lived one-time magic link token, stores
+only a hash, and sends the raw link through the configured email provider.
+
+Verify body:
+
+```json
+{
+  "token": "..."
+}
+```
+
+`POST /api/auth/email/verify` consumes a valid token exactly once, creates or
+updates the user for that email, and returns the same bearer token/session shape
+as other auth exchanges.
+
+Auth exchange endpoints return:
 
 ```json
 {
@@ -141,8 +175,9 @@ Snooze body:
 ```
 
 Snoozing sets `Item.nextCheckAt` to `now + days` and recreates the pending
-`ITEM_CHECK` reminder data. It does not send a Telegram message; sending is
-handled by later worker slices.
+`ITEM_CHECK` reminder data. In the web-first MVP this powers in-app reminders;
+optional external Telegram delivery is handled by `apps/worker` only when that
+integration is deployed.
 
 Update body:
 

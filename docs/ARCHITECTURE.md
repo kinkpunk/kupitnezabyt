@@ -4,11 +4,14 @@
 
 The current architecture supports the implemented core MVP slices. It should not
 be read as full compliance with every requirement in `docs/PRODUCT_SPEC.md`.
-The product spec remains the complete target; the remaining gaps are tracked in
-`docs/IMPLEMENTATION_ROADMAP.md` and summarized here as follow-up work:
+The product spec remains the complete target. As of 2026-06-21, the release
+target is web-first: email magic link auth and in-app reminders, with Telegram
+kept as optional integration.
 
-- reminder delivery beyond `ITEM_CHECK`;
-- Telegram bot commands beyond `/start`, `/app`, and `/help`;
+- email magic link auth and production-safe browser sessions;
+- in-app reminders and check-cycle settings;
+- optional reminder delivery beyond in-app surfaces;
+- optional Telegram bot commands beyond `/start`, `/app`, and `/help`;
 - UI/API configuration for check cycles and reminder toggles;
 - persisted continuation of unfinished check sessions;
 - auth/sensitive endpoint rate limiting;
@@ -21,7 +24,7 @@ The product spec remains the complete target; the remaining gaps are tracked in
 The first vertical slice implements only:
 
 ```text
-Open Mini App
+Open webapp
 -> create category
 -> add item
 -> change item status
@@ -29,16 +32,17 @@ Open Mini App
 -> mark it bought
 ```
 
-Out of scope for this slice: Telegram bot commands, worker, reminders, groups,
-check sessions, recommendations, search, export, onboarding, deployment, and CI.
+Out of scope for this slice: production browser auth, optional Telegram bot
+commands, worker, reminders, groups, check sessions, recommendations, search,
+export, onboarding, deployment, and CI.
 
 ## Workspace
 
 ```text
 apps/webapp          Next.js mobile UI
 apps/api             Fastify API
-apps/bot             grammY Telegram bot entry point
-apps/worker          reminder polling and Telegram delivery
+apps/bot             optional grammY Telegram bot entry point
+apps/worker          optional reminder polling and Telegram delivery
 packages/database    Prisma schema and client
 packages/shared      Shared domain types and pure business logic
 ```
@@ -50,7 +54,9 @@ components in Slice 1.
 
 The API resolves user identity from an authorization context only.
 
-- `POST /api/auth/telegram` validates Telegram Mini App `initData`.
+- Target production auth: email magic link request/verify flow.
+- `POST /api/auth/telegram` validates Telegram Mini App `initData` only when
+  optional Telegram integration is enabled.
 - `POST /api/auth/dev` exists only when `NODE_ENV=development` and
   `DEV_AUTH_ENABLED=true`.
 - Authenticated requests use a signed bearer token.
@@ -71,13 +77,14 @@ The API applies those rules inside database transactions. `NEED_BUY` and
 `URGENT` create or update one open shopping list entry per item. Returning an
 item to `IN_STOCK`, `LOW`, or `PAUSED` completes the open entry.
 
-## Telegram Bot
+## Optional Telegram Bot
 
 Slice 3 adds a minimal `apps/bot` service with grammY. It currently implements
 only `/start`, `/app`, and `/help`, plus an inline Mini App button. Slice 6 adds
 item reminder callback handling for `ITEM_CHECK` notifications. The MVP spec
-also lists `/shopping`, `/check`, `/settings`, category/group reminder actions,
-and shopping reminder actions; those remain follow-up work.
+previously listed `/shopping`, `/check`, `/settings`, category/group reminder
+actions, and shopping reminder actions; those are now optional Telegram
+integration work.
 
 The bot requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBAPP_URL` when started
 directly:
@@ -107,16 +114,17 @@ Slice 5 adds reminder scheduling data:
 
 Reminder rows include an `idempotencyKey` so later worker slices can avoid
 duplicates for the same user, reminder type, entity, and UTC scheduled date.
-Slice 5 stores and updates reminder data only; it does not send Telegram
-notifications.
+For the web-first MVP, this scheduling data powers in-app reminders. Due and
+upcoming reminders can be shown when the user opens the app; this does not
+require an always-on worker process.
 
-Slice 6 adds `apps/worker` for reminder delivery. The worker polls pending
+Slice 6 historically adds `apps/worker` for Telegram reminder delivery. The worker polls pending
 `Reminder` rows, renders item-check notifications, sends them through Telegram
 Bot API, and updates reminder status to `SENT`, `FAILED`, or `CANCELLED`.
 Temporary failures are retried by moving `scheduledFor` forward with bounded
 backoff. User data mutations are not rolled back when Telegram delivery fails.
 
-The worker currently handles `ITEM_CHECK` reminders. `CATEGORY_CHECK`,
+The optional worker currently handles `ITEM_CHECK` reminders. `CATEGORY_CHECK`,
 `GROUP_CHECK`, and `SHOPPING_REMINDER` exist in the data model but are not yet
 delivered by the worker.
 
@@ -224,7 +232,14 @@ Slice 13 adds a local Docker Compose integration surface for infrastructure,
 webapp, API, bot, and worker. The app profile can run webapp and API locally
 against Compose PostgreSQL and Redis. Telegram-facing services are behind a
 separate `telegram` profile because they require a real bot token, a public
-Mini App URL, and network access to Telegram.
+Mini App URL, network access to Telegram, and an always-on process.
+
+The web-first deployment target is free-friendly:
+
+- Vercel webapp.
+- Render free web API, accepting cold starts for MVP.
+- Neon/Postgres database.
+- No required Render background workers.
 
 The final integration checklist lives in `docs/FINAL_INTEGRATION.md`. It
 verifies the implemented core MVP and highlights remaining `PRODUCT_SPEC` gaps.

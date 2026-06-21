@@ -14,25 +14,112 @@ Telegram-compatible auth, categories, tracked items, status transitions,
 shopping list sync, item reminders, check sessions, groups, recommendations,
 search, export, and account deletion.
 
+Product direction changed on 2026-06-21: the release target is now a
+**web-first MVP** with email magic link authentication and in-app reminders.
+Telegram Mini App, Telegram Bot, and external Telegram reminder delivery are
+kept as optional integration/future work because always-on Render background
+workers are not free in the current deployment setup.
+
 This does not mean full compliance with `docs/PRODUCT_SPEC.md`. The product spec
-remains the source of the complete target. The remaining work is tracked as
-finalization/follow-up work rather than as new foundational product slices.
+remains the source of the complete target. Existing Telegram slices are
+historical implemented work, but the next release-readiness path is browser
+auth, browser smoke, and in-app reminders.
 
-Remaining `PRODUCT_SPEC` gaps:
+Remaining web-first MVP gaps:
 
-- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` reminder scheduling,
-  rendering, worker delivery, and bot callbacks.
-- Telegram bot commands `/shopping`, `/check`, and `/settings`.
+- Email magic link auth data model, endpoints, token hashing/expiry/consumption,
+  and email provider integration.
+- Production-safe browser session flow that replaces dev auth.
 - UI/API flows for configuring check cycles and `reminderEnabled` for items,
   categories, and groups.
+- In-app reminders surface for due and upcoming item/category/group checks.
 - Continuing an unfinished check session after webapp reload or returning later.
 - Rate limiting for auth and other sensitive endpoints.
 - Explicit delete/reorder contracts for categories/items where the spec requires
   them; current MVP primarily uses archive flows.
 - Recommendation action `Скрыть похожие`.
 - `test:e2e` plus DB-backed API integration tests.
-- Optional non-Telegram browser/PWA sign-in: passwordless email magic links,
-  Telegram account linking, and iPhone home-screen usage.
+- Optional Telegram integration smoke if/when bot/worker deployment is enabled.
+
+## Web-First Release Plan
+
+### Slice 14: Email Magic Link Auth
+
+Status: next.
+
+Goal: let a production browser user sign in without Telegram.
+
+Database:
+
+- Add `User.email`, `User.emailVerifiedAt`, and optional `displayName`.
+- Keep `telegramUserId` optional or nullable for future account linking.
+- Add `MagicLinkToken` with hashed token, email, expiry, consumed timestamp, and
+  indexes for lookup/cleanup.
+
+Backend:
+
+- Add `POST /api/auth/email/request`.
+- Add `POST /api/auth/email/verify`.
+- Hash raw magic link tokens before storing.
+- Consume tokens exactly once.
+- Enforce short TTL and generic responses to avoid email enumeration.
+- Add rate limiting for auth endpoints.
+- Return the existing bearer token/session shape after verification.
+
+Webapp:
+
+- Replace production Telegram-only auth with email entry and magic link verify
+  screen.
+- Keep dev auth only for `NODE_ENV=development`.
+- Preserve optional Telegram auth path behind runtime detection/feature flag.
+
+Tests:
+
+- Unit tests for token hashing, expiry, one-time consumption, and generic
+  request responses.
+- API tests for request/verify success, expired token, consumed token, invalid
+  token, and user isolation.
+
+### Slice 15: In-App Reminders And Check Settings
+
+Status: planned.
+
+Goal: make reminders useful without a paid always-on worker.
+
+Backend:
+
+- Add endpoints or response fields for due/upcoming reminders scoped to the
+  authenticated user.
+- Reuse existing `nextCheckAt`, `usageCycleDays`, and `reminderEnabled`.
+- Add update support for item/category/group check cycles and reminder toggles.
+- Ensure reminder rows remain idempotent where they are still used.
+
+Webapp:
+
+- Show due and upcoming checks on Home.
+- Add settings/controls for `usageCycleDays`, `nextCheckAt`, and
+  `reminderEnabled`.
+- Add actions from an in-app reminder: mark status, start category/group check,
+  snooze, or open item/category/group.
+
+Tests:
+
+- Unit tests for due/upcoming reminder selection.
+- E2E happy path: sign in, add item, configure cycle, see due reminder, act on
+  it, and verify no duplicate shopping/reminder state.
+
+### Slice 16: Web Deployment Finalization
+
+Status: planned.
+
+Goal: keep the first release on free-friendly infrastructure.
+
+- Vercel webapp.
+- Render free web API, accepting cold starts for MVP.
+- Neon/Postgres database.
+- No required Render background workers.
+- Telegram bot/worker deployment documented as optional and not part of release
+  acceptance.
 
 ## Slice 1 Baseline
 
@@ -488,10 +575,12 @@ Decision for the current MVP state:
 - Revisit after Slice 13 only if final integration exposes stable repeated
   components shared across screens or apps.
 
-## Slice 13: Final MVP Integration
+## Slice 13: Final Telegram-Compatible Core Integration
 
-Status: implemented for local core-MVP verification; external Telegram smoke
-requires real credentials and a public HTTPS Mini App URL.
+Status: implemented as historical Telegram-compatible core verification.
+External Telegram smoke requires real credentials, a public HTTPS Mini App URL,
+and always-on bot/worker processes; it is no longer required for the
+free-friendly web-first MVP.
 
 Goal: verify the implemented core MVP as one product and make remaining
 `PRODUCT_SPEC` gaps explicit.
@@ -521,14 +610,14 @@ Tasks:
 
 Finalization work after Slice 13:
 
-- Run the full local Docker smoke from `docs/FINAL_INTEGRATION.md`.
+- Run the full local Docker smoke from `docs/FINAL_INTEGRATION.md` when Docker
+  is available.
 - Add and run `pnpm test:e2e` for the main dev-auth product flow.
 - Add DB-backed integration tests for auth/user isolation, CRUD, shopping
   duplicate prevention, check sessions, groups, recommendations, search, export,
   and account deletion.
-- Run Telegram smoke with a real bot token and public HTTPS Mini App URL.
-- Decide whether remaining `PRODUCT_SPEC` gaps are in-scope for the first
-  release or should be explicitly deferred in a release note.
+- Implement Slices 14-16 for web-first release readiness.
+- Run Telegram smoke only if optional Telegram deployment is enabled.
 
 ## Dependency Policy
 
@@ -548,5 +637,5 @@ Finalization work after Slice 13:
 5. Mutations that affect tracked items and shopping list entries must be
    transactional.
 6. Shopping list and reminders require idempotency.
-7. Telegram `initData` is validated only on the backend.
-8. Never log Telegram tokens, init data, JWTs, or sensitive notes.
+7. Magic link tokens and Telegram `initData` are validated only on the backend.
+8. Never log magic link tokens, Telegram tokens, init data, JWTs, or sensitive notes.
