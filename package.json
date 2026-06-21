@@ -12,6 +12,7 @@
     "test": "vitest run",
     "db:generate": "corepack pnpm --filter @kupitnezabyt/database db:generate",
     "db:migrate": "corepack pnpm --filter @kupitnezabyt/database db:migrate",
+    "db:deploy": "corepack pnpm --filter @kupitnezabyt/database db:deploy",
     "db:seed": "corepack pnpm --filter @kupitnezabyt/database db:seed"
   },
   "devDependencies": {
