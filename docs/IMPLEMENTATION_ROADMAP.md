@@ -27,12 +27,11 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- Email magic link auth data model, endpoints, token hashing/expiry/consumption,
-  and email provider integration.
-- Production-safe browser session flow that replaces dev auth.
-- UI/API flows for configuring check cycles and `reminderEnabled` for items,
-  categories, and groups.
-- In-app reminders surface for due and upcoming item/category/group checks.
+- Production deployment smoke for email magic link auth with a real email
+  provider and HTTPS browser URL.
+- Continued browser smoke for the production-safe bearer/JWT session flow.
+- In-app reminder actions beyond opening the related item/category/group, such
+  as direct status changes, starting checks, and snoozing from the reminder row.
 - Continuing an unfinished check session after webapp reload or returning later.
 - Rate limiting for auth and other sensitive endpoints.
 - Explicit delete/reorder contracts for categories/items where the spec requires
@@ -45,7 +44,7 @@ Remaining web-first MVP gaps:
 
 ### Slice 14: Email Magic Link Auth
 
-Status: next.
+Status: implemented in `0187e8e`.
 
 Goal: let a production browser user sign in without Telegram.
 
@@ -80,9 +79,19 @@ Tests:
 - API tests for request/verify success, expired token, consumed token, invalid
   token, and user isolation.
 
+Implemented notes:
+
+- Added nullable email/user fields and `MagicLinkToken`.
+- Added request/verify endpoints with hashed one-time tokens, TTL, generic
+  request response, and auth rate limiting.
+- Added email provider integration with a development fallback link.
+- Webapp supports email entry, magic link verification, existing bearer session
+  storage, development auth only in development, and optional Telegram auth when
+  Telegram WebApp runtime is present.
+
 ### Slice 15: In-App Reminders And Check Settings
 
-Status: planned.
+Status: implemented in `62a48e6`.
 
 Goal: make reminders useful without a paid always-on worker.
 
@@ -99,14 +108,26 @@ Webapp:
 - Show due and upcoming checks on Home.
 - Add settings/controls for `usageCycleDays`, `nextCheckAt`, and
   `reminderEnabled`.
-- Add actions from an in-app reminder: mark status, start category/group check,
-  snooze, or open item/category/group.
+- Add an action from an in-app reminder to open the related item/category/group.
+- Direct row actions for status changes, starting checks, and snoozing remain
+  follow-up work.
 
 Tests:
 
 - Unit tests for due/upcoming reminder selection.
-- E2E happy path: sign in, add item, configure cycle, see due reminder, act on
-  it, and verify no duplicate shopping/reminder state.
+- E2E happy path remains planned because `test:e2e` is not configured yet.
+
+Implemented notes:
+
+- Added `GET /api/reminders/in-app` for authenticated due/upcoming
+  item/category/group reminders.
+- Expanded item/category/group PATCH flows to update `usageCycleDays`,
+  `nextCheckAt`, and `reminderEnabled` without requiring name changes.
+- Home now shows due/upcoming in-app reminders.
+- Settings now includes cycle/toggle controls for categories, groups, and items.
+- Reminder rows can open the related item/category/group. Direct actions such as
+  status change, start check, and snooze from the reminder row remain follow-up
+  work.
 
 ### Slice 16: Web Deployment Finalization
 

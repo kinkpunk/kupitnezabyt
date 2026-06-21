@@ -1,9 +1,9 @@
 # API
 
-This document tracks the implemented API surface and the next planned web-first
-auth surface. The current implementation covers the core product flow with
-development and Telegram-compatible auth. The release target is email magic link
-auth for browser users; Telegram auth remains optional integration.
+This document tracks the implemented API surface. The current implementation
+covers the core product flow with development auth, email magic link auth, and
+optional Telegram-compatible auth. The release target is email magic link auth
+for browser users; Telegram auth remains optional integration.
 
 ## Auth
 
@@ -35,7 +35,7 @@ shape as dev auth.
 }
 ```
 
-Planned web-first auth endpoints:
+Web-first auth endpoints:
 
 ```http
 POST /api/auth/email/request
@@ -187,13 +187,44 @@ Update body:
   "categoryId": "...",
   "brand": "optional",
   "notes": "optional",
-  "usageCycleDays": 30
+  "usageCycleDays": 30,
+  "nextCheckAt": "2026-06-28T12:00:00.000Z",
+  "reminderEnabled": true
 }
 ```
 
-Only `name` is required for the current update endpoint. Optional fields are
-preserved when omitted. Archiving an item also completes its open shopping list
-entry.
+All update fields are optional. Omitted fields are preserved. Sending
+`usageCycleDays` without `nextCheckAt` recalculates the next check date from the
+current item status; sending `nextCheckAt: null` clears the explicit schedule.
+Archiving an item also completes its open shopping list entry.
+
+```http
+GET /api/reminders/in-app
+GET /api/reminders/in-app?days=7
+```
+
+Returns due and upcoming in-app reminders scoped to the authenticated user.
+The response includes item, category, and group checks whose reminders are
+enabled and whose `nextCheckAt` is due or falls inside the requested upcoming
+window.
+
+```json
+[
+  {
+    "id": "ITEM:item-id",
+    "entityId": "item-id",
+    "entityType": "ITEM",
+    "title": "Кофе",
+    "nextCheckAt": "2026-06-28T12:00:00.000Z",
+    "timing": "UPCOMING"
+  }
+]
+```
+
+`PATCH /api/categories/:id`, `PATCH /api/groups/:id`, and
+`PATCH /api/items/:id` accept `usageCycleDays`, `nextCheckAt`, and
+`reminderEnabled` so the webapp can configure check settings without renaming
+the entity.
 
 `GET /api/categories?archived=true` and `GET /api/items?archived=true` return
 archived records for the authenticated user. Restoring a category also restores

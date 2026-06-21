@@ -111,12 +111,12 @@ Requires real Telegram credentials and deployed bot/worker services:
 - `pnpm test:e2e` is not configured yet.
 - DB-backed integration tests for API user isolation still require a dedicated
   PostgreSQL test harness.
-- Email magic link auth is not implemented yet.
-- In-app reminder settings and due/upcoming reminder surfaces are incomplete.
+- Production email magic link smoke still needs a real email provider and HTTPS
+  deployed browser URL.
+- In-app reminder rows open the related item/category/group; direct row actions
+  for status changes, starting checks, and snoozing remain follow-up work.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
-- UI/API flows for configuring item/category/group check cycles and reminder
-  toggles are incomplete.
 - Unfinished check sessions are not persisted/discovered in the webapp after
   reload.
 - Rate limiting for auth and other sensitive endpoints is still follow-up work.
