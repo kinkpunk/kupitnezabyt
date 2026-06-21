@@ -826,12 +826,12 @@ export default function HomePage() {
                   className="ghost-button"
                   type="button"
                   onClick={() =>
-                    void handleFinishOnboarding(true).catch((caughtError) =>
+                    void handleFinishOnboarding().catch((caughtError) =>
                       setError(formatError(caughtError))
                     )
                   }
                 >
-                  Пропустить настройку
+                  Пропустить напоминания
                 </button>
               </div>
             </>
