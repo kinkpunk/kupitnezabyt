@@ -1,0 +1,5 @@
+{
+  "installCommand": "corepack enable && corepack pnpm install --frozen-lockfile",
+  "buildCommand": "corepack pnpm --filter @kupitnezabyt/shared build && corepack pnpm --filter @kupitnezabyt/webapp build",
+  "outputDirectory": "apps/webapp/.next"
+}
