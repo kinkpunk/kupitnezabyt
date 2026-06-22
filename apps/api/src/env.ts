@@ -11,7 +11,7 @@ export type ApiConfig = {
 };
 
 export function getConfig(): ApiConfig {
-  return {
+  const config = {
     appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:3000",
     emailFrom: process.env.EMAIL_FROM || undefined,
     emailProviderApiKey: process.env.EMAIL_PROVIDER_API_KEY || undefined,
@@ -25,6 +25,10 @@ export function getConfig(): ApiConfig {
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
     port: Number(process.env.API_PORT ?? 3001)
   };
+
+  assertProductionConfig(config);
+
+  return config;
 }
 
 function readPositiveInteger(value: string | undefined, fallback: number): number {
@@ -34,4 +38,32 @@ function readPositiveInteger(value: string | undefined, fallback: number): numbe
 
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function assertProductionConfig(config: ApiConfig): void {
+  if (config.nodeEnv !== "production") {
+    return;
+  }
+
+  const missing: string[] = [];
+
+  if (!config.jwtSecret || config.jwtSecret === "replace_me") {
+    missing.push("JWT_SECRET");
+  }
+
+  if (!config.emailFrom) {
+    missing.push("EMAIL_FROM");
+  }
+
+  if (!config.emailProviderApiKey) {
+    missing.push("EMAIL_PROVIDER_API_KEY");
+  }
+
+  if (!config.appBaseUrl.startsWith("https://")) {
+    missing.push("APP_BASE_URL_HTTPS");
+  }
+
+  if (missing.length) {
+    throw new Error(`PRODUCTION_CONFIG_INVALID: ${missing.join(", ")}`);
+  }
 }

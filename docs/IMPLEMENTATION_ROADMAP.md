@@ -131,7 +131,7 @@ Implemented notes:
 
 ### Slice 16: Web Deployment Finalization
 
-Status: planned.
+Status: in progress.
 
 Goal: keep the first release on free-friendly infrastructure.
 
@@ -141,6 +141,14 @@ Goal: keep the first release on free-friendly infrastructure.
 - No required Render background workers.
 - Telegram bot/worker deployment documented as optional and not part of release
   acceptance.
+
+Implementation notes:
+
+- Production API startup now fails fast when required auth/email env vars are
+  missing or `APP_BASE_URL` is not HTTPS.
+- `GET /health/detailed` verifies database connectivity for deployment smoke.
+- Deployment docs distinguish Neon pooled API connections from direct migration
+  connections and use the implemented `corepack pnpm db:deploy` command.
 
 ## Slice 1 Baseline
 

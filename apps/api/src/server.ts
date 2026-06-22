@@ -120,7 +120,13 @@ export function buildServer() {
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "info",
-      redact: ["req.headers.authorization", "req.body.initData", "req.body.token"]
+      redact: [
+        "req.headers.authorization",
+        "req.headers.cookie",
+        "req.body.email",
+        "req.body.initData",
+        "req.body.token"
+      ]
     }
   });
 
@@ -131,7 +137,7 @@ export function buildServer() {
   });
 
   app.addHook("preHandler", async (request, reply) => {
-    if (request.url === "/health" || request.url.startsWith("/api/auth/")) {
+    if (request.url === "/health" || request.url === "/health/detailed" || request.url.startsWith("/api/auth/")) {
       return;
     }
 
@@ -146,6 +152,27 @@ export function buildServer() {
   });
 
   app.get("/health", async () => ({ ok: true }));
+
+  app.get("/health/detailed", async (_request, reply) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      reply.code(503);
+      return {
+        ok: false,
+        db: false,
+        env: config.nodeEnv,
+        commit: process.env.RENDER_GIT_COMMIT ?? null
+      };
+    }
+
+    return {
+      ok: true,
+      db: true,
+      env: config.nodeEnv,
+      commit: process.env.RENDER_GIT_COMMIT ?? null
+    };
+  });
 
   app.get<{ Querystring: RemindersQuery }>("/api/reminders/in-app", async (request) => {
     const userId = requireUserId(request.userId);

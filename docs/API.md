@@ -422,4 +422,10 @@ Errors use this shape:
 
 ```http
 GET /health
+GET /health/detailed
 ```
+
+`GET /health` is a lightweight liveness check for platform health probes.
+`GET /health/detailed` additionally checks database connectivity and returns
+`503` when Postgres is unavailable. It is intended for deployment smoke and
+manual diagnostics.

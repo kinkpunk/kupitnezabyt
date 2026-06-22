@@ -42,6 +42,7 @@ Telegram APIs, and an always-on process.
 - `pnpm db:generate`
 - `pnpm db:migrate`
 - API health check at `http://localhost:3001/health`
+- API detailed health check at `http://localhost:3001/health/detailed`
 - Webapp opens at `http://localhost:3000`
 
 These checks should be treated as release-readiness checks for the implemented
@@ -75,20 +76,21 @@ Minimum browser smoke:
 Target release smoke after email auth is implemented:
 
 1. Open the deployed webapp HTTPS URL in a mobile browser.
-2. Request a magic link for a real test email.
-3. Open the magic link and confirm authenticated session is created.
-4. Confirm `GET /api/me` resolves the email-authenticated user.
-5. Complete or skip onboarding.
-6. Create a category.
-7. Add an item with `usageCycleDays`.
-8. Confirm the item appears in upcoming in-app reminders when due or near due.
-9. Snooze or update the reminder and confirm no duplicate shopping/reminder
+2. Confirm deployed API `GET /health` and `GET /health/detailed` pass.
+3. Request a magic link for a real test email.
+4. Open the magic link and confirm authenticated session is created.
+5. Confirm `GET /api/me` resolves the email-authenticated user.
+6. Complete or skip onboarding.
+7. Create a category.
+8. Add an item with `usageCycleDays`.
+9. Confirm the item appears in upcoming in-app reminders when due or near due.
+10. Snooze or update the reminder and confirm no duplicate shopping/reminder
    entries are created.
-10. Change item status to `NEED_BUY`.
-11. Confirm the item appears in shopping list.
-12. Mark the shopping item bought.
-13. Confirm the tracked item returns to `IN_STOCK`.
-14. Export JSON from settings.
+11. Change item status to `NEED_BUY`.
+12. Confirm the item appears in shopping list.
+13. Mark the shopping item bought.
+14. Confirm the tracked item returns to `IN_STOCK`.
+15. Export JSON from settings.
 
 ## Optional Telegram Smoke Checklist
 

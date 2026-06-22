@@ -217,7 +217,9 @@ pnpm dev
 
 - webapp: `http://localhost:3000`;
 - API: `http://localhost:3001`;
-- API health check: `http://localhost:3001/health`.
+- API health check: `http://localhost:3001/health`;
+- API detailed health check with database connectivity:
+  `http://localhost:3001/health/detailed`.
 
 При необходимости сервисы можно запускать отдельно:
 
