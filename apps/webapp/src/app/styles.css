@@ -485,6 +485,16 @@ select {
   font-size: 26px;
 }
 
+.check-saving {
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--muted);
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
 .item-card-header {
   display: flex;
   align-items: flex-start;

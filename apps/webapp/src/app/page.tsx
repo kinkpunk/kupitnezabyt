@@ -180,6 +180,7 @@ export default function HomePage() {
   const [editingShoppingId, setEditingShoppingId] = useState<string | null>(null);
   const [editingShoppingTitle, setEditingShoppingTitle] = useState("");
   const [checkSession, setCheckSession] = useState<CheckSession | null>(null);
+  const [pendingCheckItemName, setPendingCheckItemName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -744,25 +745,38 @@ export default function HomePage() {
   }
 
   async function handleCheckStatus(status: ItemStatus) {
-    if (!token || !checkSession || !currentCheckItem) {
+    if (!token || !checkSession || !currentCheckItem || pendingCheckItemName) {
       return;
     }
 
     setError(null);
-    const session = await setCheckSessionItemStatus(
-      token,
-      checkSession.id,
-      currentCheckItem.itemId,
-      status
-    );
-    setCheckSession(session);
+    const previousSession = checkSession;
+    const checkedItem = currentCheckItem;
+    const optimisticSession = getOptimisticCheckSession(checkSession, checkedItem.itemId, status);
+    setPendingCheckItemName(checkedItem.item.name);
+    setCheckSession(optimisticSession);
 
-    if (session.items.every((sessionItem) => sessionItem.checkedAt)) {
-      const completedSession = await completeCheckSession(token, session.id);
-      setCheckSession(completedSession);
-      await refreshActiveData(token);
-    } else {
-      await refreshActiveData(token);
+    try {
+      const session = await setCheckSessionItemStatus(
+        token,
+        previousSession.id,
+        checkedItem.itemId,
+        status
+      );
+
+      if (session.items.every((sessionItem) => sessionItem.checkedAt)) {
+        const completedSession = await completeCheckSession(token, session.id);
+        setCheckSession(completedSession);
+      } else {
+        setCheckSession(session);
+      }
+
+      void refreshActiveData(token).catch((caughtError) => setError(formatError(caughtError)));
+    } catch (caughtError) {
+      setCheckSession(previousSession);
+      setError(formatError(caughtError));
+    } finally {
+      setPendingCheckItemName(null);
     }
   }
 
@@ -1851,7 +1865,11 @@ export default function HomePage() {
           ) : null}
 
           {checkSession?.status === "COMPLETED" ? (
-            <p className="empty">Проверка завершена.</p>
+            <p className="empty">
+              {pendingCheckItemName
+                ? `Завершаем проверку, сохраняем "${pendingCheckItemName}"...`
+                : "Проверка завершена."}
+            </p>
           ) : checkSession?.status === "CANCELLED" ? (
             <p className="empty">Проверка отменена.</p>
           ) : currentCheckItem ? (
@@ -1860,9 +1878,15 @@ export default function HomePage() {
                 {checkSession?.category?.name ?? checkSession?.group?.name ?? "Проверка"}
               </p>
               <h2>{currentCheckItem.item.name}</h2>
+              {pendingCheckItemName ? (
+                <p className="check-saving" role="status">
+                  Сохраняем "{pendingCheckItemName}"...
+                </p>
+              ) : null}
               <div className="status-grid">
                 {statusOptions.map((status) => (
                   <button
+                    disabled={Boolean(pendingCheckItemName)}
                     key={status}
                     type="button"
                     onClick={() =>
@@ -1878,7 +1902,9 @@ export default function HomePage() {
             </article>
           ) : (
             <p className="empty">
-              Выберите категорию и начните пошаговую проверку.
+              {pendingCheckItemName
+                ? `Сохраняем "${pendingCheckItemName}"...`
+                : "Выберите категорию и начните пошаговую проверку."}
             </p>
           )}
         </section>
@@ -2259,6 +2285,8 @@ function getFriendlyErrorMessage(message: string): string {
   const authErrorMessages: Record<string, string> = {
     EMAIL_AUTH_REQUIRED: "Войдите через Google или получите ссылку на email.",
     "Failed to fetch": "Не удалось подключиться к сервису. Попробуйте обновить страницу.",
+    "Load failed": "Не удалось подключиться к сервису. Попробуйте еще раз.",
+    NETWORK_ERROR: "Не удалось подключиться к сервису. Попробуйте еще раз.",
     GOOGLE_AUTH_CANCELLED: "Вход через Google отменен.",
     GOOGLE_AUTH_FAILED: "Не удалось завершить вход через Google. Попробуйте еще раз.",
     GOOGLE_AUTH_INVALID_CALLBACK: "Google вернул неполный ответ. Попробуйте войти еще раз.",
@@ -2268,6 +2296,35 @@ function getFriendlyErrorMessage(message: string): string {
   };
 
   return authErrorMessages[message] ?? message;
+}
+
+function getOptimisticCheckSession(
+  session: CheckSession,
+  itemId: string,
+  status: ItemStatus
+): CheckSession {
+  const checkedAt = new Date().toISOString();
+  const items = session.items.map((sessionItem) =>
+    sessionItem.itemId === itemId
+      ? {
+          ...sessionItem,
+          checkedAt,
+          selectedStatus: status,
+          item: {
+            ...sessionItem.item,
+            status
+          }
+        }
+      : sessionItem
+  );
+  const isCompleted = items.every((sessionItem) => sessionItem.checkedAt);
+
+  return {
+    ...session,
+    completedAt: isCompleted ? checkedAt : session.completedAt,
+    items,
+    status: isCompleted ? "COMPLETED" : session.status
+  };
 }
 
 function ErrorNotice({

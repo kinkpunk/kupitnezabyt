@@ -455,7 +455,9 @@ async function request<TResponse>(
     init.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, init);
+  const response = await fetch(`${apiBaseUrl}${path}`, init).catch(() => {
+    throw new ApiError("NETWORK_ERROR");
+  });
 
   if (!response.ok) {
     const payload = (await response.json().catch(() => null)) as
