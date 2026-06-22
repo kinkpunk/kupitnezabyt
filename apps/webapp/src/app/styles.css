@@ -1,28 +1,30 @@
 :root {
   color-scheme: light dark;
-  --background: #f7f2e8;
-  --surface: #fffaf0;
+  --background: #f6f7f5;
+  --surface: #ffffff;
   --surface-strong: #ffffff;
-  --text: #211f1a;
-  --muted: #6f695f;
-  --line: #ded6c8;
-  --accent: #2f7d69;
-  --accent-strong: #255f51;
-  --danger: #ba3d2d;
-  --shadow: 0 10px 30px rgba(35, 31, 22, 0.08);
+  --text: #171d1a;
+  --muted: #52605a;
+  --line: #d7ddd9;
+  --accent: #176b57;
+  --accent-strong: #0f5142;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --shadow: 0 10px 30px rgba(20, 32, 28, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #161714;
-    --surface: #20221e;
-    --surface-strong: #292c26;
-    --text: #f7f2e8;
-    --muted: #bbb4a8;
-    --line: #3e4139;
-    --accent: #7fc7ad;
-    --accent-strong: #9ed8c2;
-    --danger: #ff9587;
+    --background: #101412;
+    --surface: #171d1a;
+    --surface-strong: #202723;
+    --text: #f3f7f4;
+    --muted: #b7c2bc;
+    --line: #3a4640;
+    --accent: #89d3ba;
+    --accent-strong: #a7e3ce;
+    --accent-text: #08251d;
+    --danger: #ffb4ab;
     --shadow: none;
   }
 }
@@ -51,7 +53,7 @@ button {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
   cursor: pointer;
   font-weight: 700;
 }
@@ -200,7 +202,7 @@ select {
 .status-grid button.active {
   border-color: var(--accent);
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
 }
 
 .stack {
@@ -305,7 +307,7 @@ select {
 .choice.active {
   border-color: var(--accent);
   background: var(--accent);
-  color: white;
+  color: var(--accent-text);
 }
 
 .starter-items,

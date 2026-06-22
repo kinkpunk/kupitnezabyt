@@ -750,16 +750,13 @@ export default function HomePage() {
     }
 
     setError(null);
-    const previousSession = checkSession;
     const checkedItem = currentCheckItem;
-    const optimisticSession = getOptimisticCheckSession(checkSession, checkedItem.itemId, status);
     setPendingCheckItemName(checkedItem.item.name);
-    setCheckSession(optimisticSession);
 
     try {
       const session = await setCheckSessionItemStatus(
         token,
-        previousSession.id,
+        checkSession.id,
         checkedItem.itemId,
         status
       );
@@ -773,7 +770,6 @@ export default function HomePage() {
 
       void refreshActiveData(token).catch((caughtError) => setError(formatError(caughtError)));
     } catch (caughtError) {
-      setCheckSession(previousSession);
       setError(formatError(caughtError));
     } finally {
       setPendingCheckItemName(null);
@@ -2296,35 +2292,6 @@ function getFriendlyErrorMessage(message: string): string {
   };
 
   return authErrorMessages[message] ?? message;
-}
-
-function getOptimisticCheckSession(
-  session: CheckSession,
-  itemId: string,
-  status: ItemStatus
-): CheckSession {
-  const checkedAt = new Date().toISOString();
-  const items = session.items.map((sessionItem) =>
-    sessionItem.itemId === itemId
-      ? {
-          ...sessionItem,
-          checkedAt,
-          selectedStatus: status,
-          item: {
-            ...sessionItem.item,
-            status
-          }
-        }
-      : sessionItem
-  );
-  const isCompleted = items.every((sessionItem) => sessionItem.checkedAt);
-
-  return {
-    ...session,
-    completedAt: isCompleted ? checkedAt : session.completedAt,
-    items,
-    status: isCompleted ? "COMPLETED" : session.status
-  };
 }
 
 function ErrorNotice({
