@@ -38,6 +38,8 @@ Remaining web-first MVP gaps:
   them; current MVP primarily uses archive flows.
 - Recommendation action `Скрыть похожие`.
 - `test:e2e` plus DB-backed API integration tests.
+- Optional Google and Apple sign-in as lower-friction alternatives to email
+  magic links.
 - Optional Telegram integration smoke if/when bot/worker deployment is enabled.
 
 ## Web-First Release Plan
@@ -149,6 +151,130 @@ Implementation notes:
 - `GET /health/detailed` verifies database connectivity for deployment smoke.
 - Deployment docs distinguish Neon pooled API connections from direct migration
   connections and use the implemented `corepack pnpm db:deploy` command.
+
+### Slice 17: OAuth Account Identity Foundation
+
+Status: planned.
+
+Goal: prepare the auth model and API contracts so Google and Apple sign-in can
+coexist with email magic links without duplicating users or weakening account
+isolation.
+
+Database:
+
+- Add `AuthAccount` or equivalent provider account model with `userId`,
+  `provider`, `providerAccountId`, `email`, `emailVerified`, and timestamps.
+- Keep `User.email` as the primary contact email when a provider returns a
+  verified email.
+- Add uniqueness on `(provider, providerAccountId)`.
+- Define a safe linking rule: if a verified provider email matches an existing
+  `User.email`, attach the provider account to that user; otherwise create a
+  new user.
+
+Backend:
+
+- Add provider-neutral OAuth state storage with hashed state, nonce, expiry, and
+  one-time consumption.
+- Add shared token/session issuing code so email magic link, Google, Apple, and
+  optional Telegram all return the same bearer token shape.
+- Reject unverified provider emails for automatic account linking.
+- Keep magic link auth available as fallback while OAuth rolls out.
+
+Webapp:
+
+- Add provider-neutral auth UI slots on the login screen.
+- Preserve magic link as a fallback action.
+- Show provider errors without leaking provider tokens or raw callback payloads.
+
+Tests:
+
+- Unit tests for provider account linking rules.
+- API tests for state expiry, state reuse, provider account creation, and
+  existing-user linking.
+
+### Slice 18: Google Sign-In
+
+Status: planned.
+
+Goal: let browser users sign in with Google without waiting for an email magic
+link.
+
+Provider setup:
+
+- Create a Google OAuth Client ID with application type `Web application`.
+- Configure exact authorized redirect URI, for example
+  `https://<api-host>/api/auth/google/callback`.
+- Request only OpenID Connect identity scopes: `openid email profile`.
+
+Backend:
+
+- Add `POST /api/auth/google/start` or `GET /api/auth/google/start` to create
+  state and redirect the user to Google.
+- Add `GET /api/auth/google/callback` to validate state, exchange the code,
+  verify ID token issuer/audience/nonce/expiry, and resolve/create the user.
+- Store only stable provider identifiers and non-sensitive profile metadata.
+- Return to the webapp with the same session shape used by magic link auth.
+
+Webapp:
+
+- Add "Continue with Google" to the login screen.
+- Handle OAuth callback result and store the bearer token.
+- Keep email magic link visible as fallback.
+
+Environment:
+
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REDIRECT_URI`
+
+Tests:
+
+- Provider-token verification unit tests with mocked JWKS/token responses.
+- Route tests for start/callback happy path, invalid state, reused state,
+  provider email missing, and account linking.
+
+### Slice 19: Apple Sign-In
+
+Status: planned.
+
+Goal: support Sign in with Apple as a second OAuth/OIDC provider after the
+provider-neutral foundation and Google flow are stable.
+
+Provider setup:
+
+- Requires an Apple Developer account and Sign in with Apple capability.
+- Configure Services ID, Team ID, Key ID, private key, and exact redirect URI,
+  for example `https://<api-host>/api/auth/apple/callback`.
+- Account for Apple private relay emails and the fact that name is usually
+  returned only on the first authorization.
+
+Backend:
+
+- Add `POST /api/auth/apple/start` or `GET /api/auth/apple/start`.
+- Add `POST /api/auth/apple/callback` or `GET /api/auth/apple/callback`
+  depending on Apple response mode.
+- Generate Apple client secret JWT server-side.
+- Verify Apple ID token issuer/audience/nonce/expiry and resolve/create user via
+  the provider-neutral auth account model.
+
+Webapp:
+
+- Add "Continue with Apple" using Apple-compliant button treatment.
+- Keep Google and email magic link available.
+
+Environment:
+
+- `APPLE_CLIENT_ID`
+- `APPLE_TEAM_ID`
+- `APPLE_KEY_ID`
+- `APPLE_PRIVATE_KEY`
+- `APPLE_REDIRECT_URI`
+
+Tests:
+
+- Client secret generation tests.
+- Callback tests for first-login profile fields, private relay email, invalid
+  state, invalid token, and existing-user linking.
 
 ## Slice 1 Baseline
 

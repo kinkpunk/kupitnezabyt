@@ -241,7 +241,7 @@ export default function HomePage() {
         }
 
         setToken(authToken);
-        await refreshData(authToken);
+        await refreshActiveData(authToken);
         setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
       } catch (caughtError) {
         if (isMounted) {
@@ -271,6 +271,14 @@ export default function HomePage() {
   }, [categories, selectedCategoryId]);
 
   useEffect(() => {
+    if (activeTab !== "archive" || !token) {
+      return;
+    }
+
+    void refreshArchivedData(token).catch((caughtError) => setError(formatError(caughtError)));
+  }, [activeTab, token]);
+
+  useEffect(() => {
     const nextDrafts: Record<string, ReminderDraft> = {};
 
     for (const category of categories) {
@@ -297,7 +305,7 @@ export default function HomePage() {
     setReminderDrafts(nextDrafts);
   }, [categories, groups, items]);
 
-  async function refreshData(authToken = token) {
+  async function refreshActiveData(authToken = token) {
     if (!authToken) {
       return;
     }
@@ -305,16 +313,12 @@ export default function HomePage() {
     const [
       nextCategories,
       nextItems,
-      nextArchivedCategories,
-      nextArchivedItems,
       nextShoppingList,
       nextGroups,
       nextInAppReminders
     ] = await Promise.all([
       getCategories(authToken),
       getItems(authToken),
-      getArchivedCategories(authToken),
-      getArchivedItems(authToken),
       getShoppingList(authToken),
       getGroups(authToken),
       getInAppReminders(authToken)
@@ -322,11 +326,23 @@ export default function HomePage() {
 
     setCategories(nextCategories);
     setItems(nextItems);
-    setArchivedCategories(nextArchivedCategories);
-    setArchivedItems(nextArchivedItems);
     setShoppingList(nextShoppingList);
     setGroups(nextGroups);
     setInAppReminders(nextInAppReminders);
+  }
+
+  async function refreshArchivedData(authToken = token) {
+    if (!authToken) {
+      return;
+    }
+
+    const [nextArchivedCategories, nextArchivedItems] = await Promise.all([
+      getArchivedCategories(authToken),
+      getArchivedItems(authToken)
+    ]);
+
+    setArchivedCategories(nextArchivedCategories);
+    setArchivedItems(nextArchivedItems);
   }
 
   async function refreshRecommendations(authToken: string, item: Item) {
@@ -360,7 +376,7 @@ export default function HomePage() {
     });
     setItemName("");
     setItems((current) => [...current, item]);
-    await refreshData(token);
+    await refreshActiveData(token);
     await refreshRecommendations(token, item);
   }
 
@@ -374,7 +390,7 @@ export default function HomePage() {
     setItems((current) =>
       current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
     );
-    await refreshData(token);
+    await refreshActiveData(token);
     await refreshRecommendations(token, updatedItem);
   }
 
@@ -389,7 +405,7 @@ export default function HomePage() {
 
     setError(null);
     const item = await acceptRecommendation(token, recommendation.id);
-    await refreshData(token);
+    await refreshActiveData(token);
     await refreshRecommendations(token, item);
   }
 
@@ -415,7 +431,7 @@ export default function HomePage() {
 
     setError(null);
     const completedEntry = await completeShoppingListItem(token, entry.id);
-    await refreshData(token);
+    await refreshActiveData(token);
     if (completedEntry.item) {
       await refreshRecommendations(token, completedEntry.item);
     }
@@ -435,7 +451,7 @@ export default function HomePage() {
     setManualShoppingTitle("");
     setManualShoppingCategoryId("");
     setManualShoppingPriority("NORMAL");
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleUpdateManualShoppingItem(entry: ShoppingListEntry) {
@@ -451,7 +467,7 @@ export default function HomePage() {
     });
     setEditingShoppingId(null);
     setEditingShoppingTitle("");
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleDeleteManualShoppingItem(entry: ShoppingListEntry) {
@@ -461,7 +477,7 @@ export default function HomePage() {
 
     setError(null);
     await deleteShoppingListItem(token, entry.id);
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleUpdateItem(item: Item) {
@@ -478,7 +494,7 @@ export default function HomePage() {
     );
     setEditingItemId(null);
     setEditingItemName("");
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   function updateReminderDraft(key: string, draft: ReminderDraft) {
@@ -521,7 +537,7 @@ export default function HomePage() {
       await updateItem(token, entityId, input);
     }
 
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   function handleOpenReminder(reminder: InAppReminder) {
@@ -551,7 +567,10 @@ export default function HomePage() {
 
     setError(null);
     await archiveItem(token, item.id);
-    await refreshData(token);
+    await refreshActiveData(token);
+    if (activeTab === "archive") {
+      await refreshArchivedData(token);
+    }
   }
 
   async function handleArchiveSelectedCategory() {
@@ -566,7 +585,10 @@ export default function HomePage() {
     setError(null);
     await archiveCategory(token, selectedCategory.id);
     setSelectedCategoryId(null);
-    await refreshData(token);
+    await refreshActiveData(token);
+    if (activeTab === "archive") {
+      await refreshArchivedData(token);
+    }
   }
 
   async function handleRestoreCategory(category: Category) {
@@ -578,7 +600,7 @@ export default function HomePage() {
     const restoredCategory = await restoreCategory(token, category.id);
     setSelectedCategoryId(restoredCategory.id);
     setActiveTab("items");
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleRestoreItem(item: Item) {
@@ -590,7 +612,7 @@ export default function HomePage() {
     const restoredItem = await restoreItem(token, item.id);
     setSelectedCategoryId(restoredItem.categoryId);
     setActiveTab("items");
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleDeleteArchivedCategory(category: Category) {
@@ -600,7 +622,7 @@ export default function HomePage() {
 
     setError(null);
     await deleteArchivedCategory(token, category.id);
-    await refreshData(token);
+    await refreshArchivedData(token);
   }
 
   async function handleDeleteArchivedItem(item: Item) {
@@ -610,7 +632,7 @@ export default function HomePage() {
 
     setError(null);
     await deleteArchivedItem(token, item.id);
-    await refreshData(token);
+    await refreshArchivedData(token);
   }
 
   async function handleClearCompletedShoppingList() {
@@ -620,7 +642,7 @@ export default function HomePage() {
 
     setError(null);
     await clearCompletedShoppingList(token);
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleStartCategoryCheck() {
@@ -654,7 +676,7 @@ export default function HomePage() {
     setError(null);
     await archiveGroup(token, selectedGroup.id);
     setSelectedGroupId(null);
-    await refreshData(token);
+    await refreshActiveData(token);
   }
 
   async function handleAddGroupItem() {
@@ -706,9 +728,9 @@ export default function HomePage() {
     if (session.items.every((sessionItem) => sessionItem.checkedAt)) {
       const completedSession = await completeCheckSession(token, session.id);
       setCheckSession(completedSession);
-      await refreshData(token);
+      await refreshActiveData(token);
     } else {
-      await refreshData(token);
+      await refreshActiveData(token);
     }
   }
 
@@ -755,7 +777,7 @@ export default function HomePage() {
     window.localStorage.setItem(onboardingStorageKey, "true");
     setShowOnboarding(false);
     setOnboardingStep(0);
-    await refreshData(token);
+    await refreshActiveData(token);
     setActiveTab("home");
   }
 
