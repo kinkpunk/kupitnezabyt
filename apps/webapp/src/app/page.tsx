@@ -8,6 +8,7 @@ import {
   Boxes,
   Home,
   ListChecks,
+  Mail,
   Search,
   Settings,
   ShoppingCart,
@@ -99,6 +100,17 @@ const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
 
+type StarterItemDraft = {
+  name: string;
+  categoryName: string;
+};
+
+const defaultStarterItems: StarterItemDraft[] = [
+  { name: "Кофе", categoryName: "Еда" },
+  { name: "Ибупрофен", categoryName: "Аптека" },
+  { name: "Шампунь", categoryName: "Косметика" }
+];
+
 type ReminderDraft = {
   usageCycleDays: string;
   reminderEnabled: boolean;
@@ -138,6 +150,9 @@ export default function HomePage() {
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
     null
   );
+  const [recommendationSourceCategoryId, setRecommendationSourceCategoryId] = useState<
+    string | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Item[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -148,7 +163,7 @@ export default function HomePage() {
     "Аптека",
     "Дом"
   ]);
-  const [starterItems, setStarterItems] = useState(["Кофе", "Ибупрофен", "Шампунь"]);
+  const [starterItems, setStarterItems] = useState<StarterItemDraft[]>(defaultStarterItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
@@ -191,6 +206,19 @@ export default function HomePage() {
         : [],
     [items, selectedCategory]
   );
+
+  const visibleRecommendations = useMemo(() => {
+    if (!selectedCategory || selectedCategory.id !== recommendationSourceCategoryId) {
+      return [];
+    }
+
+    return recommendations;
+  }, [recommendations, recommendationSourceCategoryId, selectedCategory]);
+
+  const starterCategoryOptions = useMemo(() => {
+    const names = selectedStarterCategories.length ? selectedStarterCategories : starterCategories;
+    return [...new Set(names)];
+  }, [selectedStarterCategories]);
 
   const archivedStandaloneItems = useMemo(
     () => archivedItems.filter((item) => !item.category?.archivedAt),
@@ -351,6 +379,7 @@ export default function HomePage() {
     const nextRecommendations = await getRecommendations(authToken, item.id);
     setRecommendations(nextRecommendations);
     setRecommendationSourceItemName(nextRecommendations.length ? item.name : null);
+    setRecommendationSourceCategoryId(nextRecommendations.length ? item.categoryId : null);
   }
 
   async function handleCreateCategory() {
@@ -421,9 +450,10 @@ export default function HomePage() {
     setRecommendations((current) =>
       current.filter((currentRecommendation) => currentRecommendation.id !== recommendation.id)
     );
-    setRecommendationSourceItemName((currentName) =>
-      recommendations.length <= 1 ? null : currentName
-    );
+    if (recommendations.length <= 1) {
+      setRecommendationSourceItemName(null);
+      setRecommendationSourceCategoryId(null);
+    }
   }
 
   async function handleCompleteShoppingListItem(entry: ShoppingListEntry) {
@@ -754,23 +784,40 @@ export default function HomePage() {
     setError(null);
     if (!skipSetup) {
       const existingCategoryNames = new Set(categories.map((category) => category.name));
+      const starterItemDrafts = starterItems
+        .map((item) => ({
+          name: item.name.trim(),
+          categoryName: starterCategoryOptions.includes(item.categoryName.trim())
+            ? item.categoryName.trim()
+            : starterCategoryOptions[0] ?? ""
+        }))
+        .filter((item) => item.name && item.categoryName)
+        .slice(0, 5);
+      const requestedCategoryNames = [
+        ...selectedStarterCategories,
+        ...starterItemDrafts.map((item) => item.categoryName)
+      ];
       const createdCategories: Category[] = [];
 
-      for (const name of selectedStarterCategories) {
+      for (const name of [...new Set(requestedCategoryNames)]) {
         if (!existingCategoryNames.has(name)) {
-          createdCategories.push(await createCategory(token, name));
+          const category = await createCategory(token, name);
+          createdCategories.push(category);
+          existingCategoryNames.add(name);
         }
       }
 
       const nextCategories = createdCategories.length
         ? [...categories, ...createdCategories]
         : categories;
-      const firstCategory = nextCategories[0];
-      if (firstCategory) {
-        for (const name of starterItems.map((item) => item.trim()).filter(Boolean).slice(0, 5)) {
+      const categoriesByName = new Map(nextCategories.map((category) => [category.name, category]));
+
+      for (const item of starterItemDrafts) {
+        const category = categoriesByName.get(item.categoryName);
+        if (category) {
           await createItem(token, {
-            categoryId: firstCategory.id,
-            name
+            categoryId: category.id,
+            name: item.name
           });
         }
       }
@@ -834,6 +881,8 @@ export default function HomePage() {
     setGroups([]);
     setShoppingList([]);
     setRecommendations([]);
+    setRecommendationSourceItemName(null);
+    setRecommendationSourceCategoryId(null);
     setSearchResults([]);
     setHasSearched(false);
     window.localStorage.removeItem(onboardingStorageKey);
@@ -885,43 +934,55 @@ export default function HomePage() {
       <main className="app-shell onboarding-shell">
         <ErrorNotice message={error} onClose={() => setError(null)} />
         <section className="onboarding-panel">
-          <p className="eyebrow">Вход</p>
-          <h1>kupitnezabyt</h1>
-          <p>Войдите через Google или получите одноразовую ссылку на email.</p>
+          <div className="login-heading">
+            <p className="eyebrow">Вход</p>
+            <h1>kupitnezabyt</h1>
+            <p>Следите за регулярными покупками с личного аккаунта.</p>
+          </div>
           <button
-            className="ghost-button"
+            className="provider-button"
             type="button"
-            disabled={isStartingGoogleSignIn}
+            disabled={isStartingGoogleSignIn || isRequestingMagicLink}
             onClick={() =>
               void handleStartGoogleSignIn().catch((caughtError) =>
                 setError(formatError(caughtError))
               )
             }
           >
+            <span aria-hidden="true">G</span>
             {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
           </button>
-          <p className="eyebrow">или email</p>
-          <input
-            aria-label="Email"
-            autoComplete="email"
-            inputMode="email"
-            placeholder="you@example.com"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-          />
-          <button
-            type="button"
-            disabled={isRequestingMagicLink}
-            onClick={() =>
-              void handleRequestMagicLink().catch((caughtError) =>
-                setError(formatError(caughtError))
-              )
-            }
-          >
-            {isRequestingMagicLink ? "Отправляем..." : "Получить ссылку"}
-          </button>
-          {emailAuthMessage ? <p>{emailAuthMessage}</p> : null}
+          <div className="auth-divider">
+            <span />
+            <p className="eyebrow">или email</p>
+            <span />
+          </div>
+          <div className="email-auth-box">
+            <input
+              aria-label="Email"
+              autoComplete="email"
+              disabled={isStartingGoogleSignIn || isRequestingMagicLink}
+              inputMode="email"
+              placeholder="you@example.com"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+            />
+            <button
+              className="ghost-button auth-action"
+              type="button"
+              disabled={isStartingGoogleSignIn || isRequestingMagicLink}
+              onClick={() =>
+                void handleRequestMagicLink().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              <Mail aria-hidden="true" size={18} />
+              {isRequestingMagicLink ? "Отправляем..." : "Получить ссылку"}
+            </button>
+          </div>
+          {emailAuthMessage ? <p className="auth-success">{emailAuthMessage}</p> : null}
           {devMagicLink ? (
             <a className="dev-magic-link" href={devMagicLink}>
               Открыть dev magic link
@@ -991,22 +1052,46 @@ export default function HomePage() {
           ) : onboardingStep === 2 ? (
             <>
               <h1>Первые товары</h1>
-              <p>Добавьте 3-5 вещей, которые обычно заканчиваются.</p>
+              <p>Добавьте 3-5 вещей и выберите категорию для каждой.</p>
               <div className="starter-items">
                 {starterItems.map((value, index) => (
-                  <input
-                    aria-label={`Стартовый товар ${index + 1}`}
-                    key={index}
-                    placeholder={starterItemHints[index] ?? "Товар"}
-                    value={value}
-                    onChange={(event) =>
-                      setStarterItems((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? event.target.value : item
+                  <div className="starter-item-row" key={index}>
+                    <input
+                      aria-label={`Стартовый товар ${index + 1}`}
+                      placeholder={starterItemHints[index] ?? "Товар"}
+                      value={value.name}
+                      onChange={(event) =>
+                        setStarterItems((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, name: event.target.value } : item
+                          )
                         )
-                      )
-                    }
-                  />
+                      }
+                    />
+                    <select
+                      aria-label={`Категория для товара ${index + 1}`}
+                      value={
+                        starterCategoryOptions.includes(value.categoryName)
+                          ? value.categoryName
+                          : starterCategoryOptions[0]
+                      }
+                      onChange={(event) =>
+                        setStarterItems((current) =>
+                          current.map((item, itemIndex) =>
+                            itemIndex === index
+                              ? { ...item, categoryName: event.target.value }
+                              : item
+                          )
+                        )
+                      }
+                    >
+                      {starterCategoryOptions.map((categoryName) => (
+                        <option key={categoryName} value={categoryName}>
+                          {categoryName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 ))}
               </div>
               <div className="onboarding-actions">
@@ -1330,7 +1415,7 @@ export default function HomePage() {
                 <button type="submit">Добавить</button>
               </form>
 
-              {recommendations.length ? (
+              {visibleRecommendations.length ? (
                 <section className="recommendations" aria-label="Рекомендации">
                   <div>
                     <p className="eyebrow">Рекомендации</p>
@@ -1341,7 +1426,7 @@ export default function HomePage() {
                     </h2>
                   </div>
                   <div className="recommendation-list">
-                    {recommendations.map((recommendation) => (
+                    {visibleRecommendations.map((recommendation) => (
                       <article className="recommendation-row" key={recommendation.id}>
                         <div>
                           <h3>{recommendation.suggestedItem}</h3>
@@ -2160,14 +2245,29 @@ function ReminderSettingsGroup({
 
 function formatError(error: unknown): string {
   if (error instanceof ApiError) {
-    return error.message;
+    return getFriendlyErrorMessage(error.message);
   }
 
   if (error instanceof Error) {
-    return error.message;
+    return getFriendlyErrorMessage(error.message);
   }
 
   return "Что-то пошло не так.";
+}
+
+function getFriendlyErrorMessage(message: string): string {
+  const authErrorMessages: Record<string, string> = {
+    EMAIL_AUTH_REQUIRED: "Войдите через Google или получите ссылку на email.",
+    "Failed to fetch": "Не удалось подключиться к сервису. Попробуйте обновить страницу.",
+    GOOGLE_AUTH_CANCELLED: "Вход через Google отменен.",
+    GOOGLE_AUTH_FAILED: "Не удалось завершить вход через Google. Попробуйте еще раз.",
+    GOOGLE_AUTH_INVALID_CALLBACK: "Google вернул неполный ответ. Попробуйте войти еще раз.",
+    GOOGLE_AUTH_INVALID_STATE: "Сессия входа устарела. Начните вход через Google заново.",
+    GOOGLE_AUTH_INVALID_TOKEN: "Не удалось проверить Google-аккаунт. Попробуйте еще раз.",
+    GOOGLE_AUTH_NOT_CONFIGURED: "Вход через Google временно недоступен. Используйте email-ссылку."
+  };
+
+  return authErrorMessages[message] ?? message;
 }
 
 function ErrorNotice({
