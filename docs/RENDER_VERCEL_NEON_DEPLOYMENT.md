@@ -143,6 +143,22 @@ For Google sign-in, create a Google OAuth Client with application type
 https://kupitnezabyt-api.onrender.com/api/auth/google/callback
 ```
 
+The Google Auth Platform setup used for the production MVP is:
+
+- Audience: `External`.
+- Publishing status during MVP testing: `Testing`.
+- Test users: add each Google account that should be allowed to sign in.
+- OAuth client type: `Web application`.
+- Authorized JavaScript origin: `https://kupitnezabyt-api.onrender.com`.
+- Authorized redirect URI:
+  `https://kupitnezabyt-api.onrender.com/api/auth/google/callback`.
+- Render API env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
+  `GOOGLE_REDIRECT_URI`.
+
+After changing any Render API env vars, wait for the automatic environment
+update deploy or trigger `Manual Deploy` / `Restart service` so the running
+process reads the new values.
+
 ### Optional Bot Background Worker
 
 This service is not required for the free-friendly web-first MVP. Create it only

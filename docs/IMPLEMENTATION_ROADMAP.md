@@ -206,7 +206,7 @@ Implemented notes:
 
 ### Slice 18: Google Sign-In
 
-Status: implemented.
+Status: implemented and verified in production.
 
 Goal: let browser users sign in with Google without waiting for an email magic
 link.
@@ -254,10 +254,36 @@ Implemented notes:
   uses the Slice 17 linking foundation.
 - The webapp login screen now offers "Войти через Google" while preserving email
   magic link fallback.
-- Google sign-in remains optional until `GOOGLE_CLIENT_ID`,
-  `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are set in production.
+- Google sign-in is enabled in production with a Google OAuth web client,
+  Render API env vars, and Google Auth Platform test users.
+- Production smoke passed: a test user can complete Google sign-in from the
+  deployed webapp and land back in the authenticated app session.
 
-### Slice 19: Apple Sign-In
+### Slice 19: Auth UX Polish
+
+Status: next.
+
+Goal: make the now-working production auth experience clearer, calmer, and more
+recoverable before adding another OAuth provider.
+
+Scope:
+
+- Improve the login screen hierarchy around Google sign-in and email fallback.
+- Add clearer loading states for Google redirect and magic link request.
+- Show friendly error messages for common OAuth failures:
+  `GOOGLE_AUTH_NOT_CONFIGURED`, denied consent, invalid state, expired state,
+  and unavailable provider.
+- Avoid exposing raw callback query values after auth errors.
+- Make signed-in/out transitions feel instant and predictable on mobile.
+- Keep email magic link available as a fallback during Google rollout.
+
+Tests:
+
+- Add focused frontend tests for OAuth callback token/error handling where the
+  existing frontend test setup supports it.
+- Keep backend route coverage for Google start/callback in place.
+
+### Slice 20: Apple Sign-In
 
 Status: planned.
 

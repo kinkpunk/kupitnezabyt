@@ -296,6 +296,10 @@ scripts README нужно обновить в той же задаче.
 | `TELEGRAM_BOT_USERNAME` | Username Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App | Только optional Telegram integration |
 
+Google sign-in is production-enabled for the web-first MVP. While the Google
+Auth Platform publishing status is `Testing`, each tester's Google account must
+be added to Test users before they can complete OAuth.
+
 ## Ключевая бизнес-логика
 
 У товара есть пять статусов:

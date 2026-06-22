@@ -83,6 +83,10 @@ user, and redirects to the webapp with a short callback result. The webapp store
 the returned bearer token in the same client-side session slot used by magic
 links.
 
+Production note: Google sign-in is enabled for the deployed MVP through Google
+Auth Platform in testing mode. Only Google accounts added as test users can use
+the OAuth flow until the app is published or verified.
+
 Auth exchange endpoints return:
 
 ```json
