@@ -119,6 +119,10 @@ LOG_LEVEL=info
 EMAIL_FROM=noreply@<verified-email-domain>
 EMAIL_PROVIDER_API_KEY=<resend-api-key>
 MAGIC_LINK_TOKEN_TTL_MINUTES=15
+# Optional Google sign-in:
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=https://<render-api-host>/api/auth/google/callback
 # Optional Telegram integration only:
 TELEGRAM_BOT_TOKEN=
 ```
@@ -130,6 +134,14 @@ start successfully.
 
 After the API URL is known, set the Vercel webapp variable
 `NEXT_PUBLIC_API_BASE_URL` to that URL.
+
+For Google sign-in, create a Google OAuth Client with application type
+`Web application` and add the exact authorized redirect URI used in
+`GOOGLE_REDIRECT_URI`, for example:
+
+```text
+https://kupitnezabyt-api.onrender.com/api/auth/google/callback
+```
 
 ### Optional Bot Background Worker
 

@@ -24,6 +24,9 @@ const config: ApiConfig = {
   magicLinkTokenTtlMinutes: 15,
   nodeEnv: "test",
   devAuthEnabled: false,
+  googleClientId: undefined,
+  googleClientSecret: undefined,
+  googleRedirectUri: undefined,
   telegramBotToken: "bot-token",
   port: 3001
 };

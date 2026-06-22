@@ -19,10 +19,14 @@ import type { FastifyReply } from "fastify";
 
 import {
   calculateMagicLinkExpiresAt,
+  calculateOAuthStateExpiresAt,
+  generateOAuthSecret,
   generateMagicLinkToken,
   getBearerToken,
   hashMagicLinkToken,
+  hashOAuthSecret,
   isUsableMagicLinkToken,
+  isUsableOAuthStateToken,
   normalizeEmail,
   signToken,
   validateTelegramInitData,
@@ -31,6 +35,13 @@ import {
 import type { TelegramUser } from "./auth.js";
 import { sendMagicLinkEmail } from "./email.js";
 import { getConfig } from "./env.js";
+import {
+  createGoogleAuthorizationUrl,
+  exchangeGoogleCodeForIdToken,
+  isGoogleAuthConfigured,
+  verifyGoogleIdToken
+} from "./google-auth.js";
+import { resolveOAuthUser } from "./oauth.js";
 import { cancelPendingItemCheckReminders, markShoppingListItemBought, setItemStatus, upsertItemCheckReminder } from "./services.js";
 
 type NamedBody = {
@@ -87,6 +98,12 @@ type EmailAuthRequestBody = {
 
 type EmailAuthVerifyBody = {
   token?: unknown;
+};
+
+type GoogleAuthCallbackQuery = {
+  code?: string;
+  error?: string;
+  state?: string;
 };
 
 type ShoppingListBody = {
@@ -427,6 +444,108 @@ export function buildServer() {
       user: result
     };
   });
+
+  app.post("/api/auth/google/start", async (_request, reply) => {
+    if (!isGoogleAuthConfigured(config)) {
+      await sendError(reply, 404, "GOOGLE_AUTH_NOT_CONFIGURED", "Google sign-in is not configured.");
+      return;
+    }
+
+    const state = generateOAuthSecret();
+    const nonce = generateOAuthSecret();
+    await prisma.oAuthStateToken.create({
+      data: {
+        provider: "GOOGLE",
+        stateHash: hashOAuthSecret(state, config),
+        nonceHash: hashOAuthSecret(nonce, config),
+        expiresAt: calculateOAuthStateExpiresAt(new Date())
+      }
+    });
+
+    return {
+      authUrl: createGoogleAuthorizationUrl(config, state, nonce)
+    };
+  });
+
+  app.get<{ Querystring: GoogleAuthCallbackQuery }>(
+    "/api/auth/google/callback",
+    async (request, reply) => {
+      const redirectWithError = (error: string) =>
+        reply.redirect(`${config.appBaseUrl}/?oauth_error=${encodeURIComponent(error)}`);
+
+      if (request.query.error) {
+        return redirectWithError("GOOGLE_AUTH_CANCELLED");
+      }
+
+      if (!isGoogleAuthConfigured(config) || !config.googleClientId) {
+        return redirectWithError("GOOGLE_AUTH_NOT_CONFIGURED");
+      }
+
+      if (!request.query.code || !request.query.state) {
+        return redirectWithError("GOOGLE_AUTH_INVALID_CALLBACK");
+      }
+
+      const now = new Date();
+      const stateHash = hashOAuthSecret(request.query.state, config);
+      const stateToken = await prisma.$transaction(async (tx) => {
+        const token = await tx.oAuthStateToken.findUnique({
+          where: {
+            stateHash
+          }
+        });
+
+        if (!token || token.provider !== "GOOGLE" || !isUsableOAuthStateToken(token, now)) {
+          return null;
+        }
+
+        const consumeResult = await tx.oAuthStateToken.updateMany({
+          where: {
+            id: token.id,
+            consumedAt: null
+          },
+          data: {
+            consumedAt: now
+          }
+        });
+
+        return consumeResult.count === 1 ? token : null;
+      });
+
+      if (!stateToken) {
+        return redirectWithError("GOOGLE_AUTH_INVALID_STATE");
+      }
+
+      try {
+        const idToken = await exchangeGoogleCodeForIdToken(config, request.query.code);
+        const payload = await verifyGoogleIdToken(idToken, config.googleClientId, now);
+        if (
+          !payload?.email ||
+          hashOAuthSecret(payload.nonce ?? "", config) !== stateToken.nonceHash
+        ) {
+          return redirectWithError("GOOGLE_AUTH_INVALID_TOKEN");
+        }
+
+        const user = await prisma.$transaction((tx) =>
+          resolveOAuthUser(
+            tx,
+            {
+              provider: "GOOGLE",
+              providerAccountId: payload.sub,
+              email: payload.email ?? null,
+              emailVerified: payload.email_verified === true,
+              displayName: payload.name ?? null
+            },
+            now
+          )
+        );
+        const token = signToken(user.id, config);
+        return reply.redirect(`${config.appBaseUrl}/?oauth_token=${encodeURIComponent(token)}`);
+      } catch (error) {
+        request.log.error({ error }, "Google sign-in failed");
+        return redirectWithError("GOOGLE_AUTH_FAILED");
+      }
+    }
+  );
 
   app.get("/api/me", async (request) => {
     return prisma.user.findUniqueOrThrow({

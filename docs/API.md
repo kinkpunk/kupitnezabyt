@@ -40,6 +40,8 @@ Web-first auth endpoints:
 ```http
 POST /api/auth/email/request
 POST /api/auth/email/verify
+POST /api/auth/google/start
+GET /api/auth/google/callback
 ```
 
 Request body:
@@ -65,6 +67,21 @@ Verify body:
 `POST /api/auth/email/verify` consumes a valid token exactly once, creates or
 updates the user for that email, and returns the same bearer token/session shape
 as other auth exchanges.
+
+`POST /api/auth/google/start` returns:
+
+```json
+{
+  "authUrl": "https://accounts.google.com/o/oauth2/v2/auth?..."
+}
+```
+
+The webapp redirects the browser to `authUrl`. Google then redirects back to
+`GET /api/auth/google/callback`. The callback validates OAuth state, exchanges
+the authorization code, verifies the Google ID token, resolves or creates the
+user, and redirects to the webapp with a short callback result. The webapp stores
+the returned bearer token in the same client-side session slot used by magic
+links.
 
 Auth exchange endpoints return:
 

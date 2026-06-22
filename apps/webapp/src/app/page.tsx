@@ -56,6 +56,7 @@ import {
   setCheckSessionItemStatus,
   startCategoryCheckSession,
   startGroupCheckSession,
+  startGoogleSignIn,
   updateCategory,
   updateGroup,
   updateItem,
@@ -170,6 +171,7 @@ export default function HomePage() {
   const [emailAuthMessage, setEmailAuthMessage] = useState<string | null>(null);
   const [devMagicLink, setDevMagicLink] = useState<string | null>(null);
   const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
+  const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
 
   const selectedCategory = useMemo(
@@ -860,6 +862,20 @@ export default function HomePage() {
     }
   }
 
+  async function handleStartGoogleSignIn() {
+    setError(null);
+    setEmailAuthMessage(null);
+    setDevMagicLink(null);
+    setIsStartingGoogleSignIn(true);
+
+    try {
+      const response = await startGoogleSignIn();
+      window.location.assign(response.authUrl);
+    } finally {
+      setIsStartingGoogleSignIn(false);
+    }
+  }
+
   if (isLoading) {
     return <main className="app-shell centered">Загрузка...</main>;
   }
@@ -871,7 +887,20 @@ export default function HomePage() {
         <section className="onboarding-panel">
           <p className="eyebrow">Вход</p>
           <h1>kupitnezabyt</h1>
-          <p>Введите email, и мы отправим одноразовую ссылку для входа.</p>
+          <p>Войдите через Google или получите одноразовую ссылку на email.</p>
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={isStartingGoogleSignIn}
+            onClick={() =>
+              void handleStartGoogleSignIn().catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+          >
+            {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
+          </button>
+          <p className="eyebrow">или email</p>
           <input
             aria-label="Email"
             autoComplete="email"

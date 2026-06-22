@@ -6,6 +6,9 @@ export type ApiConfig = {
   magicLinkTokenTtlMinutes: number;
   nodeEnv: string;
   devAuthEnabled: boolean;
+  googleClientId: string | undefined;
+  googleClientSecret: string | undefined;
+  googleRedirectUri: string | undefined;
   telegramBotToken: string | undefined;
   port: number;
 };
@@ -22,6 +25,9 @@ export function getConfig(): ApiConfig {
     ),
     nodeEnv: process.env.NODE_ENV ?? "development",
     devAuthEnabled: process.env.DEV_AUTH_ENABLED === "true",
+    googleClientId: process.env.GOOGLE_CLIENT_ID || undefined,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || undefined,
+    googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || undefined,
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
     port: Number(process.env.API_PORT ?? 3001)
   };

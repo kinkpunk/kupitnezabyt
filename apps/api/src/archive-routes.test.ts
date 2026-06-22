@@ -90,6 +90,9 @@ describe("archive routes", () => {
         jwtSecret: "test-secret",
         magicLinkTokenTtlMinutes: 15,
         nodeEnv: "test",
+        googleClientId: undefined,
+        googleClientSecret: undefined,
+        googleRedirectUri: undefined,
         port: 3001,
         telegramBotToken: undefined
       }
@@ -359,6 +362,9 @@ function createToken(signToken: typeof import("./auth.js").signToken): string {
       jwtSecret: "test-secret",
       magicLinkTokenTtlMinutes: 15,
       nodeEnv: "test",
+      googleClientId: undefined,
+      googleClientSecret: undefined,
+      googleRedirectUri: undefined,
       port: 3001,
       telegramBotToken: undefined
     }

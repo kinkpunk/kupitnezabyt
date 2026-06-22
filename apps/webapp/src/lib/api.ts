@@ -10,6 +10,7 @@ import type {
   ItemGroup,
   Item,
   MagicLinkRequestResponse,
+  OAuthStartResponse,
   RecommendationSuggestion,
   ShoppingListEntry,
   UserDataExport
@@ -56,6 +57,19 @@ export async function login(): Promise<string> {
   prepareTelegramWebApp();
 
   const magicToken = new URLSearchParams(window.location.search).get("magic_token");
+  const oauthToken = new URLSearchParams(window.location.search).get("oauth_token");
+  const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+  if (oauthToken) {
+    window.localStorage.setItem(tokenStorageKey, oauthToken);
+    window.history.replaceState({}, "", window.location.pathname);
+    return oauthToken;
+  }
+
+  if (oauthError) {
+    window.history.replaceState({}, "", window.location.pathname);
+    throw new ApiError(oauthError);
+  }
+
   if (magicToken) {
     const response = await post<AuthResponse>("/api/auth/email/verify", undefined, {
       token: magicToken
@@ -90,6 +104,10 @@ export function clearSavedToken(): void {
 
 export function requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
   return post<MagicLinkRequestResponse>("/api/auth/email/request", undefined, { email });
+}
+
+export function startGoogleSignIn(): Promise<OAuthStartResponse> {
+  return post<OAuthStartResponse>("/api/auth/google/start", undefined, {});
 }
 
 function prepareTelegramWebApp(): void {

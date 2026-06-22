@@ -289,6 +289,9 @@ scripts README нужно обновить в той же задаче.
 | `EMAIL_FROM` | From-адрес для magic links | Да для web-first auth |
 | `EMAIL_PROVIDER_API_KEY` | API key email-провайдера | Да для web-first auth |
 | `MAGIC_LINK_TOKEN_TTL_MINUTES` | TTL magic link токена | Нет |
+| `GOOGLE_CLIENT_ID` | Google OAuth Web Client ID | Только если включен Google sign-in |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | Только если включен Google sign-in |
+| `GOOGLE_REDIRECT_URI` | Callback URL API для Google OAuth | Только если включен Google sign-in |
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_BOT_USERNAME` | Username Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App | Только optional Telegram integration |

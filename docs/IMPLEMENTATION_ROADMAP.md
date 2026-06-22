@@ -206,7 +206,7 @@ Implemented notes:
 
 ### Slice 18: Google Sign-In
 
-Status: planned.
+Status: implemented.
 
 Goal: let browser users sign in with Google without waiting for an email magic
 link.
@@ -220,8 +220,8 @@ Provider setup:
 
 Backend:
 
-- Add `POST /api/auth/google/start` or `GET /api/auth/google/start` to create
-  state and redirect the user to Google.
+- Add `POST /api/auth/google/start` to create state and return the Google
+  authorization URL.
 - Add `GET /api/auth/google/callback` to validate state, exchange the code,
   verify ID token issuer/audience/nonce/expiry, and resolve/create the user.
 - Store only stable provider identifiers and non-sensitive profile metadata.
@@ -244,6 +244,18 @@ Tests:
 - Provider-token verification unit tests with mocked JWKS/token responses.
 - Route tests for start/callback happy path, invalid state, reused state,
   provider email missing, and account linking.
+
+Implemented notes:
+
+- `POST /api/auth/google/start` stores hashed state/nonce and returns a Google
+  authorization URL.
+- `GET /api/auth/google/callback` consumes state once, exchanges the code,
+  verifies the Google ID token signature and issuer/audience/nonce/expiry, then
+  uses the Slice 17 linking foundation.
+- The webapp login screen now offers "Войти через Google" while preserving email
+  magic link fallback.
+- Google sign-in remains optional until `GOOGLE_CLIENT_ID`,
+  `GOOGLE_CLIENT_SECRET`, and `GOOGLE_REDIRECT_URI` are set in production.
 
 ### Slice 19: Apple Sign-In
 

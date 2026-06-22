@@ -110,6 +110,10 @@ export type MagicLinkRequestResponse = {
   devMagicLink?: string;
 };
 
+export type OAuthStartResponse = {
+  authUrl: string;
+};
+
 export type DeletedCountResponse = {
   deletedCount: number;
 };
