@@ -4,8 +4,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   calculateMagicLinkExpiresAt,
+  calculateOAuthStateExpiresAt,
   hashMagicLinkToken,
+  hashOAuthSecret,
   isUsableMagicLinkToken,
+  isUsableOAuthStateToken,
   normalizeEmail,
   signToken,
   validateTelegramInitData,
@@ -68,6 +71,27 @@ describe("email magic link auth helpers", () => {
     expect(isUsableMagicLinkToken({ consumedAt: now, expiresAt }, now)).toBe(false);
     expect(isUsableMagicLinkToken({ consumedAt: null, expiresAt: now }, now)).toBe(false);
     expect(isUsableMagicLinkToken(null, now)).toBe(false);
+  });
+});
+
+describe("OAuth state helpers", () => {
+  it("hashes provider state and nonce without exposing raw values", () => {
+    const hash = hashOAuthSecret("raw-state", config);
+
+    expect(hash).not.toBe("raw-state");
+    expect(hash).toBe(hashOAuthSecret("raw-state", config));
+    expect(hash).not.toBe(hashOAuthSecret("other-state", config));
+  });
+
+  it("calculates short expiry and rejects expired or consumed state", () => {
+    const now = new Date("2026-06-22T12:00:00.000Z");
+    const expiresAt = calculateOAuthStateExpiresAt(now);
+
+    expect(expiresAt.toISOString()).toBe("2026-06-22T12:10:00.000Z");
+    expect(isUsableOAuthStateToken({ consumedAt: null, expiresAt }, now)).toBe(true);
+    expect(isUsableOAuthStateToken({ consumedAt: now, expiresAt }, now)).toBe(false);
+    expect(isUsableOAuthStateToken({ consumedAt: null, expiresAt: now }, now)).toBe(false);
+    expect(isUsableOAuthStateToken(null, now)).toBe(false);
   });
 });
 

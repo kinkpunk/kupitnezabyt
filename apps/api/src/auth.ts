@@ -27,6 +27,11 @@ export type MagicLinkTokenRecord = {
   expiresAt: Date;
 };
 
+export type OAuthStateTokenRecord = {
+  consumedAt: Date | null;
+  expiresAt: Date;
+};
+
 function base64UrlEncode(input: Buffer | string): string {
   return Buffer.from(input)
     .toString("base64")
@@ -114,18 +119,37 @@ export function generateMagicLinkToken(): string {
   return base64UrlEncode(crypto.randomBytes(32));
 }
 
+export function generateOAuthSecret(): string {
+  return base64UrlEncode(crypto.randomBytes(32));
+}
+
 export function hashMagicLinkToken(token: string, config: ApiConfig): string {
   return crypto.createHmac("sha256", config.jwtSecret).update(token).digest("hex");
+}
+
+export function hashOAuthSecret(secret: string, config: ApiConfig): string {
+  return crypto.createHmac("sha256", config.jwtSecret).update(secret).digest("hex");
 }
 
 export function calculateMagicLinkExpiresAt(now: Date, ttlMinutes: number): Date {
   return new Date(now.getTime() + ttlMinutes * 60 * 1000);
 }
 
+export function calculateOAuthStateExpiresAt(now: Date): Date {
+  return new Date(now.getTime() + 10 * 60 * 1000);
+}
+
 export function isUsableMagicLinkToken(
   token: MagicLinkTokenRecord | null,
   now = new Date()
 ): token is MagicLinkTokenRecord {
+  return Boolean(token && !token.consumedAt && token.expiresAt.getTime() > now.getTime());
+}
+
+export function isUsableOAuthStateToken(
+  token: OAuthStateTokenRecord | null,
+  now = new Date()
+): token is OAuthStateTokenRecord {
   return Boolean(token && !token.consumedAt && token.expiresAt.getTime() > now.getTime());
 }
 

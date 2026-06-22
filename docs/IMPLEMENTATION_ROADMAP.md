@@ -154,7 +154,7 @@ Implementation notes:
 
 ### Slice 17: OAuth Account Identity Foundation
 
-Status: planned.
+Status: implemented as backend/data foundation.
 
 Goal: prepare the auth model and API contracts so Google and Apple sign-in can
 coexist with email magic links without duplicating users or weakening account
@@ -182,7 +182,8 @@ Backend:
 
 Webapp:
 
-- Add provider-neutral auth UI slots on the login screen.
+- Add provider-neutral auth UI slots on the login screen when a provider is
+  configured in Slice 18 or Slice 19.
 - Preserve magic link as a fallback action.
 - Show provider errors without leaking provider tokens or raw callback payloads.
 
@@ -191,6 +192,17 @@ Tests:
 - Unit tests for provider account linking rules.
 - API tests for state expiry, state reuse, provider account creation, and
   existing-user linking.
+
+Implemented notes:
+
+- Added `AuthAccount` for stable provider identities and `OAuthStateToken` for
+  hashed state/nonce storage.
+- Added `AuthProvider` enum for Google and Apple.
+- Added provider-neutral OAuth secret hashing, expiry, and usability helpers.
+- Added safe account resolution/linking logic that only auto-links existing
+  users by verified provider email.
+- Magic link remains the visible production auth method until Slice 18/19 add
+  real provider start/callback routes and UI buttons.
 
 ### Slice 18: Google Sign-In
 
