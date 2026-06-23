@@ -862,6 +862,26 @@ export default function HomePage() {
     setActiveTab("search");
   }
 
+  function clearSearchSession() {
+    setSearchQuery("");
+    setSearchResults([]);
+    setHasSearched(false);
+  }
+
+  function handleSelectTab(tab: ActiveTab) {
+    if (tab !== "search") {
+      clearSearchSession();
+    }
+
+    setActiveTab(tab);
+  }
+
+  function handleSelectCategory(categoryId: string) {
+    clearSearchSession();
+    setSelectedCategoryId(categoryId);
+    setActiveTab("items");
+  }
+
   async function handleExportUserData() {
     if (!token) {
       return;
@@ -1236,7 +1256,7 @@ export default function HomePage() {
               className={activeTab === tab.id ? "active" : ""}
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleSelectTab(tab.id)}
             >
               <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
               <span>{tab.label}</span>
@@ -1345,10 +1365,7 @@ export default function HomePage() {
                   className="category"
                   key={category.id}
                   type="button"
-                  onClick={() => {
-                    setSelectedCategoryId(category.id);
-                    setActiveTab("items");
-                  }}
+                  onClick={() => handleSelectCategory(category.id)}
                 >
                   <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
                   <small>
@@ -1402,6 +1419,7 @@ export default function HomePage() {
                 key={category.id}
                 type="button"
                 onClick={() => {
+                  clearSearchSession();
                   setSelectedCategoryId(category.id);
                   setShowCategoryForm(false);
                 }}
@@ -1891,7 +1909,10 @@ export default function HomePage() {
               <select
                 aria-label="Категория для проверки"
                 value={selectedCategory?.id ?? ""}
-                onChange={(event) => setSelectedCategoryId(event.target.value)}
+                onChange={(event) => {
+                  clearSearchSession();
+                  setSelectedCategoryId(event.target.value);
+                }}
               >
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -1971,6 +1992,7 @@ export default function HomePage() {
                     className="ghost-button"
                     type="button"
                     onClick={() => {
+                      clearSearchSession();
                       setSelectedCategoryId(item.categoryId);
                       setActiveTab("items");
                     }}
