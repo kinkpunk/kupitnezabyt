@@ -9,6 +9,7 @@ import {
   Home,
   ListChecks,
   Mail,
+  Pencil,
   Search,
   Settings,
   ShoppingCart,
@@ -1279,12 +1280,13 @@ export default function HomePage() {
                     <button
                       className="ghost-button"
                       type="button"
-                      onClick={() => {
-                        setSelectedCategoryId(item.categoryId);
-                        setActiveTab("items");
-                      }}
+                      onClick={() =>
+                        void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
                     >
-                      Открыть
+                      Куплено
                     </button>
                   </article>
                 ))}
@@ -1539,17 +1541,21 @@ export default function HomePage() {
                           </div>
                           <div className="icon-actions">
                             <button
-                              className="ghost-button"
+                              aria-label={`Изменить товар ${item.name}`}
+                              className="ghost-button icon-button"
+                              title="Изменить"
                               type="button"
                               onClick={() => {
                                 setEditingItemId(item.id);
                                 setEditingItemName(item.name);
                               }}
                             >
-                              Изм.
+                              <Pencil aria-hidden="true" size={18} />
                             </button>
                             <button
-                              className="ghost-button danger-button"
+                              aria-label={`Архивировать товар ${item.name}`}
+                              className="ghost-button danger-button icon-button"
+                              title="Архивировать"
                               type="button"
                               onClick={() =>
                                 void handleArchiveItem(item).catch((caughtError) =>
@@ -1557,7 +1563,7 @@ export default function HomePage() {
                                 )
                               }
                             >
-                              Архив
+                              <Archive aria-hidden="true" size={18} />
                             </button>
                           </div>
                         </div>

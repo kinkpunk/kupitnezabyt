@@ -532,6 +532,14 @@ select {
   padding: 0 12px;
 }
 
+.icon-button {
+  display: inline-grid;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  place-items: center;
+}
+
 .danger-button {
   color: var(--danger);
 }
@@ -556,6 +564,11 @@ select {
 .shopping-row button,
 .shopping-actions button {
   padding: 0 14px;
+}
+
+.shopping-row .icon-button,
+.shopping-actions .icon-button {
+  padding: 0;
 }
 
 .shopping-form {
