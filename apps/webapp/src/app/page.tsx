@@ -40,6 +40,7 @@ import {
   deleteArchivedItem,
   dismissRecommendation,
   exportUserData,
+  getActiveCheckSession,
   getArchivedCategories,
   getArchivedItems,
   getCategories,
@@ -285,6 +286,7 @@ export default function HomePage() {
 
         setToken(authToken);
         await refreshActiveData(authToken);
+        await refreshActiveCheckSession(authToken);
         setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
       } catch (caughtError) {
         if (isMounted) {
@@ -320,6 +322,14 @@ export default function HomePage() {
 
     void refreshArchivedData(token).catch((caughtError) => setError(formatError(caughtError)));
   }, [activeTab, token]);
+
+  useEffect(() => {
+    if (activeTab !== "check" || !token || checkSession?.status === "IN_PROGRESS") {
+      return;
+    }
+
+    void refreshActiveCheckSession(token).catch((caughtError) => setError(formatError(caughtError)));
+  }, [activeTab, checkSession?.status, token]);
 
   useEffect(() => {
     const nextDrafts: Record<string, ReminderDraft> = {};
@@ -386,6 +396,26 @@ export default function HomePage() {
 
     setArchivedCategories(nextArchivedCategories);
     setArchivedItems(nextArchivedItems);
+  }
+
+  async function refreshActiveCheckSession(authToken = token) {
+    if (!authToken) {
+      return;
+    }
+
+    const session = await getActiveCheckSession(authToken);
+    if (!session) {
+      return;
+    }
+
+    setCheckSession(session);
+    if (session.categoryId) {
+      setSelectedCategoryId(session.categoryId);
+    }
+
+    if (session.groupId) {
+      setSelectedGroupId(session.groupId);
+    }
   }
 
   async function refreshRecommendations(authToken: string, item: Item) {
@@ -1335,6 +1365,27 @@ export default function HomePage() {
               <span>{shoppingList.length ? "активных позиций" : "список пуст"}</span>
             </div>
           </div>
+
+          {checkSession?.status === "IN_PROGRESS" ? (
+            <section className="home-section">
+              <article className="shopping-row">
+                <div>
+                  <p className="normal">Незавершенная проверка</p>
+                  <h2>{checkSession.category?.name ?? checkSession.group?.name ?? "Проверка"}</h2>
+                  <span>
+                    {checkedCount} из {checkSession.items.length}
+                  </span>
+                </div>
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setActiveTab("check")}
+                >
+                  Продолжить
+                </button>
+              </article>
+            </section>
+          ) : null}
 
           <section className="home-section">
             <div className="section-heading">

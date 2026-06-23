@@ -27,7 +27,6 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- Continuing an unfinished check session after webapp reload or returning later.
 - Rate limiting for auth and other sensitive endpoints.
 - Explicit delete/reorder contracts for categories/items where the spec requires
   them; current MVP primarily uses archive flows.
@@ -397,7 +396,7 @@ Implemented notes:
 
 ### Slice 22: Check Session Resume
 
-Status: planned.
+Status: implemented.
 
 Goal: let users continue an unfinished check session after reload or returning
 to the app later.
@@ -422,6 +421,17 @@ Tests:
 - API route tests for active-session discovery, no-session response, and user
   isolation.
 - Focused frontend behavior coverage if the webapp test harness exists by then.
+
+Implemented notes:
+
+- Added `GET /api/check/session/active` to return the latest `IN_PROGRESS`
+  check session for the authenticated user, or `null` when none exists.
+- Webapp now discovers an active check session on boot and when opening the
+  Check tab.
+- The Home screen shows a "Continue" affordance for unfinished checks.
+- Resumed sessions restore the related category or group selection and continue
+  using the existing check screen/status actions.
+- Added API route coverage for active-session discovery.
 
 ### Slice 23: Rate Limiting Hardening
 

@@ -417,11 +417,15 @@ The export endpoint is read-only and always uses the bearer auth context.
 ```http
 POST /api/check/category/:categoryId/start
 POST /api/check/group/:groupId/start
+GET  /api/check/session/active
 GET  /api/check/session/:sessionId
 POST /api/check/session/:sessionId/item/:itemId/status
 POST /api/check/session/:sessionId/complete
 POST /api/check/session/:sessionId/cancel
 ```
+
+`GET /api/check/session/active` returns the latest unfinished check session for
+the authenticated user, or `null` when there is no active session.
 
 Starting a category check session snapshots active, non-archived, non-`PAUSED`
 items from the category. Starting a group check session snapshots active,

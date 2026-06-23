@@ -2305,6 +2305,19 @@ export function buildServer() {
     };
   });
 
+  app.get("/api/check/session/active", async (request) => {
+    return prisma.checkSession.findFirst({
+      where: {
+        userId: requireUserId(request.userId),
+        status: "IN_PROGRESS"
+      },
+      include: checkSessionInclude,
+      orderBy: {
+        startedAt: "desc"
+      }
+    });
+  });
+
   app.get<{ Params: { sessionId: string } }>(
     "/api/check/session/:sessionId",
     async (request, reply) => {

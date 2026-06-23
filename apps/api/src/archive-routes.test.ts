@@ -10,6 +10,9 @@ const mockPrisma = vi.hoisted(() => ({
     delete: vi.fn(),
     findFirst: vi.fn()
   },
+  checkSession: {
+    findFirst: vi.fn()
+  },
   shoppingListItem: {
     findUniqueOrThrow: vi.fn()
   }
@@ -349,6 +352,52 @@ describe("archive routes", () => {
         title: "Кофе",
         categoryId: "category-1",
         priority: "NORMAL"
+      }
+    });
+
+    await app.close();
+  });
+});
+
+describe("check session routes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.JWT_SECRET = "test-secret";
+  });
+
+  it("returns the latest active check session for the authenticated user", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+    const activeSession = {
+      id: "session-1",
+      userId: "user-1",
+      categoryId: "category-1",
+      groupId: null,
+      status: "IN_PROGRESS",
+      items: []
+    };
+
+    mockPrisma.checkSession.findFirst.mockResolvedValue(activeSession);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/check/session/active",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual(activeSession);
+    expect(mockPrisma.checkSession.findFirst).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1",
+        status: "IN_PROGRESS"
+      },
+      include: expect.any(Object),
+      orderBy: {
+        startedAt: "desc"
       }
     });
 

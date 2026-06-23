@@ -377,6 +377,10 @@ export function startGroupCheckSession(token: string, groupId: string): Promise<
   return post<CheckSession>(`/api/check/group/${groupId}/start`, token, {});
 }
 
+export function getActiveCheckSession(token: string): Promise<CheckSession | null> {
+  return get<CheckSession | null>("/api/check/session/active", token);
+}
+
 export function setCheckSessionItemStatus(
   token: string,
   sessionId: string,
