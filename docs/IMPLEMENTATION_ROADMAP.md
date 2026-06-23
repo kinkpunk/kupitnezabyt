@@ -435,7 +435,7 @@ Implemented notes:
 
 ### Slice 23: Rate Limiting Hardening
 
-Status: planned.
+Status: implemented.
 
 Goal: make auth and sensitive endpoints safer in production without adding
 unnecessary infrastructure.
@@ -457,6 +457,15 @@ Tests:
 
 - Unit tests for limiter window/reset behavior.
 - Route tests for `429` behavior and normal requests after reset.
+
+Implemented notes:
+
+- Replaced the inline auth rate-limit map with a reusable in-memory limiter.
+- Applied auth limits to email magic-link requests, Google start, Apple start,
+  and optional Telegram auth.
+- Applied conservative per-user limits to account deletion and JSON export.
+- Kept `429` responses generic and covered limiter reset behavior in unit and
+  route tests.
 
 ### Slice 24: Delete And Reorder Contracts
 

@@ -49,6 +49,7 @@ import {
   verifyGoogleIdToken
 } from "./google-auth.js";
 import { resolveOAuthUser } from "./oauth.js";
+import { createRateLimiter, type RateLimiter } from "./rate-limit.js";
 import { cancelPendingItemCheckReminders, markShoppingListItemBought, setItemStatus, upsertItemCheckReminder } from "./services.js";
 
 type NamedBody = {
@@ -142,9 +143,14 @@ type RemindersQuery = {
 };
 
 const config = getConfig();
-const authRateLimitWindowMs = 15 * 60 * 1000;
-const authRateLimitMaxAttempts = 10;
-const authRateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+const authRateLimiter = createRateLimiter({
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000
+});
+const sensitiveRateLimiter = createRateLimiter({
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000
+});
 
 export function buildServer() {
   const app = Fastify({
@@ -334,6 +340,10 @@ export function buildServer() {
   });
 
   app.post<{ Body: TelegramAuthBody }>("/api/auth/telegram", async (request, reply) => {
+    if (!(await checkRateLimit(reply, authRateLimiter, `auth:telegram:${request.ip}`))) {
+      return;
+    }
+
     if (typeof request.body?.initData !== "string" || !config.telegramBotToken) {
       await sendError(reply, 400, "INVALID_TELEGRAM_AUTH", "Telegram init data is invalid.");
       return;
@@ -359,10 +369,9 @@ export function buildServer() {
   app.post<{ Body: EmailAuthRequestBody }>("/api/auth/email/request", async (request, reply) => {
     const email =
       typeof request.body?.email === "string" ? normalizeEmail(request.body.email) : null;
-    const rateLimitKey = email ? `email:${email}` : `ip:${request.ip}`;
+    const rateLimitKey = email ? `auth:email:${email}` : `auth:email-ip:${request.ip}`;
 
-    if (!checkAuthRateLimit(rateLimitKey)) {
-      await sendError(reply, 429, "RATE_LIMITED", "Too many sign-in attempts.");
+    if (!(await checkRateLimit(reply, authRateLimiter, rateLimitKey))) {
       return;
     }
 
@@ -468,7 +477,11 @@ export function buildServer() {
     };
   });
 
-  app.post("/api/auth/google/start", async (_request, reply) => {
+  app.post("/api/auth/google/start", async (request, reply) => {
+    if (!(await checkRateLimit(reply, authRateLimiter, `auth:google:${request.ip}`))) {
+      return;
+    }
+
     if (!isGoogleAuthConfigured(config)) {
       await sendError(reply, 404, "GOOGLE_AUTH_NOT_CONFIGURED", "Google sign-in is not configured.");
       return;
@@ -570,7 +583,11 @@ export function buildServer() {
     }
   );
 
-  app.post("/api/auth/apple/start", async (_request, reply) => {
+  app.post("/api/auth/apple/start", async (request, reply) => {
+    if (!(await checkRateLimit(reply, authRateLimiter, `auth:apple:${request.ip}`))) {
+      return;
+    }
+
     if (!isAppleAuthConfigured(config)) {
       await sendError(reply, 404, "APPLE_AUTH_NOT_CONFIGURED", "Apple sign-in is not configured.");
       return;
@@ -680,10 +697,15 @@ export function buildServer() {
     });
   });
 
-  app.delete("/api/me", async (request) => {
+  app.delete("/api/me", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    if (!(await checkRateLimit(reply, sensitiveRateLimiter, `sensitive:delete-account:${userId}`))) {
+      return;
+    }
+
     await prisma.user.delete({
       where: {
-        id: requireUserId(request.userId)
+        id: userId
       }
     });
 
@@ -692,8 +714,12 @@ export function buildServer() {
     };
   });
 
-  app.get("/api/export/json", async (request) => {
+  app.get("/api/export/json", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    if (!(await checkRateLimit(reply, sensitiveRateLimiter, `sensitive:export:${userId}`))) {
+      return;
+    }
+
     const [
       user,
       categories,
@@ -2670,22 +2696,17 @@ function requireUserId(userId: string | undefined): string {
   return userId;
 }
 
-function checkAuthRateLimit(key: string, now = Date.now()): boolean {
-  const bucket = authRateLimitBuckets.get(key);
-  if (!bucket || bucket.resetAt <= now) {
-    authRateLimitBuckets.set(key, {
-      count: 1,
-      resetAt: now + authRateLimitWindowMs
-    });
+async function checkRateLimit(
+  reply: FastifyReply,
+  limiter: RateLimiter,
+  key: string
+): Promise<boolean> {
+  if (limiter.consume(key)) {
     return true;
   }
 
-  if (bucket.count >= authRateLimitMaxAttempts) {
-    return false;
-  }
-
-  bucket.count += 1;
-  return true;
+  await sendError(reply, 429, "RATE_LIMITED", "Too many attempts. Please try again later.");
+  return false;
 }
 
 function readRequiredString(value: unknown): string | null {

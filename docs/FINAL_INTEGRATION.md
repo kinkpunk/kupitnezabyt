@@ -116,7 +116,6 @@ Requires real Telegram credentials and deployed bot/worker services:
   PostgreSQL test harness.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
-- Rate limiting for auth and other sensitive endpoints is still follow-up work.
 - Category/item delete and reorder flows are not fully implemented where the
   product spec requires them; current flows prefer archiving.
 - Recommendation action `Скрыть похожие` is not implemented yet.

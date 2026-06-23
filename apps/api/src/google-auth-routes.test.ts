@@ -89,6 +89,40 @@ describe("google auth routes", () => {
     await app.close();
   });
 
+  it("rate limits Google sign-in start requests and allows them after the window resets", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-06-23T10:00:00.000Z")
+    });
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+
+    mockPrisma.oAuthStateToken.create.mockResolvedValue({});
+
+    for (let index = 0; index < 10; index += 1) {
+      const response = await app.inject({
+        method: "POST",
+        url: "/api/auth/google/start"
+      });
+      expect(response.statusCode).toBe(200);
+    }
+
+    const limitedResponse = await app.inject({
+      method: "POST",
+      url: "/api/auth/google/start"
+    });
+    expect(limitedResponse.statusCode).toBe(429);
+
+    vi.setSystemTime(new Date("2026-06-23T10:15:00.001Z"));
+    const resetResponse = await app.inject({
+      method: "POST",
+      url: "/api/auth/google/start"
+    });
+    expect(resetResponse.statusCode).toBe(200);
+
+    await app.close();
+    vi.useRealTimers();
+  });
+
   it("handles a Google callback and redirects with the app bearer token", async () => {
     const { hashOAuthSecret } = await import("./auth.js");
     const { buildServer } = await import("./server.js");

@@ -46,6 +46,9 @@ POST /api/auth/apple/start
 POST /api/auth/apple/callback
 ```
 
+Auth start/request endpoints are rate-limited. Excess requests return `429`
+with a generic `RATE_LIMITED` error.
+
 Request body:
 
 ```json
@@ -129,7 +132,8 @@ DELETE /api/me
 ```
 
 `DELETE /api/me` deletes the authenticated user. Related user data is removed
-through database cascades and becomes inaccessible through the API.
+through database cascades and becomes inaccessible through the API. Account
+deletion is rate-limited per authenticated user.
 
 ## Categories
 
@@ -410,7 +414,8 @@ Exports authenticated user data as JSON:
 }
 ```
 
-The export endpoint is read-only and always uses the bearer auth context.
+The export endpoint is read-only, rate-limited per authenticated user, and
+always uses the bearer auth context.
 
 ## Check Sessions
 
