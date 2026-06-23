@@ -266,6 +266,19 @@ export default function HomePage() {
     () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
     [items]
   );
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+  const itemReminders = useMemo(
+    () => inAppReminders.filter((reminder) => reminder.entityType === "ITEM"),
+    [inAppReminders]
+  );
+  const categoryReminders = useMemo(
+    () => inAppReminders.filter((reminder) => reminder.entityType === "CATEGORY"),
+    [inAppReminders]
+  );
+  const groupReminders = useMemo(
+    () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
+    [inAppReminders]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -687,6 +700,79 @@ export default function HomePage() {
       setCheckSession(session);
       setActiveTab("check");
     }
+  }
+
+  function renderReminderActions(reminder: InAppReminder) {
+    const reminderItem = reminder.entityType === "ITEM" ? itemsById.get(reminder.entityId) : null;
+    const showItemStatusActions = reminder.entityType === "ITEM" && reminderItem?.status !== "LOW";
+
+    return (
+      <div className="reminder-actions">
+        {showItemStatusActions
+          ? statusOptions.map((status) => (
+              <button
+                className={status === "URGENT" ? "ghost-button danger-button" : "ghost-button"}
+                key={status}
+                type="button"
+                onClick={() =>
+                  void handleSetReminderItemStatus(reminder, status).catch((caughtError) =>
+                    setError(formatError(caughtError))
+                  )
+                }
+              >
+                {statusLabels[status]}
+              </button>
+            ))
+          : null}
+        {reminder.entityType !== "ITEM" ? (
+          <button
+            className="ghost-button"
+            type="button"
+            onClick={() =>
+              void handleStartReminderCheck(reminder).catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+          >
+            Проверить
+          </button>
+        ) : null}
+        <button
+          className="ghost-button"
+          type="button"
+          onClick={() =>
+            void handleSnoozeReminder(reminder).catch((caughtError) =>
+              setError(formatError(caughtError))
+            )
+          }
+        >
+          Позже
+        </button>
+        <button className="ghost-button" type="button" onClick={() => handleOpenReminder(reminder)}>
+          Открыть
+        </button>
+      </div>
+    );
+  }
+
+  function renderReminderList(reminders: InAppReminder[]) {
+    return (
+      <div className="item-list">
+        {reminders.map((reminder) => (
+          <article className="shopping-row reminder-row" key={reminder.id}>
+            <div>
+              <p className={reminder.timing === "DUE" ? "urgent" : "normal"}>
+                {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
+                {formatDate(reminder.nextCheckAt)}
+              </p>
+              <h2>{reminder.title}</h2>
+              <span>{reminderEntityLabels[reminder.entityType]}</span>
+            </div>
+            {renderReminderActions(reminder)}
+          </article>
+        ))}
+      </div>
+    );
   }
 
   async function handleArchiveItem(item: Item) {
@@ -1433,99 +1519,34 @@ export default function HomePage() {
               </div>
             </div>
             {inAppReminders.length ? (
-              <div className="item-list">
-                {inAppReminders.map((reminder) => (
-                  <article className="shopping-row reminder-row" key={reminder.id}>
-                    <div>
-                      <p className={reminder.timing === "DUE" ? "urgent" : "normal"}>
-                        {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
-                        {formatDate(reminder.nextCheckAt)}
-                      </p>
-                      <h2>{reminder.title}</h2>
-                      <span>{reminderEntityLabels[reminder.entityType]}</span>
+              <div className="reminder-groups">
+                {categoryReminders.length ? (
+                  <section className="reminder-group" aria-label="Напоминания категорий">
+                    <div className="reminder-group-heading">
+                      <h3>Категории</h3>
+                      <span>{categoryReminders.length}</span>
                     </div>
-                    <div className="reminder-actions">
-                      {reminder.entityType === "ITEM" ? (
-                        <>
-                          <button
-                            className="ghost-button"
-                            type="button"
-                            onClick={() =>
-                              void handleSetReminderItemStatus(reminder, "IN_STOCK").catch(
-                                (caughtError) => setError(formatError(caughtError))
-                              )
-                            }
-                          >
-                            Есть
-                          </button>
-                          <button
-                            className="ghost-button"
-                            type="button"
-                            onClick={() =>
-                              void handleSetReminderItemStatus(reminder, "LOW").catch(
-                                (caughtError) => setError(formatError(caughtError))
-                              )
-                            }
-                          >
-                            Мало
-                          </button>
-                          <button
-                            className="ghost-button"
-                            type="button"
-                            onClick={() =>
-                              void handleSetReminderItemStatus(reminder, "NEED_BUY").catch(
-                                (caughtError) => setError(formatError(caughtError))
-                              )
-                            }
-                          >
-                            Купить
-                          </button>
-                          <button
-                            className="ghost-button danger-button"
-                            type="button"
-                            onClick={() =>
-                              void handleSetReminderItemStatus(reminder, "URGENT").catch(
-                                (caughtError) => setError(formatError(caughtError))
-                              )
-                            }
-                          >
-                            Срочно
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          className="ghost-button"
-                          type="button"
-                          onClick={() =>
-                            void handleStartReminderCheck(reminder).catch((caughtError) =>
-                              setError(formatError(caughtError))
-                            )
-                          }
-                        >
-                          Проверить
-                        </button>
-                      )}
-                      <button
-                        className="ghost-button"
-                        type="button"
-                        onClick={() =>
-                          void handleSnoozeReminder(reminder).catch((caughtError) =>
-                            setError(formatError(caughtError))
-                          )
-                        }
-                      >
-                        Позже
-                      </button>
-                      <button
-                        className="ghost-button"
-                        type="button"
-                        onClick={() => handleOpenReminder(reminder)}
-                      >
-                        Открыть
-                      </button>
+                    {renderReminderList(categoryReminders)}
+                  </section>
+                ) : null}
+                {groupReminders.length ? (
+                  <section className="reminder-group" aria-label="Напоминания наборов">
+                    <div className="reminder-group-heading">
+                      <h3>Наборы</h3>
+                      <span>{groupReminders.length}</span>
                     </div>
-                  </article>
-                ))}
+                    {renderReminderList(groupReminders)}
+                  </section>
+                ) : null}
+                {itemReminders.length ? (
+                  <section className="reminder-group" aria-label="Напоминания товаров">
+                    <div className="reminder-group-heading">
+                      <h3>Товары</h3>
+                      <span>{itemReminders.length}</span>
+                    </div>
+                    {renderReminderList(itemReminders)}
+                  </section>
+                ) : null}
               </div>
             ) : (
               <p className="empty">Добавьте циклы проверки, чтобы видеть ближайшие даты.</p>

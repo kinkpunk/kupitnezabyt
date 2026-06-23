@@ -565,6 +565,33 @@ select {
   grid-template-columns: 1fr;
 }
 
+.reminder-groups {
+  display: grid;
+  gap: 16px;
+}
+
+.reminder-group {
+  display: grid;
+  gap: 8px;
+}
+
+.reminder-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.reminder-group-heading h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.reminder-group-heading span {
+  font-size: 13px;
+}
+
 .reminder-actions {
   display: flex;
   flex-wrap: wrap;
