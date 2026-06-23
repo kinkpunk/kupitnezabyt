@@ -57,6 +57,7 @@ import {
   startAppleSignIn,
   setItemStatus,
   setCheckSessionItemStatus,
+  snoozeItemReminder,
   startCategoryCheckSession,
   startGroupCheckSession,
   startGoogleSignIn,
@@ -101,6 +102,7 @@ const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
 const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
+const reminderSnoozeDays = 3;
 
 type StarterItemDraft = {
   name: string;
@@ -600,6 +602,60 @@ export default function HomePage() {
     if (item) {
       setSelectedCategoryId(item.categoryId);
       setActiveTab("items");
+    }
+  }
+
+  async function handleSetReminderItemStatus(reminder: InAppReminder, status: ItemStatus) {
+    if (!token || reminder.entityType !== "ITEM") {
+      return;
+    }
+
+    setError(null);
+    const updatedItem = await setItemStatus(token, reminder.entityId, status);
+    await refreshActiveData(token);
+    await refreshRecommendations(token, updatedItem);
+  }
+
+  async function handleSnoozeReminder(reminder: InAppReminder, days = reminderSnoozeDays) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    if (reminder.entityType === "ITEM") {
+      await snoozeItemReminder(token, reminder.entityId, days);
+    } else if (reminder.entityType === "CATEGORY") {
+      await updateCategory(token, reminder.entityId, {
+        nextCheckAt: calculateSnoozedAt(days)
+      });
+    } else {
+      await updateGroup(token, reminder.entityId, {
+        nextCheckAt: calculateSnoozedAt(days)
+      });
+    }
+
+    await refreshActiveData(token);
+  }
+
+  async function handleStartReminderCheck(reminder: InAppReminder) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    if (reminder.entityType === "CATEGORY") {
+      const session = await startCategoryCheckSession(token, reminder.entityId);
+      setSelectedCategoryId(reminder.entityId);
+      setCheckSession(session);
+      setActiveTab("check");
+      return;
+    }
+
+    if (reminder.entityType === "GROUP") {
+      const session = await startGroupCheckSession(token, reminder.entityId);
+      setSelectedGroupId(reminder.entityId);
+      setCheckSession(session);
+      setActiveTab("check");
     }
   }
 
@@ -1328,7 +1384,7 @@ export default function HomePage() {
             {inAppReminders.length ? (
               <div className="item-list">
                 {inAppReminders.map((reminder) => (
-                  <article className="shopping-row" key={reminder.id}>
+                  <article className="shopping-row reminder-row" key={reminder.id}>
                     <div>
                       <p className={reminder.timing === "DUE" ? "urgent" : "normal"}>
                         {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
@@ -1337,13 +1393,86 @@ export default function HomePage() {
                       <h2>{reminder.title}</h2>
                       <span>{reminderEntityLabels[reminder.entityType]}</span>
                     </div>
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      onClick={() => handleOpenReminder(reminder)}
-                    >
-                      Открыть
-                    </button>
+                    <div className="reminder-actions">
+                      {reminder.entityType === "ITEM" ? (
+                        <>
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={() =>
+                              void handleSetReminderItemStatus(reminder, "IN_STOCK").catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Есть
+                          </button>
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={() =>
+                              void handleSetReminderItemStatus(reminder, "LOW").catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Мало
+                          </button>
+                          <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={() =>
+                              void handleSetReminderItemStatus(reminder, "NEED_BUY").catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Купить
+                          </button>
+                          <button
+                            className="ghost-button danger-button"
+                            type="button"
+                            onClick={() =>
+                              void handleSetReminderItemStatus(reminder, "URGENT").catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Срочно
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          onClick={() =>
+                            void handleStartReminderCheck(reminder).catch((caughtError) =>
+                              setError(formatError(caughtError))
+                            )
+                          }
+                        >
+                          Проверить
+                        </button>
+                      )}
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() =>
+                          void handleSnoozeReminder(reminder).catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        Позже
+                      </button>
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() => handleOpenReminder(reminder)}
+                      >
+                        Открыть
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -2386,4 +2515,8 @@ function formatDate(value: string | null): string {
     day: "2-digit",
     month: "short"
   }).format(new Date(value));
+}
+
+function calculateSnoozedAt(days: number): string {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }

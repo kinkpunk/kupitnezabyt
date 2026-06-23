@@ -27,8 +27,6 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- In-app reminder actions beyond opening the related item/category/group, such
-  as direct status changes, starting checks, and snoozing from the reminder row.
 - Continuing an unfinished check session after webapp reload or returning later.
 - Rate limiting for auth and other sensitive endpoints.
 - Explicit delete/reorder contracts for categories/items where the spec requires
@@ -357,7 +355,7 @@ Implemented notes:
 
 ### Slice 21: In-App Reminder Row Actions
 
-Status: planned.
+Status: implemented.
 
 Goal: let users act on due/upcoming reminders directly from Home without first
 opening the related item, category, or group.
@@ -384,6 +382,18 @@ Tests:
 
 - Unit tests for snooze date calculation where shared logic is reused or added.
 - API route tests for user isolation and idempotent shopping/reminder effects.
+
+Implemented notes:
+
+- Reminder rows now expose direct actions instead of only opening the related
+  entity.
+- Item reminder rows can set `IN_STOCK`, `LOW`, `NEED_BUY`, or `URGENT` through
+  the existing item status endpoint.
+- Item reminder rows can snooze through the existing item snooze endpoint.
+- Category and group reminder rows can start a check session directly.
+- Category and group reminder rows can snooze by updating `nextCheckAt` through
+  the existing authenticated PATCH endpoints.
+- Existing reminder row "Open" remains available as a secondary action.
 
 ### Slice 22: Check Session Resume
 

@@ -561,6 +561,22 @@ select {
   align-items: center;
 }
 
+.reminder-row {
+  grid-template-columns: 1fr;
+}
+
+.reminder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.reminder-actions button {
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+
 .shopping-row button,
 .shopping-actions button {
   padding: 0 14px;
@@ -684,6 +700,14 @@ select {
   .reminder-settings-row {
     grid-template-columns: 1fr 80px 96px auto;
     align-items: center;
+  }
+
+  .reminder-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+  }
+
+  .reminder-actions {
+    justify-content: flex-end;
   }
 }
 

@@ -241,6 +241,14 @@ export function setItemStatus(
   return post<Item>(`/api/items/${itemId}/status`, token, { status });
 }
 
+export function snoozeItemReminder(
+  token: string,
+  itemId: string,
+  days: number
+): Promise<Item> {
+  return post<Item>(`/api/items/${itemId}/snooze`, token, { days });
+}
+
 export function getRecommendations(
   token: string,
   itemId: string

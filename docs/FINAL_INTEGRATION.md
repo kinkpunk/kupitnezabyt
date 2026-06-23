@@ -114,8 +114,6 @@ Requires real Telegram credentials and deployed bot/worker services:
 - `pnpm test:e2e` is not configured yet.
 - DB-backed integration tests for API user isolation still require a dedicated
   PostgreSQL test harness.
-- In-app reminder rows open the related item/category/group; direct row actions
-  for status changes, starting checks, and snoozing remain follow-up work.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
 - Unfinished check sessions are not persisted/discovered in the webapp after
