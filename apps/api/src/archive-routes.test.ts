@@ -93,6 +93,11 @@ describe("archive routes", () => {
         googleClientId: undefined,
         googleClientSecret: undefined,
         googleRedirectUri: undefined,
+        appleClientId: undefined,
+        appleTeamId: undefined,
+        appleKeyId: undefined,
+        applePrivateKey: undefined,
+        appleRedirectUri: undefined,
         port: 3001,
         telegramBotToken: undefined
       }
@@ -365,6 +370,11 @@ function createToken(signToken: typeof import("./auth.js").signToken): string {
       googleClientId: undefined,
       googleClientSecret: undefined,
       googleRedirectUri: undefined,
+      appleClientId: undefined,
+      appleTeamId: undefined,
+      appleKeyId: undefined,
+      applePrivateKey: undefined,
+      appleRedirectUri: undefined,
       port: 3001,
       telegramBotToken: undefined
     }

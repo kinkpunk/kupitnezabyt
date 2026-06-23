@@ -124,6 +124,12 @@ MAGIC_LINK_TOKEN_TTL_MINUTES=15
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=https://<render-api-host>/api/auth/google/callback
+# Optional Apple sign-in:
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+APPLE_REDIRECT_URI=https://<render-api-host>/api/auth/apple/callback
 # Optional Telegram integration only:
 TELEGRAM_BOT_TOKEN=
 ```
@@ -155,6 +161,18 @@ The Google Auth Platform setup used for the production MVP is:
   `https://kupitnezabyt-api.onrender.com/api/auth/google/callback`.
 - Render API env vars: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
   `GOOGLE_REDIRECT_URI`.
+
+For Apple sign-in, configure Sign in with Apple in the Apple Developer account:
+
+- Enable Sign in with Apple for the app identifier.
+- Create or reuse a Services ID matching `APPLE_CLIENT_ID`.
+- Add the exact return URL used in `APPLE_REDIRECT_URI`, for example:
+  `https://kupitnezabyt-api.onrender.com/api/auth/apple/callback`.
+- Create a Sign in with Apple private key and store its Key ID in
+  `APPLE_KEY_ID`.
+- Store the Team ID in `APPLE_TEAM_ID`.
+- Store the `.p8` private key PEM in `APPLE_PRIVATE_KEY`. Render env vars can
+  keep newlines escaped as `\n`; the API normalizes them at startup.
 
 After changing any Render API env vars, wait for the automatic environment
 update deploy or trigger `Manual Deploy` / `Restart service` so the running

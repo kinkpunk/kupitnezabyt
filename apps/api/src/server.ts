@@ -18,6 +18,13 @@ import Fastify from "fastify";
 import type { FastifyReply } from "fastify";
 
 import {
+  createAppleAuthorizationUrl,
+  exchangeAppleCodeForIdToken,
+  isAppleAuthConfigured,
+  isAppleEmailVerified,
+  verifyAppleIdToken
+} from "./apple-auth.js";
+import {
   calculateMagicLinkExpiresAt,
   calculateOAuthStateExpiresAt,
   generateOAuthSecret,
@@ -106,6 +113,12 @@ type GoogleAuthCallbackQuery = {
   state?: string;
 };
 
+type AppleAuthCallbackBody = {
+  code?: string;
+  error?: string;
+  state?: string;
+};
+
 type ShoppingListBody = {
   title?: unknown;
   categoryId?: unknown;
@@ -152,6 +165,16 @@ export function buildServer() {
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"]
   });
+
+  app.addContentTypeParser(
+    "application/x-www-form-urlencoded",
+    {
+      parseAs: "string"
+    },
+    (_request, body, done) => {
+      done(null, Object.fromEntries(new URLSearchParams(body.toString())));
+    }
+  );
 
   app.addHook("preHandler", async (request, reply) => {
     if (request.url === "/health" || request.url === "/health/detailed" || request.url.startsWith("/api/auth/")) {
@@ -543,6 +566,108 @@ export function buildServer() {
       } catch (error) {
         request.log.error({ error }, "Google sign-in failed");
         return redirectWithError("GOOGLE_AUTH_FAILED");
+      }
+    }
+  );
+
+  app.post("/api/auth/apple/start", async (_request, reply) => {
+    if (!isAppleAuthConfigured(config)) {
+      await sendError(reply, 404, "APPLE_AUTH_NOT_CONFIGURED", "Apple sign-in is not configured.");
+      return;
+    }
+
+    const state = generateOAuthSecret();
+    const nonce = generateOAuthSecret();
+    await prisma.oAuthStateToken.create({
+      data: {
+        provider: "APPLE",
+        stateHash: hashOAuthSecret(state, config),
+        nonceHash: hashOAuthSecret(nonce, config),
+        expiresAt: calculateOAuthStateExpiresAt(new Date())
+      }
+    });
+
+    return {
+      authUrl: createAppleAuthorizationUrl(config, state, nonce)
+    };
+  });
+
+  app.post<{ Body: AppleAuthCallbackBody }>(
+    "/api/auth/apple/callback",
+    async (request, reply) => {
+      const redirectWithError = (error: string) =>
+        reply.redirect(`${config.appBaseUrl}/?oauth_error=${encodeURIComponent(error)}`);
+
+      if (request.body?.error) {
+        return redirectWithError("APPLE_AUTH_CANCELLED");
+      }
+
+      if (!isAppleAuthConfigured(config) || !config.appleClientId) {
+        return redirectWithError("APPLE_AUTH_NOT_CONFIGURED");
+      }
+
+      if (!request.body?.code || !request.body.state) {
+        return redirectWithError("APPLE_AUTH_INVALID_CALLBACK");
+      }
+
+      const now = new Date();
+      const stateHash = hashOAuthSecret(request.body.state, config);
+      const stateToken = await prisma.$transaction(async (tx) => {
+        const token = await tx.oAuthStateToken.findUnique({
+          where: {
+            stateHash
+          }
+        });
+
+        if (!token || token.provider !== "APPLE" || !isUsableOAuthStateToken(token, now)) {
+          return null;
+        }
+
+        const consumeResult = await tx.oAuthStateToken.updateMany({
+          where: {
+            id: token.id,
+            consumedAt: null
+          },
+          data: {
+            consumedAt: now
+          }
+        });
+
+        return consumeResult.count === 1 ? token : null;
+      });
+
+      if (!stateToken) {
+        return redirectWithError("APPLE_AUTH_INVALID_STATE");
+      }
+
+      try {
+        const idToken = await exchangeAppleCodeForIdToken(config, request.body.code);
+        const payload = await verifyAppleIdToken(idToken, config.appleClientId, now);
+        if (
+          !payload ||
+          hashOAuthSecret(payload.nonce ?? "", config) !== stateToken.nonceHash
+        ) {
+          return redirectWithError("APPLE_AUTH_INVALID_TOKEN");
+        }
+
+        const user = await prisma.$transaction((tx) =>
+          resolveOAuthUser(
+            tx,
+            {
+              provider: "APPLE",
+              providerAccountId: payload.sub,
+              email: payload.email ?? null,
+              emailVerified: isAppleEmailVerified(payload.email_verified),
+              displayName: null
+            },
+            now
+          )
+        );
+        const token = signToken(user.id, config);
+        return reply.redirect(`${config.appBaseUrl}/?oauth_token=${encodeURIComponent(token)}`);
+      } catch (error) {
+        request.log.error({ error }, "Apple sign-in failed");
+        return redirectWithError("APPLE_AUTH_FAILED");
       }
     }
   );

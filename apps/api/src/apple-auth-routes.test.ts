@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockGoogleAuth = vi.hoisted(() => ({
-  createGoogleAuthorizationUrl: vi.fn(),
-  exchangeGoogleCodeForIdToken: vi.fn(),
-  isGoogleAuthConfigured: vi.fn(),
-  verifyGoogleIdToken: vi.fn()
+const mockAppleAuth = vi.hoisted(() => ({
+  createAppleAuthorizationUrl: vi.fn(),
+  exchangeAppleCodeForIdToken: vi.fn(),
+  isAppleAuthConfigured: vi.fn(),
+  isAppleEmailVerified: vi.fn(),
+  verifyAppleIdToken: vi.fn()
 }));
 
 const mockResolveOAuthUser = vi.hoisted(() => vi.fn());
@@ -31,31 +32,34 @@ vi.mock("@kupitnezabyt/database", () => ({
   upsertItemCheckReminder: vi.fn()
 }));
 
-vi.mock("./google-auth.js", () => mockGoogleAuth);
+vi.mock("./apple-auth.js", () => mockAppleAuth);
 
 vi.mock("./oauth.js", () => ({
   resolveOAuthUser: mockResolveOAuthUser
 }));
 
-describe("google auth routes", () => {
+describe("apple auth routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     process.env.APP_BASE_URL = "http://localhost:3000";
     process.env.JWT_SECRET = "test-secret";
     process.env.NODE_ENV = "test";
-    process.env.GOOGLE_CLIENT_ID = "google-client-id";
-    process.env.GOOGLE_CLIENT_SECRET = "google-client-secret";
-    process.env.GOOGLE_REDIRECT_URI = "http://localhost:3001/api/auth/google/callback";
+    process.env.APPLE_CLIENT_ID = "com.example.web";
+    process.env.APPLE_TEAM_ID = "TEAM123456";
+    process.env.APPLE_KEY_ID = "KEY123456";
+    process.env.APPLE_PRIVATE_KEY = "private-key";
+    process.env.APPLE_REDIRECT_URI = "http://localhost:3001/api/auth/apple/callback";
 
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
-    mockGoogleAuth.isGoogleAuthConfigured.mockReturnValue(true);
-    mockGoogleAuth.createGoogleAuthorizationUrl.mockReturnValue(
-      "https://accounts.google.com/o/oauth2/v2/auth"
+    mockAppleAuth.isAppleAuthConfigured.mockReturnValue(true);
+    mockAppleAuth.isAppleEmailVerified.mockReturnValue(true);
+    mockAppleAuth.createAppleAuthorizationUrl.mockReturnValue(
+      "https://appleid.apple.com/auth/authorize"
     );
   });
 
-  it("creates OAuth state and returns a Google authorization URL", async () => {
+  it("creates OAuth state and returns an Apple authorization URL", async () => {
     const { buildServer } = await import("./server.js");
     const app = buildServer();
 
@@ -63,24 +67,24 @@ describe("google auth routes", () => {
 
     const response = await app.inject({
       method: "POST",
-      url: "/api/auth/google/start"
+      url: "/api/auth/apple/start"
     });
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({
-      authUrl: "https://accounts.google.com/o/oauth2/v2/auth"
+      authUrl: "https://appleid.apple.com/auth/authorize"
     });
     expect(mockPrisma.oAuthStateToken.create).toHaveBeenCalledWith({
       data: {
-        provider: "GOOGLE",
+        provider: "APPLE",
         stateHash: expect.any(String),
         nonceHash: expect.any(String),
         expiresAt: expect.any(Date)
       }
     });
-    expect(mockGoogleAuth.createGoogleAuthorizationUrl).toHaveBeenCalledWith(
+    expect(mockAppleAuth.createAppleAuthorizationUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        googleClientId: "google-client-id"
+        appleClientId: "com.example.web"
       }),
       expect.any(String),
       expect.any(String)
@@ -89,14 +93,14 @@ describe("google auth routes", () => {
     await app.close();
   });
 
-  it("handles a Google callback and redirects with the app bearer token", async () => {
+  it("handles an Apple callback and redirects with the app bearer token", async () => {
     const { hashOAuthSecret } = await import("./auth.js");
     const { buildServer } = await import("./server.js");
     const app = buildServer();
 
     mockTx.oAuthStateToken.findUnique.mockResolvedValue({
       id: "state-1",
-      provider: "GOOGLE",
+      provider: "APPLE",
       nonceHash: hashOAuthSecret("nonce-1", {
         appBaseUrl: "http://localhost:3000",
         emailFrom: undefined,
@@ -105,14 +109,14 @@ describe("google auth routes", () => {
         magicLinkTokenTtlMinutes: 15,
         nodeEnv: "test",
         devAuthEnabled: false,
-        googleClientId: "google-client-id",
-        googleClientSecret: "google-client-secret",
-        googleRedirectUri: "http://localhost:3001/api/auth/google/callback",
-        appleClientId: undefined,
-        appleTeamId: undefined,
-        appleKeyId: undefined,
-        applePrivateKey: undefined,
-        appleRedirectUri: undefined,
+        googleClientId: undefined,
+        googleClientSecret: undefined,
+        googleRedirectUri: undefined,
+        appleClientId: "com.example.web",
+        appleTeamId: "TEAM123456",
+        appleKeyId: "KEY123456",
+        applePrivateKey: "private-key",
+        appleRedirectUri: "http://localhost:3001/api/auth/apple/callback",
         telegramBotToken: undefined,
         port: 3001
       }),
@@ -120,26 +124,32 @@ describe("google auth routes", () => {
       consumedAt: null
     });
     mockTx.oAuthStateToken.updateMany.mockResolvedValue({ count: 1 });
-    mockGoogleAuth.exchangeGoogleCodeForIdToken.mockResolvedValue("id-token");
-    mockGoogleAuth.verifyGoogleIdToken.mockResolvedValue({
-      iss: "https://accounts.google.com",
-      aud: "google-client-id",
+    mockAppleAuth.exchangeAppleCodeForIdToken.mockResolvedValue("id-token");
+    mockAppleAuth.verifyAppleIdToken.mockResolvedValue({
+      iss: "https://appleid.apple.com",
+      aud: "com.example.web",
       exp: Math.floor(Date.now() / 1000) + 60,
-      sub: "google-user-1",
+      sub: "apple-user-1",
       email: "user@example.com",
-      email_verified: true,
-      name: "Alice",
+      email_verified: "true",
       nonce: "nonce-1"
     });
     mockResolveOAuthUser.mockResolvedValue({
       id: "user-1",
       email: "user@example.com",
-      displayName: "Alice"
+      displayName: null
     });
 
     const response = await app.inject({
-      method: "GET",
-      url: "/api/auth/google/callback?code=code-1&state=state-raw"
+      method: "POST",
+      url: "/api/auth/apple/callback",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded"
+      },
+      payload: new URLSearchParams({
+        code: "code-1",
+        state: "state-raw"
+      }).toString()
     });
 
     expect(response.statusCode).toBe(302);
@@ -156,11 +166,11 @@ describe("google auth routes", () => {
     expect(mockResolveOAuthUser).toHaveBeenCalledWith(
       mockTx,
       {
-        provider: "GOOGLE",
-        providerAccountId: "google-user-1",
+        provider: "APPLE",
+        providerAccountId: "apple-user-1",
         email: "user@example.com",
         emailVerified: true,
-        displayName: "Alice"
+        displayName: null
       },
       expect.any(Date)
     );

@@ -9,6 +9,11 @@ export type ApiConfig = {
   googleClientId: string | undefined;
   googleClientSecret: string | undefined;
   googleRedirectUri: string | undefined;
+  appleClientId: string | undefined;
+  appleTeamId: string | undefined;
+  appleKeyId: string | undefined;
+  applePrivateKey: string | undefined;
+  appleRedirectUri: string | undefined;
   telegramBotToken: string | undefined;
   port: number;
 };
@@ -28,6 +33,11 @@ export function getConfig(): ApiConfig {
     googleClientId: process.env.GOOGLE_CLIENT_ID || undefined,
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || undefined,
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || undefined,
+    appleClientId: process.env.APPLE_CLIENT_ID || undefined,
+    appleTeamId: process.env.APPLE_TEAM_ID || undefined,
+    appleKeyId: process.env.APPLE_KEY_ID || undefined,
+    applePrivateKey: normalizeMultilineEnv(process.env.APPLE_PRIVATE_KEY),
+    appleRedirectUri: process.env.APPLE_REDIRECT_URI || undefined,
     telegramBotToken: process.env.TELEGRAM_BOT_TOKEN || undefined,
     port: Number(process.env.API_PORT ?? 3001)
   };
@@ -44,6 +54,10 @@ function readPositiveInteger(value: string | undefined, fallback: number): numbe
 
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function normalizeMultilineEnv(value: string | undefined): string | undefined {
+  return value ? value.replaceAll("\\n", "\n") : undefined;
 }
 
 function assertProductionConfig(config: ApiConfig): void {

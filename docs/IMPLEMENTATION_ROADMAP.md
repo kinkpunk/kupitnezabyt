@@ -302,7 +302,7 @@ Implemented notes:
 
 ### Slice 20: Apple Sign-In
 
-Status: planned.
+Status: implemented.
 
 Goal: support Sign in with Apple as a second OAuth/OIDC provider after the
 provider-neutral foundation and Google flow are stable.
@@ -342,6 +342,20 @@ Tests:
 - Client secret generation tests.
 - Callback tests for first-login profile fields, private relay email, invalid
   state, invalid token, and existing-user linking.
+
+Implemented notes:
+
+- Added `POST /api/auth/apple/start` and `POST /api/auth/apple/callback` using
+  the existing hashed OAuth state/nonce storage.
+- Added server-side Apple client secret JWT generation with ES256 and
+  `.p8` private key support.
+- Added Apple ID token verification against Apple JWKS, issuer, audience,
+  nonce, expiry, and provider account subject.
+- The webapp login screen now offers "Войти через Apple" while preserving
+  Google and email magic link fallback.
+- Apple auth errors are mapped to friendly webapp messages.
+- Added Apple route tests and helper tests for configuration, authorization URL,
+  client secret generation, and email verification claim handling.
 
 ## Slice 1 Baseline
 

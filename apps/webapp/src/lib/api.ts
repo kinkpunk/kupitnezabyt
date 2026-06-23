@@ -111,6 +111,10 @@ export function startGoogleSignIn(): Promise<OAuthStartResponse> {
   return post<OAuthStartResponse>("/api/auth/google/start", undefined, {});
 }
 
+export function startAppleSignIn(): Promise<OAuthStartResponse> {
+  return post<OAuthStartResponse>("/api/auth/apple/start", undefined, {});
+}
+
 function prepareTelegramWebApp(): void {
   const webApp = window.Telegram?.WebApp;
   webApp?.ready?.();

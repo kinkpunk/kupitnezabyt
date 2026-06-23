@@ -27,6 +27,11 @@ const config: ApiConfig = {
   googleClientId: undefined,
   googleClientSecret: undefined,
   googleRedirectUri: undefined,
+  appleClientId: undefined,
+  appleTeamId: undefined,
+  appleKeyId: undefined,
+  applePrivateKey: undefined,
+  appleRedirectUri: undefined,
   telegramBotToken: "bot-token",
   port: 3001
 };

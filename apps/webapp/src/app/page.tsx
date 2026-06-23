@@ -53,6 +53,7 @@ import {
   restoreCategory,
   restoreItem,
   searchItems,
+  startAppleSignIn,
   setItemStatus,
   setCheckSessionItemStatus,
   startCategoryCheckSession,
@@ -188,6 +189,7 @@ export default function HomePage() {
   const [devMagicLink, setDevMagicLink] = useState<string | null>(null);
   const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
+  const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
 
   const selectedCategory = useMemo(
@@ -943,6 +945,20 @@ export default function HomePage() {
     }
   }
 
+  async function handleStartAppleSignIn() {
+    setError(null);
+    setEmailAuthMessage(null);
+    setDevMagicLink(null);
+    setIsStartingAppleSignIn(true);
+
+    try {
+      const response = await startAppleSignIn();
+      window.location.assign(response.authUrl);
+    } finally {
+      setIsStartingAppleSignIn(false);
+    }
+  }
+
   if (isLoading) {
     return <main className="app-shell centered">{loadingMessage}</main>;
   }
@@ -960,7 +976,7 @@ export default function HomePage() {
           <button
             className="provider-button"
             type="button"
-            disabled={isStartingGoogleSignIn || isRequestingMagicLink}
+            disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
             onClick={() =>
               void handleStartGoogleSignIn().catch((caughtError) =>
                 setError(formatError(caughtError))
@@ -969,6 +985,19 @@ export default function HomePage() {
           >
             <span aria-hidden="true">G</span>
             {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
+          </button>
+          <button
+            className="provider-button apple-button"
+            type="button"
+            disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
+            onClick={() =>
+              void handleStartAppleSignIn().catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+          >
+            <span aria-hidden="true"></span>
+            {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
           </button>
           <div className="auth-divider">
             <span />
@@ -979,7 +1008,7 @@ export default function HomePage() {
             <input
               aria-label="Email"
               autoComplete="email"
-              disabled={isStartingGoogleSignIn || isRequestingMagicLink}
+              disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
               inputMode="email"
               placeholder="you@example.com"
               type="email"
@@ -989,7 +1018,7 @@ export default function HomePage() {
             <button
               className="ghost-button auth-action"
               type="button"
-              disabled={isStartingGoogleSignIn || isRequestingMagicLink}
+              disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
               onClick={() =>
                 void handleRequestMagicLink().catch((caughtError) =>
                   setError(formatError(caughtError))
@@ -2282,7 +2311,13 @@ function getFriendlyErrorMessage(message: string): string {
     GOOGLE_AUTH_INVALID_CALLBACK: "Google вернул неполный ответ. Попробуйте войти еще раз.",
     GOOGLE_AUTH_INVALID_STATE: "Сессия входа устарела. Начните вход через Google заново.",
     GOOGLE_AUTH_INVALID_TOKEN: "Не удалось проверить Google-аккаунт. Попробуйте еще раз.",
-    GOOGLE_AUTH_NOT_CONFIGURED: "Вход через Google временно недоступен. Используйте email-ссылку."
+    GOOGLE_AUTH_NOT_CONFIGURED: "Вход через Google временно недоступен. Используйте email-ссылку.",
+    APPLE_AUTH_CANCELLED: "Вход через Apple отменен.",
+    APPLE_AUTH_FAILED: "Не удалось завершить вход через Apple. Попробуйте еще раз.",
+    APPLE_AUTH_INVALID_CALLBACK: "Apple вернул неполный ответ. Попробуйте войти еще раз.",
+    APPLE_AUTH_INVALID_STATE: "Сессия входа устарела. Начните вход через Apple заново.",
+    APPLE_AUTH_INVALID_TOKEN: "Не удалось проверить Apple ID. Попробуйте еще раз.",
+    APPLE_AUTH_NOT_CONFIGURED: "Вход через Apple временно недоступен. Используйте email-ссылку."
   };
 
   return authErrorMessages[message] ?? message;

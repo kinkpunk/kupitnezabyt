@@ -291,6 +291,11 @@ scripts README нужно обновить в той же задаче.
 | `GOOGLE_CLIENT_ID` | Google OAuth Web Client ID | Только если включен Google sign-in |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret | Только если включен Google sign-in |
 | `GOOGLE_REDIRECT_URI` | Callback URL API для Google OAuth | Только если включен Google sign-in |
+| `APPLE_CLIENT_ID` | Apple Services ID / OAuth client id | Только если включен Apple sign-in |
+| `APPLE_TEAM_ID` | Apple Developer Team ID | Только если включен Apple sign-in |
+| `APPLE_KEY_ID` | Apple private key id | Только если включен Apple sign-in |
+| `APPLE_PRIVATE_KEY` | Apple `.p8` private key PEM | Только если включен Apple sign-in |
+| `APPLE_REDIRECT_URI` | Callback URL API для Apple OAuth | Только если включен Apple sign-in |
 | `TELEGRAM_BOT_TOKEN` | Токен Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_BOT_USERNAME` | Username Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App | Только optional Telegram integration |

@@ -42,6 +42,8 @@ POST /api/auth/email/request
 POST /api/auth/email/verify
 POST /api/auth/google/start
 GET /api/auth/google/callback
+POST /api/auth/apple/start
+POST /api/auth/apple/callback
 ```
 
 Request body:
@@ -86,6 +88,23 @@ links.
 Production note: Google sign-in is enabled for the deployed MVP through Google
 Auth Platform in testing mode. Only Google accounts added as test users can use
 the OAuth flow until the app is published or verified.
+
+`POST /api/auth/apple/start` returns:
+
+```json
+{
+  "authUrl": "https://appleid.apple.com/auth/authorize?..."
+}
+```
+
+The webapp redirects the browser to `authUrl`. Apple posts back to
+`POST /api/auth/apple/callback` with `response_mode=form_post`. The callback
+validates OAuth state, exchanges the authorization code with a server-generated
+Apple client secret JWT, verifies the Apple ID token issuer, audience, nonce and
+expiry, resolves or creates the user, and redirects to the webapp with the same
+callback result shape used by Google. Apple may return private relay emails,
+and display name is not stored from the ID token because Apple usually provides
+name only during the first authorization response.
 
 Auth exchange endpoints return:
 
