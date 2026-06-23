@@ -74,6 +74,7 @@ describe("apple auth helpers", () => {
     const payload = JSON.parse(Buffer.from(encodedPayload!, "base64url").toString("utf8")) as {
       aud: string;
       exp: number;
+      iat: number;
       iss: string;
       sub: string;
     };
@@ -87,7 +88,8 @@ describe("apple auth helpers", () => {
       iss: "TEAM123456",
       sub: "com.example.web"
     });
-    expect(payload.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
+    expect(payload.iat).toBe(1782216000);
+    expect(payload.exp).toBe(1782219600);
   });
 
   it("normalizes Apple email verification claims", () => {

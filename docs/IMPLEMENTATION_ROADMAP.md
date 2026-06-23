@@ -35,8 +35,6 @@ Remaining web-first MVP gaps:
   them; current MVP primarily uses archive flows.
 - Recommendation action `Скрыть похожие`.
 - `test:e2e` plus DB-backed API integration tests.
-- Optional Google and Apple sign-in as lower-friction alternatives to email
-  magic links.
 - Optional Telegram integration smoke if/when bot/worker deployment is enabled.
 
 ## Web-First Release Plan
@@ -356,6 +354,167 @@ Implemented notes:
 - Apple auth errors are mapped to friendly webapp messages.
 - Added Apple route tests and helper tests for configuration, authorization URL,
   client secret generation, and email verification claim handling.
+
+### Slice 21: In-App Reminder Row Actions
+
+Status: planned.
+
+Goal: let users act on due/upcoming reminders directly from Home without first
+opening the related item, category, or group.
+
+Backend:
+
+- Add item reminder actions that reuse the existing item status transition
+  workflow for `LOW`, `NEED_BUY`, `URGENT`, and `IN_STOCK`.
+- Add category/group reminder actions for starting a check session.
+- Add snooze support for item/category/group reminders by updating
+  `nextCheckAt` without creating duplicate reminder rows or shopping entries.
+- Keep all actions scoped to the authenticated user.
+
+Webapp:
+
+- Add compact row actions on in-app reminder rows:
+  - item reminders: status change and snooze;
+  - category/group reminders: start check and snooze.
+- Refresh reminders, item/category/group state, and shopping list after each
+  action.
+- Keep the existing "Open" action as a secondary path.
+
+Tests:
+
+- Unit tests for snooze date calculation where shared logic is reused or added.
+- API route tests for user isolation and idempotent shopping/reminder effects.
+
+### Slice 22: Check Session Resume
+
+Status: planned.
+
+Goal: let users continue an unfinished check session after reload or returning
+to the app later.
+
+Backend:
+
+- Add an endpoint for the latest active check session for the authenticated
+  user, optionally filtered by category or group.
+- Return enough session/item context for the existing check screen to resume.
+- Keep session ownership and archived item behavior consistent with current
+  check session endpoints.
+
+Webapp:
+
+- Discover an active check session on boot or when opening the Check tab.
+- Show a resume affordance when an unfinished session exists.
+- Persist no sensitive session data in localStorage; backend remains the source
+  of truth.
+
+Tests:
+
+- API route tests for active-session discovery, no-session response, and user
+  isolation.
+- Focused frontend behavior coverage if the webapp test harness exists by then.
+
+### Slice 23: Rate Limiting Hardening
+
+Status: planned.
+
+Goal: make auth and sensitive endpoints safer in production without adding
+unnecessary infrastructure.
+
+Backend:
+
+- Replace the current in-memory auth limiter with a small reusable limiter
+  abstraction.
+- Apply stricter limits to auth start/request endpoints:
+  - email magic link request;
+  - Google start;
+  - Apple start;
+  - optional Telegram auth.
+- Add conservative limits to sensitive endpoints such as export and account
+  deletion.
+- Keep responses generic where endpoint behavior could reveal account existence.
+
+Tests:
+
+- Unit tests for limiter window/reset behavior.
+- Route tests for `429` behavior and normal requests after reset.
+
+### Slice 24: Delete And Reorder Contracts
+
+Status: planned.
+
+Goal: align category/item management contracts with `PRODUCT_SPEC.md` while
+preserving archive-first UX as the safer default.
+
+Backend:
+
+- Define explicit delete contracts for archived and active categories/items.
+- Keep destructive active deletes behind clear API semantics and user ownership
+  checks.
+- Add reorder endpoints for categories and, if needed by the UX, item ordering.
+- Preserve existing archive/restore behavior.
+
+Webapp:
+
+- Keep archive as the primary mobile action.
+- Add delete/reorder UI only where it is clear, reversible when possible, and
+  not visually noisy.
+
+Tests:
+
+- API route tests for non-empty category delete behavior, ownership isolation,
+  reorder persistence, and archive compatibility.
+
+### Slice 25: Recommendation Hide Similar
+
+Status: planned.
+
+Goal: implement the `Скрыть похожие` recommendation action from the product
+spec.
+
+Shared/backend:
+
+- Extend recommendation dismissal semantics so a user can hide a family/rule of
+  similar suggestions, not only one suggested item.
+- Keep recommendation generation rule-based and deterministic.
+- Ensure hidden-similar records are scoped by `userId`.
+
+Webapp:
+
+- Add `Скрыть похожие` next to existing recommendation actions.
+- Remove affected recommendations from the current view immediately after the
+  backend confirms the action.
+
+Tests:
+
+- Unit tests for rule/family dismissal filtering.
+- API route tests for accepting, dismissing one, and hiding similar.
+
+### Slice 26: E2E And DB-Backed Integration Tests
+
+Status: planned.
+
+Goal: turn the current release smoke checklists into repeatable automated
+coverage for the main web-first product loop.
+
+Test infrastructure:
+
+- Add `pnpm test:e2e` with a minimal Playwright setup for the webapp.
+- Add a PostgreSQL-backed API integration test harness that can run against an
+  isolated test database.
+- Keep tests deterministic and avoid real email/OAuth/Telegram providers.
+
+Coverage:
+
+- Browser happy path with development auth:
+  onboarding, category creation, item creation, status change, shopping list,
+  bought flow, group/check flow, search, and JSON export.
+- API integration coverage for user isolation and duplicate shopping list
+  prevention.
+
+Acceptance:
+
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm test:e2e` are all
+  documented and runnable in the intended local/CI environment.
 
 ## Slice 1 Baseline
 
