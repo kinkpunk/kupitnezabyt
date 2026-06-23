@@ -166,6 +166,22 @@ select {
   font-size: 13px;
 }
 
+.global-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.global-search button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 88px;
+  padding: 0 12px;
+}
+
 .tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -291,8 +307,7 @@ select {
   font-weight: 700;
 }
 
-.choice-grid,
-.quick-actions {
+.choice-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -637,7 +652,7 @@ select {
 
 @media (min-width: 520px) {
   .tabs {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 
   .shopping-form {

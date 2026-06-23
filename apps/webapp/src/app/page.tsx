@@ -131,7 +131,6 @@ const navTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
   { id: "items", icon: Tags, label: "Категории" },
   { id: "shopping", icon: ShoppingCart, label: "Покупки" },
   { id: "check", icon: ListChecks, label: "Проверка" },
-  { id: "search", icon: Search, label: "Поиск" },
   { id: "groups", icon: Boxes, label: "Наборы" },
   { id: "settings", icon: Settings, label: "Настройки" },
   { id: "archive", icon: Archive, label: "Архив" }
@@ -182,6 +181,7 @@ export default function HomePage() {
   const [checkSession, setCheckSession] = useState<CheckSession | null>(null);
   const [pendingCheckItemName, setPendingCheckItemName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Загрузка...");
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [emailAuthMessage, setEmailAuthMessage] = useState<string | null>(null);
@@ -266,6 +266,13 @@ export default function HomePage() {
 
     async function boot() {
       try {
+        const query = new URLSearchParams(window.location.search);
+        if (query.has("magic_token") || query.has("oauth_token")) {
+          setLoadingMessage("Завершаем вход...");
+        } else if (query.has("oauth_error")) {
+          setLoadingMessage("Возвращаемся ко входу...");
+        }
+
         const authToken = await login();
         if (!isMounted) {
           return;
@@ -849,6 +856,7 @@ export default function HomePage() {
     const results = await searchItems(token, searchQuery.trim());
     setSearchResults(results);
     setHasSearched(true);
+    setActiveTab("search");
   }
 
   async function handleExportUserData() {
@@ -936,7 +944,7 @@ export default function HomePage() {
   }
 
   if (isLoading) {
-    return <main className="app-shell centered">Загрузка...</main>;
+    return <main className="app-shell centered">{loadingMessage}</main>;
   }
 
   if (!token) {
@@ -947,7 +955,7 @@ export default function HomePage() {
           <div className="login-heading">
             <p className="eyebrow">Вход</p>
             <h1>kupitnezabyt</h1>
-            <p>Следите за регулярными покупками с личного аккаунта.</p>
+            <p>Войдите один раз, чтобы ваши товары, проверки и покупки были под рукой.</p>
           </div>
           <button
             className="provider-button"
@@ -1169,6 +1177,26 @@ export default function HomePage() {
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
 
+      <form
+        className="global-search"
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSearchItems().catch((caughtError) => setError(formatError(caughtError)));
+        }}
+      >
+        <input
+          aria-label="Глобальный поиск"
+          placeholder="Найти товар, бренд, заметку или категорию"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+        <button type="submit" aria-label="Искать">
+          <Search aria-hidden="true" size={18} />
+          <span>Найти</span>
+        </button>
+      </form>
+
       <nav className="tabs" aria-label="Основные разделы">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
@@ -1201,24 +1229,6 @@ export default function HomePage() {
               <span>{shoppingList.length ? "активных позиций" : "список пуст"}</span>
             </div>
           </div>
-
-          <section className="quick-actions" aria-label="Быстрые действия">
-            <button type="button" onClick={() => setActiveTab("items")}>
-              Категории
-            </button>
-            <button type="button" onClick={() => setActiveTab("shopping")}>
-              Покупки
-            </button>
-            <button type="button" onClick={() => setActiveTab("check")}>
-              Проверка
-            </button>
-            <button className="ghost-button" type="button" onClick={() => setActiveTab("search")}>
-              Поиск
-            </button>
-            <button className="ghost-button" type="button" onClick={() => setActiveTab("groups")}>
-              Наборы
-            </button>
-          </section>
 
           <section className="home-section">
             <div className="section-heading">
@@ -1909,25 +1919,9 @@ export default function HomePage() {
           <div className="section-heading">
             <div>
               <h2>Поиск</h2>
-              <p>Название, бренд, заметки или категория</p>
+              <p>{hasSearched ? `Запрос: ${searchQuery}` : "Название, бренд, заметки или категория"}</p>
             </div>
           </div>
-
-          <form
-            className="inline-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void handleSearchItems().catch((caughtError) => setError(formatError(caughtError)));
-            }}
-          >
-            <input
-              aria-label="Поиск товаров"
-              placeholder="Например, кофе"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-            <button type="submit">Найти</button>
-          </form>
 
           <div className="item-list">
             {searchResults.length ? (

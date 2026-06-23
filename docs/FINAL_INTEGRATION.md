@@ -44,6 +44,7 @@ Telegram APIs, and an always-on process.
 - API health check at `http://localhost:3001/health`
 - API detailed health check at `http://localhost:3001/health/detailed`
 - Webapp opens at `http://localhost:3000`
+- Deployed API/webapp smoke with `corepack pnpm smoke:deployment`
 
 These checks should be treated as release-readiness checks for the implemented
 core MVP, not as acceptance of the full product spec.
@@ -113,8 +114,6 @@ Requires real Telegram credentials and deployed bot/worker services:
 - `pnpm test:e2e` is not configured yet.
 - DB-backed integration tests for API user isolation still require a dedicated
   PostgreSQL test harness.
-- Production email magic link smoke still needs a real email provider and HTTPS
-  deployed browser URL.
 - In-app reminder rows open the related item/category/group; direct row actions
   for status changes, starting checks, and snoozing remain follow-up work.
 - Telegram end-to-end checks are optional and require external credentials,

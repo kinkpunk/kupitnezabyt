@@ -48,17 +48,13 @@ export class ApiError extends Error {
 }
 
 export async function login(): Promise<string> {
-  const savedToken = window.localStorage.getItem(tokenStorageKey);
-  if (savedToken) {
-    prepareTelegramWebApp();
-    return savedToken;
-  }
-
   prepareTelegramWebApp();
 
-  const magicToken = new URLSearchParams(window.location.search).get("magic_token");
-  const oauthToken = new URLSearchParams(window.location.search).get("oauth_token");
-  const oauthError = new URLSearchParams(window.location.search).get("oauth_error");
+  const searchParams = new URLSearchParams(window.location.search);
+  const magicToken = searchParams.get("magic_token");
+  const oauthToken = searchParams.get("oauth_token");
+  const oauthError = searchParams.get("oauth_error");
+
   if (oauthToken) {
     window.localStorage.setItem(tokenStorageKey, oauthToken);
     window.history.replaceState({}, "", window.location.pathname);
@@ -77,6 +73,11 @@ export async function login(): Promise<string> {
     window.localStorage.setItem(tokenStorageKey, response.token);
     window.history.replaceState({}, "", window.location.pathname);
     return response.token;
+  }
+
+  const savedToken = window.localStorage.getItem(tokenStorageKey);
+  if (savedToken) {
+    return savedToken;
   }
 
   const initData = window.Telegram?.WebApp?.initData;

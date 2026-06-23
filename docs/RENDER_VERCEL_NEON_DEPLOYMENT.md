@@ -27,6 +27,7 @@ accepted.
 Required production scripts:
 
 - Root `db:deploy` runs Prisma production migrations.
+- Root `smoke:deployment` checks the deployed API and webapp.
 - `packages/database db:deploy` runs `prisma migrate deploy`.
 - `apps/webapp start` runs `next start`.
 
@@ -297,22 +298,36 @@ that opens `TELEGRAM_WEBAPP_URL`.
 
 ## Smoke Checklist
 
+First run the automated deployment smoke from the repository root:
+
+```bash
+DEPLOYED_API_BASE_URL=https://<render-api-host> \
+DEPLOYED_WEBAPP_URL=https://<vercel-webapp-host> \
+corepack pnpm smoke:deployment
+```
+
+The command verifies:
+
 1. API `GET /health` returns `200`.
 2. API `GET /health/detailed` returns `200` with `"db": true`.
-3. Migration job completes successfully with `corepack pnpm db:deploy`.
-4. Webapp opens by direct HTTPS URL.
-5. Email magic link request sends a test email.
-6. Magic link verify creates an authenticated browser session.
-7. `GET /api/me` succeeds with the bearer token stored by the webapp.
-8. Complete or skip onboarding.
-9. Create a category.
-10. Add an item.
-11. Configure a check cycle and confirm due/upcoming checks appear as in-app
+3. Webapp opens by direct HTTPS URL and serves HTML.
+
+Then complete the manual auth/product smoke:
+
+1. Migration job completes successfully with `corepack pnpm db:deploy`.
+2. Email magic link request sends a test email, or Google sign-in opens the
+   configured provider consent flow.
+3. Magic link verify or OAuth callback creates an authenticated browser session.
+4. `GET /api/me` succeeds with the bearer token stored by the webapp.
+5. Complete or skip onboarding.
+6. Create a category.
+7. Add an item.
+8. Configure a check cycle and confirm due/upcoming checks appear as in-app
     reminders.
-12. Set item status to `NEED_BUY`.
-13. Confirm the item appears in the shopping list.
-14. Mark the item bought and confirm it returns to `IN_STOCK`.
-15. Export JSON from settings.
+9. Set item status to `NEED_BUY`.
+10. Confirm the item appears in the shopping list.
+11. Mark the item bought and confirm it returns to `IN_STOCK`.
+12. Export JSON from settings.
 
 ## Known Deployment Limitations
 

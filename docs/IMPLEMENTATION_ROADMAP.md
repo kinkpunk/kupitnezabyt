@@ -27,9 +27,6 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- Production deployment smoke for email magic link auth with a real email
-  provider and HTTPS browser URL.
-- Continued browser smoke for the production-safe bearer/JWT session flow.
 - In-app reminder actions beyond opening the related item/category/group, such
   as direct status changes, starting checks, and snoozing from the reminder row.
 - Continuing an unfinished check session after webapp reload or returning later.
@@ -133,7 +130,7 @@ Implemented notes:
 
 ### Slice 16: Web Deployment Finalization
 
-Status: in progress.
+Status: implemented.
 
 Goal: keep the first release on free-friendly infrastructure.
 
@@ -151,6 +148,12 @@ Implementation notes:
 - `GET /health/detailed` verifies database connectivity for deployment smoke.
 - Deployment docs distinguish Neon pooled API connections from direct migration
   connections and use the implemented `corepack pnpm db:deploy` command.
+- Added `corepack pnpm smoke:deployment` for repeatable deployed API/webapp
+  smoke checks against HTTPS URLs. It verifies `/health`, `/health/detailed`
+  database connectivity, and that the webapp serves HTML.
+- Production release smoke remains a per-deploy procedure because email delivery,
+  OAuth provider settings, and Render/Vercel/Neon runtime state live outside the
+  repository.
 
 ### Slice 17: OAuth Account Identity Foundation
 
@@ -261,7 +264,7 @@ Implemented notes:
 
 ### Slice 19: Auth UX Polish
 
-Status: next.
+Status: implemented.
 
 Goal: make the now-working production auth experience clearer, calmer, and more
 recoverable before adding another OAuth provider.
@@ -282,6 +285,20 @@ Tests:
 - Add focused frontend tests for OAuth callback token/error handling where the
   existing frontend test setup supports it.
 - Keep backend route coverage for Google start/callback in place.
+
+Implemented notes:
+
+- Login screen now prioritizes Google sign-in, keeps email magic link as a
+  clear fallback, and shows explicit loading states for provider redirect and
+  magic link request.
+- Magic link and OAuth callback returns show a dedicated "finishing sign-in"
+  loading state while the browser session is stored.
+- OAuth callback errors are mapped to friendly messages and raw callback query
+  values are removed from the address bar.
+- Removed the duplicated home quick-action buttons for categories, shopping,
+  checks, search, and groups; primary navigation remains in the tab bar.
+- Search is now global across the authenticated app: a persistent search field
+  submits from any section and opens a single results view.
 
 ### Slice 20: Apple Sign-In
 

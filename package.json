@@ -10,6 +10,7 @@
     "typecheck": "corepack pnpm -r --if-present typecheck",
     "lint": "eslint .",
     "test": "vitest run",
+    "smoke:deployment": "node scripts/smoke-web-deployment.mjs",
     "db:generate": "corepack pnpm --filter @kupitnezabyt/database db:generate",
     "db:migrate": "corepack pnpm --filter @kupitnezabyt/database db:migrate",
     "db:deploy": "corepack pnpm --filter @kupitnezabyt/database db:deploy",
