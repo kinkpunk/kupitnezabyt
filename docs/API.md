@@ -141,12 +141,26 @@ deletion is rate-limited per authenticated user.
 GET /api/categories
 GET /api/categories?archived=true
 POST /api/categories
+POST /api/categories/reorder
 GET /api/categories/:id
 PATCH /api/categories/:id
 POST /api/categories/:id/archive
 POST /api/categories/:id/restore
 DELETE /api/categories/:id
 ```
+
+Reorder body:
+
+```json
+{
+  "categoryIds": ["category-2", "category-1"]
+}
+```
+
+`POST /api/categories/reorder` updates `sortOrder` for active categories owned
+by the authenticated user and returns the active category list in persisted
+order. The payload must include every active category exactly once. Unknown,
+archived, duplicate, incomplete, or cross-user ids are rejected.
 
 Create body:
 
@@ -274,7 +288,9 @@ the entity.
 archived records for the authenticated user. Restoring a category also restores
 items that were archived by that category archive action. Restoring an item
 requires its category to be active. Deleting categories or items through these
-endpoints is allowed only for archived records.
+endpoints is allowed only for archived records. Deleting an active owned
+category or item returns `409` with `CATEGORY_NOT_ARCHIVED` or
+`ITEM_NOT_ARCHIVED`; unknown or cross-user ids still return `404`.
 
 ## Shopping List
 

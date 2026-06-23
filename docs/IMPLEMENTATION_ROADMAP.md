@@ -469,7 +469,7 @@ Implemented notes:
 
 ### Slice 24: Delete And Reorder Contracts
 
-Status: planned.
+Status: implemented.
 
 Goal: align category/item management contracts with `PRODUCT_SPEC.md` while
 preserving archive-first UX as the safer default.
@@ -492,6 +492,18 @@ Tests:
 
 - API route tests for non-empty category delete behavior, ownership isolation,
   reorder persistence, and archive compatibility.
+
+Implemented notes:
+
+- `DELETE /api/categories/:id` and `DELETE /api/items/:id` now distinguish
+  active owned records from missing/cross-user records: active records return
+  `409` and must be archived before deletion.
+- Added `POST /api/categories/reorder` to persist active category `sortOrder`
+  for the authenticated user.
+- Preserved archive/restore as the primary safer workflow.
+- Item reorder was intentionally left out because `Item` has no `sortOrder`
+  field; current item ordering remains creation-date based until a UX/data-model
+  change requires it.
 
 ### Slice 25: Recommendation Hide Similar
 

@@ -116,8 +116,8 @@ Requires real Telegram credentials and deployed bot/worker services:
   PostgreSQL test harness.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
-- Category/item delete and reorder flows are not fully implemented where the
-  product spec requires them; current flows prefer archiving.
+- Item reorder is not implemented because current item ordering is creation-date
+  based and the data model has no item `sortOrder` field.
 - Recommendation action `Скрыть похожие` is not implemented yet.
 - Telegram account linking can be added later as optional integration.
 

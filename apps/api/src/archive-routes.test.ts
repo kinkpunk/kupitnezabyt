@@ -4,6 +4,7 @@ const mockPrisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
   category: {
     delete: vi.fn(),
+    findMany: vi.fn(),
     findFirst: vi.fn()
   },
   item: {
@@ -161,10 +162,7 @@ describe("archive routes", () => {
     expect(mockPrisma.category.findFirst).toHaveBeenCalledWith({
       where: {
         id: "category-1",
-        userId: "user-1",
-        archivedAt: {
-          not: null
-        }
+        userId: "user-1"
       }
     });
     expect(mockPrisma.category.delete).toHaveBeenCalledWith({
@@ -172,6 +170,173 @@ describe("archive routes", () => {
         id: "category-1"
       }
     });
+
+    await app.close();
+  });
+
+  it("rejects active category deletes with an explicit archive-first contract", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      userId: "user-1",
+      archivedAt: null
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/categories/category-1",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "CATEGORY_NOT_ARCHIVED"
+      }
+    });
+    expect(mockPrisma.category.delete).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("reorders active categories owned by the authenticated user", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findMany
+      .mockResolvedValueOnce([{ id: "category-1" }, { id: "category-2" }])
+      .mockResolvedValueOnce([
+        {
+          id: "category-2",
+          name: "Дом",
+          icon: null,
+          sortOrder: 0,
+          archivedAt: null,
+          items: [{ status: "IN_STOCK" }]
+        },
+        {
+          id: "category-1",
+          name: "Аптека",
+          icon: null,
+          sortOrder: 1,
+          archivedAt: null,
+          items: []
+        }
+      ]);
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.category.update.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/categories/reorder",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        categoryIds: ["category-2", "category-1"]
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([
+      expect.objectContaining({
+        id: "category-2",
+        itemCount: 1,
+        aggregateStatus: "OK"
+      }),
+      expect.objectContaining({
+        id: "category-1",
+        itemCount: 0,
+        aggregateStatus: "OK"
+      })
+    ]);
+    expect(mockPrisma.category.findMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        userId: "user-1",
+        archivedAt: null
+      },
+      select: {
+        id: true
+      }
+    });
+    expect(mockTx.category.update).toHaveBeenNthCalledWith(1, {
+      where: {
+        id: "category-2"
+      },
+      data: {
+        sortOrder: 0
+      }
+    });
+    expect(mockTx.category.update).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: "category-1"
+      },
+      data: {
+        sortOrder: 1
+      }
+    });
+
+    await app.close();
+  });
+
+  it("does not reorder categories outside the authenticated user scope", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findMany.mockResolvedValueOnce([{ id: "category-1" }]);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/categories/reorder",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        categoryIds: ["category-1", "other-user-category"]
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("requires category reorder payloads to include every active category", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findMany.mockResolvedValueOnce([
+      { id: "category-1" },
+      { id: "category-2" }
+    ]);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/categories/reorder",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        categoryIds: ["category-1"]
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "CATEGORY_ORDER_INCOMPLETE"
+      }
+    });
+    expect(mockPrisma.$transaction).not.toHaveBeenCalled();
 
     await app.close();
   });
@@ -201,10 +366,7 @@ describe("archive routes", () => {
     expect(mockPrisma.item.findFirst).toHaveBeenCalledWith({
       where: {
         id: "item-1",
-        userId: "user-1",
-        archivedAt: {
-          not: null
-        }
+        userId: "user-1"
       }
     });
     expect(mockPrisma.item.delete).toHaveBeenCalledWith({
@@ -212,6 +374,36 @@ describe("archive routes", () => {
         id: "item-1"
       }
     });
+
+    await app.close();
+  });
+
+  it("rejects active item deletes with an explicit archive-first contract", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.item.findFirst.mockResolvedValue({
+      id: "item-1",
+      userId: "user-1",
+      archivedAt: null
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/items/item-1",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "ITEM_NOT_ARCHIVED"
+      }
+    });
+    expect(mockPrisma.item.delete).not.toHaveBeenCalled();
 
     await app.close();
   });

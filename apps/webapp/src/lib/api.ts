@@ -154,6 +154,10 @@ export function createCategory(token: string, name: string): Promise<Category> {
   return post<Category>("/api/categories", token, { name });
 }
 
+export function reorderCategories(token: string, categoryIds: string[]): Promise<Category[]> {
+  return post<Category[]>("/api/categories/reorder", token, { categoryIds });
+}
+
 export function archiveCategory(token: string, categoryId: string): Promise<Category> {
   return post<Category>(`/api/categories/${categoryId}/archive`, token, {});
 }

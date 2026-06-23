@@ -134,6 +134,10 @@ type AcceptRecommendationBody = {
   categoryId?: unknown;
 };
 
+type ReorderCategoriesBody = {
+  categoryIds?: unknown;
+};
+
 type ArchivedQuery = {
   archived?: string;
 };
@@ -877,6 +881,85 @@ export function buildServer() {
     };
   });
 
+  app.post<{ Body: ReorderCategoriesBody }>("/api/categories/reorder", async (request, reply) => {
+    const categoryIds = readStringArray(request.body?.categoryIds);
+    if (!categoryIds || categoryIds.length === 0) {
+      await sendError(reply, 400, "CATEGORY_IDS_REQUIRED", "Category ids are required.");
+      return;
+    }
+
+    if (new Set(categoryIds).size !== categoryIds.length) {
+      await sendError(reply, 400, "DUPLICATE_CATEGORY_IDS", "Category ids must be unique.");
+      return;
+    }
+
+    const userId = requireUserId(request.userId);
+    const categories = await prisma.category.findMany({
+      where: {
+        userId,
+        archivedAt: null
+      },
+      select: {
+        id: true
+      }
+    });
+    const ownedCategoryIds = new Set(categories.map((category) => category.id));
+
+    if (categoryIds.some((categoryId) => !ownedCategoryIds.has(categoryId))) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+
+    if (categories.length !== categoryIds.length) {
+      await sendError(
+        reply,
+        400,
+        "CATEGORY_ORDER_INCOMPLETE",
+        "Category ids must include every active category."
+      );
+      return;
+    }
+
+    await prisma.$transaction((tx) =>
+      Promise.all(
+        categoryIds.map((categoryId, index) =>
+          tx.category.update({
+            where: {
+              id: categoryId
+            },
+            data: {
+              sortOrder: index
+            }
+          })
+        )
+      )
+    );
+
+    const updatedCategories = await prisma.category.findMany({
+      where: {
+        userId,
+        archivedAt: null
+      },
+      include: {
+        items: {
+          where: {
+            archivedAt: null
+          },
+          select: {
+            status: true
+          }
+        }
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
+    });
+
+    return updatedCategories.map(({ items: categoryItems, ...category }) => ({
+      ...category,
+      itemCount: categoryItems.length,
+      aggregateStatus: aggregateCategoryStatus(categoryItems)
+    }));
+  });
+
   app.get<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
     const category = await prisma.category.findFirst({
       where: {
@@ -1132,18 +1215,26 @@ export function buildServer() {
   });
 
   app.delete<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
     const category = await prisma.category.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
-        archivedAt: {
-          not: null
-        }
+        userId
       }
     });
 
     if (!category) {
-      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Archived category was not found.");
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+
+    if (!category.archivedAt) {
+      await sendError(
+        reply,
+        409,
+        "CATEGORY_NOT_ARCHIVED",
+        "Archive the category before deleting it."
+      );
       return;
     }
 
@@ -2080,18 +2171,21 @@ export function buildServer() {
   });
 
   app.delete<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
     const item = await prisma.item.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
-        archivedAt: {
-          not: null
-        }
+        userId
       }
     });
 
     if (!item) {
-      await sendError(reply, 404, "ITEM_NOT_FOUND", "Archived item was not found.");
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+
+    if (!item.archivedAt) {
+      await sendError(reply, 409, "ITEM_NOT_ARCHIVED", "Archive the item before deleting it.");
       return;
     }
 
@@ -2725,6 +2819,24 @@ function readOptionalString(value: unknown): string | undefined {
 
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
+}
+
+function readStringArray(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const values: string[] = [];
+  for (const currentValue of value) {
+    const parsedValue = readRequiredString(currentValue);
+    if (!parsedValue) {
+      return null;
+    }
+
+    values.push(parsedValue);
+  }
+
+  return values;
 }
 
 function readOptionalPositiveInteger(value: unknown): number | undefined {
