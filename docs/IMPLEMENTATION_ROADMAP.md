@@ -566,6 +566,131 @@ Acceptance:
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm test:e2e` are all
   documented and runnable in the intended local/CI environment.
 
+## Post-MVP Collaboration Plan
+
+Shared lists and household/family collaboration are intentionally kept after
+Slice 26. The current implementation scopes almost every product entity by
+`userId`, which is good for MVP isolation but should not be stretched into
+collaboration with ad hoc exceptions. Collaboration should introduce an
+explicit shared space and membership model, then migrate access checks onto
+that model.
+
+### Slice 27: Shared Workspace Data Model
+
+Status: planned.
+
+Goal: introduce an explicit shared space for personal and collaborative stock
+lists while preserving existing single-user behavior.
+
+Database:
+
+- Add a `Workspace` or `Household` model owned by a user.
+- Add `WorkspaceMember` with user, workspace, role, invitation metadata, and
+  timestamps.
+- Create a personal workspace for every existing user.
+- Add `workspaceId` to categories, items, shopping list rows, reminders, groups,
+  check sessions, and recommendation dismissals.
+- Backfill existing records into each user's personal workspace.
+
+Backend:
+
+- Resolve the active workspace from the authenticated user context and request.
+- Keep `userId` as identity, not as the only authorization boundary.
+- Preserve owner-only operations for destructive workspace changes.
+
+Tests:
+
+- Migration/backfill coverage where practical.
+- API tests proving that users cannot access workspaces where they are not
+  members.
+
+### Slice 28: Email Invitations
+
+Status: planned.
+
+Goal: let a user invite another verified email user into a shared workspace.
+
+Backend:
+
+- Add invite creation by email for workspace owners.
+- Store hashed invitation tokens with expiry and accepted/revoked timestamps.
+- Send invitation links through the existing email provider.
+- Let signed-in users accept only invitations matching their verified email.
+
+Webapp:
+
+- Add a settings section for "Совместный доступ".
+- Show pending invites, current members, roles, and revoke actions.
+
+Tests:
+
+- API tests for invite creation, acceptance, expiry, revocation, and email
+  mismatch.
+
+### Slice 29: Shared Access API Contracts
+
+Status: planned.
+
+Goal: move product APIs from direct owner-only `userId` filters to workspace
+membership authorization.
+
+Backend:
+
+- Add shared helpers for workspace authorization and role checks.
+- Update category, item, shopping list, reminder, group, check session, search,
+  recommendation, export, and account deletion flows.
+- Keep status transitions and shopping synchronization centralized and
+  workspace-safe.
+- Decide whether recommendation dismissals are per member or per workspace.
+
+Tests:
+
+- DB-backed API coverage for cross-user isolation, editor write access, viewer
+  read-only access if that role is introduced, and duplicate shopping list
+  prevention inside a shared workspace.
+
+### Slice 30: Shared Workspace UX
+
+Status: planned.
+
+Goal: make collaboration understandable in the mobile webapp without adding
+friction for users with only one personal workspace.
+
+Webapp:
+
+- Add workspace/member management to Settings.
+- Keep the workspace switcher hidden or quiet until a user has more than one
+  workspace.
+- Surface collaborator names/emails only where they help explain shared
+  changes.
+- Keep the main Home/Categories/Shopping flows focused on the active workspace.
+
+Tests:
+
+- E2E coverage for inviting a member, accepting the invite, editing a shared
+  item, and seeing the updated shopping list from both accounts.
+
+### Slice 31: Privacy, Export, And Deletion Hardening
+
+Status: planned.
+
+Goal: make account deletion, export, and privacy rules explicit for shared
+spaces before collaboration is considered production-ready.
+
+Backend/product:
+
+- Define what happens when a workspace owner deletes their account.
+- Define member removal and ownership transfer rules.
+- Decide whether export includes only personal data or all workspaces where the
+  user has access.
+- Ensure sensitive notes and medicine/hygiene items remain protected by
+  membership checks.
+
+Tests:
+
+- API tests for owner deletion, member removal, ownership transfer, export
+  boundaries, and revoked access.
+
 ## Slice 1 Baseline
 
 Historical baseline implemented in Slice 1:
