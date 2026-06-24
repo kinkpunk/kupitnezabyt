@@ -6,9 +6,10 @@
   --text: #171d1a;
   --muted: #52605a;
   --line: #d7ddd9;
-  --accent: #176b57;
-  --accent-strong: #0f5142;
+  --accent: #c94a5f;
+  --accent-strong: #9f3145;
   --accent-text: #ffffff;
+  --brand-accent: #ef7180;
   --danger: #b3261e;
   --shadow: 0 10px 30px rgba(20, 32, 28, 0.08);
 }
@@ -21,9 +22,10 @@
     --text: #f3f7f4;
     --muted: #b7c2bc;
     --line: #3a4640;
-    --accent: #89d3ba;
-    --accent-strong: #a7e3ce;
-    --accent-text: #08251d;
+    --accent: #ff9aa6;
+    --accent-strong: #ffc0c8;
+    --accent-text: #321018;
+    --brand-accent: #ff9aa6;
     --danger: #ffb4ab;
     --shadow: none;
   }
@@ -115,6 +117,35 @@ select {
 
 .topbar h1 {
   font-size: 28px;
+}
+
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-lockup-large {
+  justify-content: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.brand-lockup-large .brand-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+}
+
+.brand-accent {
+  color: var(--brand-accent);
 }
 
 .eyebrow,

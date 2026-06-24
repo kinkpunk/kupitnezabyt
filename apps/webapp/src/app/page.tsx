@@ -1200,8 +1200,15 @@ export default function HomePage() {
         <ErrorNotice message={error} onClose={() => setError(null)} />
         <section className="onboarding-panel">
           <div className="login-heading">
-            <p className="eyebrow">Вход</p>
-            <h1>kupitnezabyt</h1>
+            <div className="brand-lockup brand-lockup-large">
+              <img alt="" className="brand-logo" src="/logo.png" />
+              <div>
+                <p className="eyebrow">Вход</p>
+                <h1>
+                  <BrandWord />
+                </h1>
+              </div>
+            </div>
             <p>Войдите один раз, чтобы ваши товары, проверки и покупки были под рукой.</p>
           </div>
           <button
@@ -1280,7 +1287,12 @@ export default function HomePage() {
 
           {onboardingStep === 0 ? (
             <>
-              <h1>kupitnezabyt</h1>
+              <div className="brand-lockup brand-lockup-large">
+                <img alt="" className="brand-logo" src="/logo.png" />
+                <h1>
+                  <BrandWord />
+                </h1>
+              </div>
               <p>
                 Помогает помнить о товарах, которые регулярно заканчиваются:
                 еда, аптека, косметика, дом и другое.
@@ -1428,9 +1440,14 @@ export default function HomePage() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <div>
-          <p className="eyebrow">Web app</p>
-          <h1>kupitnezabyt</h1>
+        <div className="brand-lockup">
+          <img alt="" className="brand-logo" src="/logo.png" />
+          <div>
+            <p className="eyebrow">Web app</p>
+            <h1>
+              <BrandWord />
+            </h1>
+          </div>
         </div>
         <span className="counter">{shoppingList.length}</span>
       </header>
@@ -2503,6 +2520,15 @@ export default function HomePage() {
 
 function getReminderDraftKey(entityType: InAppReminder["entityType"], entityId: string): string {
   return `${entityType}:${entityId}`;
+}
+
+function BrandWord() {
+  return (
+    <>
+      <span>kupit</span>
+      <span className="brand-accent">nezabyt</span>
+    </>
+  );
 }
 
 function ReminderSettingsGroup({
