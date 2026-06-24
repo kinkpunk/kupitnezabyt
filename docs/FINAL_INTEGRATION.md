@@ -118,7 +118,6 @@ Requires real Telegram credentials and deployed bot/worker services:
   deployed bot/worker services, and a public HTTPS URL.
 - Item reorder is not implemented because current item ordering is creation-date
   based and the data model has no item `sortOrder` field.
-- Recommendation action `Скрыть похожие` is not implemented yet.
 - Telegram account linking can be added later as optional integration.
 
 ## Previous Local Verification

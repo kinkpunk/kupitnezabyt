@@ -669,6 +669,15 @@ select {
   gap: 8px;
 }
 
+.reminder-item-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.reminder-item-picker select {
+  width: 100%;
+}
+
 .reminder-settings-row {
   display: grid;
   grid-template-columns: 1fr;

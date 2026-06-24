@@ -284,6 +284,17 @@ export function dismissRecommendation(
   );
 }
 
+export function hideSimilarRecommendations(
+  token: string,
+  recommendationId: string
+): Promise<{ hidden: boolean; ruleId: string }> {
+  return post<{ hidden: boolean; ruleId: string }>(
+    `/api/recommendations/${recommendationId}/hide-similar`,
+    token,
+    {}
+  );
+}
+
 export function getShoppingList(token: string): Promise<ShoppingListEntry[]> {
   return get<ShoppingListEntry[]>("/api/shopping-list", token);
 }

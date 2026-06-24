@@ -8,6 +8,7 @@ import {
   getInAppReminders,
   getShoppingSyncAction,
   getRuleBasedRecommendations,
+  HIDE_SIMILAR_RECOMMENDATION_ITEM,
   isItemStatus,
   normalizeName,
   normalizeSearchQuery,
@@ -1860,6 +1861,64 @@ export function buildServer() {
     }
   );
 
+  app.post<{ Params: { id: string } }>(
+    "/api/recommendations/:id/hide-similar",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const recommendationId = parseRecommendationId(request.params.id);
+      if (!recommendationId) {
+        await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
+        return;
+      }
+
+      const triggerItem = await prisma.item.findFirst({
+        where: {
+          id: recommendationId.itemId,
+          userId,
+          archivedAt: null
+        }
+      });
+
+      if (!triggerItem) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+
+      const suggestion = (await getRecommendationsForItem(userId, triggerItem)).find(
+        (currentSuggestion) =>
+          currentSuggestion.ruleId === recommendationId.ruleId &&
+          normalizeName(currentSuggestion.suggestedItem) ===
+            normalizeName(recommendationId.suggestedItem)
+      );
+
+      if (!suggestion) {
+        await sendError(reply, 404, "RECOMMENDATION_NOT_FOUND", "Recommendation was not found.");
+        return;
+      }
+
+      await prisma.recommendationDismissal.upsert({
+        where: {
+          userId_ruleId_suggestedItem: {
+            userId,
+            ruleId: recommendationId.ruleId,
+            suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM
+          }
+        },
+        update: {},
+        create: {
+          userId,
+          ruleId: recommendationId.ruleId,
+          suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM
+        }
+      });
+
+      return {
+        hidden: true,
+        ruleId: recommendationId.ruleId
+      };
+    }
+  );
+
   app.get<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
     const item = await prisma.item.findFirst({
       where: {
@@ -2531,15 +2590,48 @@ export function buildServer() {
         return;
       }
 
-      return prisma.checkSession.update({
-        where: {
-          id: session.id
-        },
-        data: {
-          status: "COMPLETED",
-          completedAt: new Date()
-        },
-        include: checkSessionInclude
+      const now = new Date();
+      return prisma.$transaction(async (tx) => {
+        const completedSession = await tx.checkSession.update({
+          where: {
+            id: session.id
+          },
+          data: {
+            status: "COMPLETED",
+            completedAt: now
+          },
+          include: checkSessionInclude
+        });
+
+        if (completedSession.category) {
+          await tx.category.update({
+            where: {
+              id: completedSession.category.id
+            },
+            data: {
+              nextCheckAt: calculateConfiguredNextCheckAt(
+                now,
+                completedSession.category.usageCycleDays
+              )
+            }
+          });
+        }
+
+        if (completedSession.group) {
+          await tx.itemGroup.update({
+            where: {
+              id: completedSession.group.id
+            },
+            data: {
+              nextCheckAt: calculateConfiguredNextCheckAt(
+                now,
+                completedSession.group.usageCycleDays
+              )
+            }
+          });
+        }
+
+        return completedSession;
       });
     }
   );
@@ -2668,6 +2760,10 @@ async function clearRecommendationDismissalsForItems(
       dismissalKeys.set(`${suggestion.ruleId}:${normalizeName(suggestion.suggestedItem)}`, {
         ruleId: suggestion.ruleId,
         suggestedItem: suggestion.suggestedItem
+      });
+      dismissalKeys.set(`${suggestion.ruleId}:${HIDE_SIMILAR_RECOMMENDATION_ITEM}`, {
+        ruleId: suggestion.ruleId,
+        suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM
       });
     }
   }

@@ -49,6 +49,7 @@ import {
   getItems,
   getRecommendations,
   getShoppingList,
+  hideSimilarRecommendations,
   login,
   removeGroupItem,
   requestMagicLink,
@@ -195,6 +196,7 @@ export default function HomePage() {
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
+  const [selectedReminderItemId, setSelectedReminderItemId] = useState("");
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -279,6 +281,23 @@ export default function HomePage() {
     () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
     [inAppReminders]
   );
+  const configuredReminderItems = useMemo(() => {
+    const configuredItems = items.filter(
+      (item) => item.usageCycleDays !== null || item.nextCheckAt !== null
+    );
+    const selectedReminderItem = selectedReminderItemId
+      ? items.find((item) => item.id === selectedReminderItemId)
+      : null;
+
+    if (
+      selectedReminderItem &&
+      !configuredItems.some((item) => item.id === selectedReminderItem.id)
+    ) {
+      return [...configuredItems, selectedReminderItem];
+    }
+
+    return configuredItems;
+  }, [items, selectedReminderItemId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -507,6 +526,25 @@ export default function HomePage() {
       current.filter((currentRecommendation) => currentRecommendation.id !== recommendation.id)
     );
     if (recommendations.length <= 1) {
+      setRecommendationSourceItemName(null);
+      setRecommendationSourceCategoryId(null);
+    }
+  }
+
+  async function handleHideSimilarRecommendations(recommendation: RecommendationSuggestion) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    const result = await hideSimilarRecommendations(token, recommendation.id);
+    const hasRemainingRecommendations = recommendations.some(
+      (currentRecommendation) => currentRecommendation.ruleId !== result.ruleId
+    );
+    setRecommendations((current) =>
+      current.filter((currentRecommendation) => currentRecommendation.ruleId !== result.ruleId)
+    );
+    if (!hasRemainingRecommendations) {
       setRecommendationSourceItemName(null);
       setRecommendationSourceCategoryId(null);
     }
@@ -1715,6 +1753,17 @@ export default function HomePage() {
                             Не нужно
                           </button>
                           <button
+                            className="ghost-button"
+                            type="button"
+                            onClick={() =>
+                              void handleHideSimilarRecommendations(recommendation).catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Скрыть похожие
+                          </button>
+                          <button
                             type="button"
                             onClick={() =>
                               void handleAcceptRecommendation(recommendation).catch(
@@ -2379,25 +2428,48 @@ export default function HomePage() {
               }
             />
 
-            <ReminderSettingsGroup
-              title="Товары"
-              emptyMessage="Добавьте товар, чтобы настроить индивидуальную проверку."
-              rows={items.map((item) => ({
-                id: item.id,
-                entityType: "ITEM",
-                title: item.name,
-                subtitle: item.nextCheckAt
-                  ? `Следующая: ${formatDate(item.nextCheckAt)}`
-                  : "Дата не задана"
-              }))}
-              drafts={reminderDrafts}
-              onDraftChange={updateReminderDraft}
-              onSave={(entityType, entityId) =>
-                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
-                  setError(formatError(caughtError))
-                )
-              }
-            />
+            <section className="reminder-settings-group">
+              <h3>Товары</h3>
+              {items.length ? (
+                <>
+                  <div className="reminder-item-picker">
+                    <select
+                      aria-label="Добавить товар в настройки напоминаний"
+                      value={selectedReminderItemId}
+                      onChange={(event) => setSelectedReminderItemId(event.target.value)}
+                    >
+                      <option value="">Выбрать товар</option>
+                      {items.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <ReminderSettingsGroup
+                    title="Настроенные товары"
+                    emptyMessage="Выберите товар, чтобы настроить индивидуальную проверку."
+                    rows={configuredReminderItems.map((item) => ({
+                      id: item.id,
+                      entityType: "ITEM",
+                      title: item.name,
+                      subtitle: item.nextCheckAt
+                        ? `Следующая: ${formatDate(item.nextCheckAt)}`
+                        : "Дата не задана"
+                    }))}
+                    drafts={reminderDrafts}
+                    onDraftChange={updateReminderDraft}
+                    onSave={(entityType, entityId) =>
+                      void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  />
+                </>
+              ) : (
+                <p className="empty">Добавьте товар, чтобы настроить индивидуальную проверку.</p>
+              )}
+            </section>
           </section>
 
           <div className="settings-actions">

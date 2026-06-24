@@ -12,7 +12,11 @@ const mockPrisma = vi.hoisted(() => ({
     findFirst: vi.fn()
   },
   checkSession: {
-    findFirst: vi.fn()
+    findFirst: vi.fn(),
+    update: vi.fn()
+  },
+  itemGroup: {
+    update: vi.fn()
   },
   shoppingListItem: {
     findUniqueOrThrow: vi.fn()
@@ -37,6 +41,12 @@ const mockTx = vi.hoisted(() => ({
   shoppingListItem: {
     create: vi.fn(),
     updateMany: vi.fn()
+  },
+  checkSession: {
+    update: vi.fn()
+  },
+  itemGroup: {
+    update: vi.fn()
   }
 }));
 
@@ -483,6 +493,7 @@ describe("archive routes", () => {
         userId: "user-1",
         OR: [
           { ruleId: "coffee-basics", suggestedItem: "Фильтры для кофе" },
+          { ruleId: "coffee-basics", suggestedItem: "*" },
           { ruleId: "coffee-basics", suggestedItem: "Молоко" },
           { ruleId: "coffee-basics", suggestedItem: "Овсяное молоко" }
         ]
@@ -594,6 +605,59 @@ describe("check session routes", () => {
     });
 
     await app.close();
+  });
+
+  it("reschedules a category after completing its check session", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-06-24T10:00:00.000Z")
+    });
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.checkSession.findFirst.mockResolvedValue({
+      id: "session-1",
+      userId: "user-1",
+      categoryId: "category-1",
+      groupId: null,
+      status: "IN_PROGRESS"
+    });
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.checkSession.update.mockResolvedValue({
+      id: "session-1",
+      userId: "user-1",
+      categoryId: "category-1",
+      groupId: null,
+      status: "COMPLETED",
+      category: {
+        id: "category-1",
+        usageCycleDays: 7
+      },
+      group: null,
+      items: []
+    });
+    mockTx.category.update.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/check/session/session-1/complete",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.category.update).toHaveBeenCalledWith({
+      where: {
+        id: "category-1"
+      },
+      data: {
+        nextCheckAt: new Date("2026-07-01T10:00:00.000Z")
+      }
+    });
+
+    await app.close();
+    vi.useRealTimers();
   });
 });
 

@@ -1080,6 +1080,7 @@ POST /api/check/session/:sessionId/cancel
 GET  /api/recommendations?itemId=...
 POST /api/recommendations/:id/accept
 POST /api/recommendations/:id/dismiss
+POST /api/recommendations/:id/hide-similar
 ```
 
 ### 12.8. Service

@@ -1,9 +1,10 @@
 # API
 
 This document tracks the implemented API surface. The current implementation
-covers the core product flow with development auth, email magic link auth, and
-optional Telegram-compatible auth. The release target is email magic link auth
-for browser users; Telegram auth remains optional integration.
+covers the core product flow with development auth, email magic link auth,
+Google sign-in, Apple sign-in, and optional Telegram-compatible auth. The
+release target is browser auth through email magic links and configured OAuth
+providers; Telegram auth remains optional integration.
 
 ## Auth
 
@@ -363,6 +364,7 @@ Group membership is unique by `(groupId, itemId)`.
 GET  /api/recommendations?itemId=...
 POST /api/recommendations/:id/accept
 POST /api/recommendations/:id/dismiss
+POST /api/recommendations/:id/hide-similar
 ```
 
 Recommendations are deterministic rule-based suggestions generated from the
@@ -404,6 +406,20 @@ so the same rule suggestion is not shown again:
   "dismissed": true
 }
 ```
+
+`POST /api/recommendations/:id/hide-similar` stores a rule-family dismissal for
+the current user so all current suggestions from the same rule are hidden:
+
+```json
+{
+  "hidden": true,
+  "ruleId": "coffee-basics"
+}
+```
+
+Recommendation dismissals are scoped by the authenticated user. A family
+dismissal uses the same deterministic rule cycle semantics as single-suggestion
+dismissal: suggestions can appear again after a new relevant item cycle starts.
 
 ## Export
 

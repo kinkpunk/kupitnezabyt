@@ -32,6 +32,8 @@ export type RecommendationIdParts = {
   suggestedItem: string;
 };
 
+export const HIDE_SIMILAR_RECOMMENDATION_ITEM = "*";
+
 export const recommendationRules: RecommendationRule[] = [
   {
     id: "coffee-basics",
@@ -111,15 +113,27 @@ export function getRuleBasedRecommendations(input: {
     input.userItems.map((item) => normalizeName(item.name))
   );
   const recommendationCycleStartedAt = getRecommendationCycleStartedAt(input.triggerItem);
+  const currentCycleDismissals = input.dismissals.filter((dismissal) =>
+    dismissalAppliesToCurrentCycle(dismissal, recommendationCycleStartedAt)
+  );
+  const hiddenRuleIds = new Set(
+    currentCycleDismissals
+      .filter((dismissal) => dismissal.suggestedItem === HIDE_SIMILAR_RECOMMENDATION_ITEM)
+      .map((dismissal) => dismissal.ruleId)
+  );
   const dismissedKeys = new Set(
-    input.dismissals
-      .filter((dismissal) => dismissalAppliesToCurrentCycle(dismissal, recommendationCycleStartedAt))
+    currentCycleDismissals
+      .filter((dismissal) => dismissal.suggestedItem !== HIDE_SIMILAR_RECOMMENDATION_ITEM)
       .map((dismissal) => `${dismissal.ruleId}:${normalizeName(dismissal.suggestedItem)}`)
   );
   const suggestions: RecommendationSuggestion[] = [];
   const emittedNames = new Set<string>();
 
   for (const rule of input.rules ?? recommendationRules) {
+    if (hiddenRuleIds.has(rule.id)) {
+      continue;
+    }
+
     if (!matchesRule(rule, normalizedTriggerName, normalizedUserItemNames)) {
       continue;
     }

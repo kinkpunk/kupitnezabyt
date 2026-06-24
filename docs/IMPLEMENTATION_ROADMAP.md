@@ -27,11 +27,8 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- Rate limiting for auth and other sensitive endpoints.
-- Explicit delete/reorder contracts for categories/items where the spec requires
-  them; current MVP primarily uses archive flows.
-- Recommendation action `Скрыть похожие`.
 - `test:e2e` plus DB-backed API integration tests.
+- Item reorder if a later UX/data-model change adds item-level `sortOrder`.
 - Optional Telegram integration smoke if/when bot/worker deployment is enabled.
 
 ## Web-First Release Plan
@@ -507,7 +504,7 @@ Implemented notes:
 
 ### Slice 25: Recommendation Hide Similar
 
-Status: planned.
+Status: implemented.
 
 Goal: implement the `Скрыть похожие` recommendation action from the product
 spec.
@@ -529,6 +526,18 @@ Tests:
 
 - Unit tests for rule/family dismissal filtering.
 - API route tests for accepting, dismissing one, and hiding similar.
+
+Implemented notes:
+
+- Added rule-family recommendation dismissal using the existing
+  `RecommendationDismissal` table with a wildcard suggested item.
+- Added `POST /api/recommendations/:id/hide-similar`.
+- Webapp recommendations now expose `Скрыть похожие` and remove all current
+  suggestions from the hidden rule after backend confirmation.
+- Completing a category or group check now recalculates that entity's
+  `nextCheckAt`, so the active reminder disappears until the next due window.
+- Item reminder settings no longer render every item at once; Settings uses an
+  item picker and shows only selected or already configured item reminders.
 
 ### Slice 26: E2E And DB-Backed Integration Tests
 

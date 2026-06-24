@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createRecommendationId,
   getRuleBasedRecommendations,
+  HIDE_SIMILAR_RECOMMENDATION_ITEM,
   normalizeName,
   parseRecommendationId
 } from "./recommendations.js";
@@ -97,6 +98,51 @@ describe("getRuleBasedRecommendations", () => {
     expect(suggestions.map((suggestion) => suggestion.suggestedItem)).toContain(
       "Фильтры для кофе"
     );
+  });
+
+  it("hides all similar suggestions for a dismissed rule family", () => {
+    const suggestions = getRuleBasedRecommendations({
+      triggerItem: {
+        id: "item-1",
+        name: "Кофе",
+        createdAt: "2026-06-20T10:00:00.000Z"
+      },
+      userItems: [{ id: "item-1", name: "Кофе" }],
+      dismissals: [
+        {
+          ruleId: "coffee-basics",
+          suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM,
+          createdAt: "2026-06-20T10:05:00.000Z"
+        }
+      ]
+    });
+
+    expect(suggestions).toEqual([]);
+  });
+
+  it("ignores hidden-similar dismissals from before the item was bought again", () => {
+    const suggestions = getRuleBasedRecommendations({
+      triggerItem: {
+        id: "item-1",
+        name: "Кофе",
+        createdAt: "2026-06-20T10:00:00.000Z",
+        lastBoughtAt: "2026-06-21T10:00:00.000Z"
+      },
+      userItems: [{ id: "item-1", name: "Кофе" }],
+      dismissals: [
+        {
+          ruleId: "coffee-basics",
+          suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM,
+          createdAt: "2026-06-20T10:05:00.000Z"
+        }
+      ]
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.suggestedItem)).toEqual([
+      "Фильтры для кофе",
+      "Молоко",
+      "Овсяное молоко"
+    ]);
   });
 
   it("ignores dismissals from before a new matching item was added", () => {

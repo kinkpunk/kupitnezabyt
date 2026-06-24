@@ -54,7 +54,8 @@ components in Slice 1.
 
 The API resolves user identity from an authorization context only.
 
-- Target production auth: email magic link request/verify flow.
+- Target production auth: email magic link request/verify flow and configured
+  OAuth provider callbacks.
 - `POST /api/auth/telegram` validates Telegram Mini App `initData` only when
   optional Telegram integration is enabled.
 - `POST /api/auth/dev` exists only when `NODE_ENV=development` and
