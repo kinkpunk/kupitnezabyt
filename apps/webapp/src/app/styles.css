@@ -102,9 +102,8 @@ select {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 6px 0 16px;
+  justify-content: center;
+  padding: 4px 0 18px;
 }
 
 .topbar h1,
@@ -161,17 +160,6 @@ select {
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-.counter {
-  display: grid;
-  min-width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow);
-  font-weight: 800;
 }
 
 .notice {

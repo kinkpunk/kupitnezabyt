@@ -1442,14 +1442,10 @@ export default function HomePage() {
       <header className="topbar">
         <div className="brand-lockup">
           <img alt="" className="brand-logo" src="/logo.png" />
-          <div>
-            <p className="eyebrow">Web app</p>
-            <h1>
-              <BrandWord />
-            </h1>
-          </div>
+          <h1>
+            <BrandWord />
+          </h1>
         </div>
-        <span className="counter">{shoppingList.length}</span>
       </header>
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
