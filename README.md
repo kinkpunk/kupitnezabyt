@@ -255,6 +255,8 @@ pnpm build           # Production-сборка
 pnpm typecheck       # Проверка типов
 pnpm lint            # Статический анализ
 pnpm test            # Unit- и integration-тесты
+pnpm test:e2e        # Playwright smoke главного browser flow
+pnpm test:integration # DB-backed API integration tests
 pnpm smoke:deployment # Smoke deployed API/webapp через HTTPS
 
 pnpm db:generate     # Генерация Prisma Client
@@ -263,9 +265,11 @@ pnpm db:deploy       # Применение production migrations
 pnpm db:seed         # Добавление стартовых данных
 ```
 
-`pnpm test:e2e` и Playwright-сценарии пока не настроены в workspace. Этот gap
-зафиксирован в roadmap как часть финальной интеграции и не должен трактоваться
-как выполненное соответствие полному `PRODUCT_SPEC.md`.
+`pnpm test:e2e` запускает Playwright-сценарий против dev webapp/API и требует
+локальную PostgreSQL базу, миграции и `DEV_AUTH_ENABLED=true`. `pnpm
+test:integration` запускает DB-backed API сценарии с
+`RUN_DB_INTEGRATION_TESTS=1`; обычный `pnpm test` остается быстрым и не требует
+живой базы.
 
 Команды в этом разделе должны соответствовать `package.json`. При изменении
 scripts README нужно обновить в той же задаче.
@@ -352,9 +356,11 @@ In-app reminders отображаются внутри webapp: на главно
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:e2e
+pnpm test:integration
 ```
 
-Минимальный E2E-сценарий MVP для будущего `test:e2e` setup:
+Минимальный E2E-сценарий MVP, покрываемый `pnpm test:e2e`:
 
 1. Открыть приложение.
 2. Создать категорию.

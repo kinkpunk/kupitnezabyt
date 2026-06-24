@@ -541,7 +541,7 @@ Implemented notes:
 
 ### Slice 26: E2E And DB-Backed Integration Tests
 
-Status: planned.
+Status: implemented.
 
 Goal: turn the current release smoke checklists into repeatable automated
 coverage for the main web-first product loop.
@@ -565,6 +565,25 @@ Acceptance:
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm test:e2e` are all
   documented and runnable in the intended local/CI environment.
+
+Implemented notes:
+
+- Added `@playwright/test`, `playwright.config.ts`, and `pnpm test:e2e`.
+- Added a mobile Chromium browser smoke for the web-first dev-auth flow:
+  onboarding, category creation, item creation, shopping completion, and global
+  search.
+- Added an API health preflight so E2E fails quickly when PostgreSQL is not
+  reachable by the API.
+- Added `apps/api/src/db-backed.integration.test.ts` and `pnpm
+  test:integration` for real database coverage of user isolation and shopping
+  list synchronization.
+- Added `vitest.config.ts` so regular `pnpm test` excludes Playwright specs
+  while still keeping the DB-backed integration file skipped unless explicitly
+  enabled.
+- Updated README and final integration docs with the new verification commands.
+- Local verification in this implementation environment could not complete
+  `pnpm test:e2e` or `pnpm test:integration` because PostgreSQL was not running
+  at `localhost:5432`; both commands now report that requirement explicitly.
 
 ## Post-MVP Collaboration Plan
 

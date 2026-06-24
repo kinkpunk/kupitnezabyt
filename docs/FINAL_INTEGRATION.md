@@ -37,6 +37,8 @@ Telegram APIs, and an always-on process.
 - `pnpm typecheck`
 - `pnpm lint`
 - `pnpm test`
+- `pnpm test:e2e`
+- `pnpm test:integration`
 - `docker compose config`
 - `docker compose up -d postgres redis`
 - `pnpm db:generate`
@@ -111,9 +113,12 @@ Requires real Telegram credentials and deployed bot/worker services:
 
 ## Known Gaps
 
-- `pnpm test:e2e` is not configured yet.
-- DB-backed integration tests for API user isolation still require a dedicated
-  PostgreSQL test harness.
+- `pnpm test:e2e` now covers the primary dev-auth browser stock flow; broader
+  coverage for groups, check sessions, search variants, and export can be
+  expanded as the release suite matures.
+- `pnpm test:integration` now provides a DB-backed API harness for user
+  isolation and shopping-list sync; it requires a migrated PostgreSQL test
+  database through `DATABASE_URL`.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
 - Item reorder is not implemented because current item ordering is creation-date
