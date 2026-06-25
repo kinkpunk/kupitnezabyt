@@ -27,7 +27,8 @@ auth, browser smoke, and in-app reminders.
 
 Remaining web-first MVP gaps:
 
-- `test:e2e` plus DB-backed API integration tests.
+- Extended E2E/DB-backed coverage for secondary flows beyond the Slice 26 smoke
+  and user-isolation harness.
 - Item reorder if a later UX/data-model change adds item-level `sortOrder`.
 - Optional Telegram integration smoke if/when bot/worker deployment is enabled.
 
@@ -106,7 +107,8 @@ Webapp:
 Tests:
 
 - Unit tests for due/upcoming reminder selection.
-- E2E happy path remains planned because `test:e2e` is not configured yet.
+- E2E coverage was not available when this slice was implemented; the basic
+  browser harness was added later in Slice 26.
 
 Implemented notes:
 
@@ -1135,7 +1137,7 @@ Database:
 Tests:
 
 - E2E first-run flow in dev auth mode.
-  Still requires a `test:e2e` setup.
+  Basic dev-auth browser coverage was added later in Slice 26.
 
 ## Slice 12: Shared UI Package, If Needed
 
@@ -1182,7 +1184,8 @@ Tasks:
   - `pnpm typecheck`. Done.
   - `pnpm lint`. Done.
   - `pnpm test`. Done.
-  - `pnpm test:e2e`. Not configured yet; documented as a known gap.
+  - `pnpm test:e2e`. Added later in Slice 26; not part of the original Slice
+    13 verification pass.
 - Confirm Telegram Mini App opens from the bot. Documented in
   `docs/FINAL_INTEGRATION.md`; requires real Telegram credentials.
 - Confirm Telegram init data validation in production-like mode. Covered by

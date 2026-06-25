@@ -133,10 +133,39 @@ Previous Slice 13 local verification recorded during implementation:
 - `pnpm lint` passed.
 - `pnpm test` passed.
 - `pnpm build` passed.
-- `pnpm test:e2e` could not run because the script is not configured.
+- `pnpm test:e2e` was not configured at that time; it was added later in Slice
+  26 and now requires a migrated PostgreSQL database.
 - Docker Compose smoke could not run in the current environment because the
   `docker` CLI is unavailable.
 
 Before any release-readiness decision, rerun the checklist above in the current
-workspace and record the fresh results. This section is historical context, not
-a guarantee that the current working tree is clean.
+workspace and record the fresh results, including `pnpm test:e2e` and `pnpm
+test:integration` in an environment with PostgreSQL available. This section is
+historical context, not a guarantee that the current working tree is clean.
+
+## Current Local Verification
+
+Verification run on 2026-06-25 in the local Codex workspace:
+
+- `pnpm typecheck` passed.
+- `pnpm lint` passed.
+- `pnpm test` passed: 18 test files passed, 1 DB-backed integration file
+  skipped by default.
+- `pnpm build` passed.
+- `pnpm test:integration` could not complete because PostgreSQL was not
+  reachable at `localhost:5432`.
+- `pnpm test:e2e` started the dev webapp/API and failed its preflight because
+  `GET /health/detailed` returned `503` with `db: false`.
+- Docker Compose could not be used in this workspace because the `docker` CLI
+  is unavailable.
+
+Before release, rerun the DB-backed commands in an environment with a migrated
+PostgreSQL database:
+
+```bash
+docker compose up -d postgres redis
+pnpm db:generate
+pnpm db:migrate
+pnpm test:integration
+pnpm test:e2e
+```
