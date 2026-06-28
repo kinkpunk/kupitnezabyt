@@ -307,7 +307,6 @@ export default function HomePage() {
     () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
     [items]
   );
-  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const itemReminders = useMemo(
     () => inAppReminders.filter((reminder) => reminder.entityType === "ITEM"),
     [inAppReminders]
@@ -783,17 +782,6 @@ export default function HomePage() {
     }
   }
 
-  async function handleSetReminderItemStatus(reminder: InAppReminder, status: ItemStatus) {
-    if (!token || reminder.entityType !== "ITEM") {
-      return;
-    }
-
-    setError(null);
-    const updatedItem = await setItemStatus(token, reminder.entityId, status);
-    await refreshActiveData(token);
-    await refreshRecommendations(token, updatedItem);
-  }
-
   async function handleSnoozeReminder(reminder: InAppReminder, days = reminderSnoozeDays) {
     if (!token) {
       return;
@@ -838,27 +826,8 @@ export default function HomePage() {
   }
 
   function renderReminderActions(reminder: InAppReminder) {
-    const reminderItem = reminder.entityType === "ITEM" ? itemsById.get(reminder.entityId) : null;
-    const showItemStatusActions = reminder.entityType === "ITEM" && reminderItem?.status !== "LOW";
-
     return (
       <div className="reminder-actions">
-        {showItemStatusActions
-          ? statusOptions.map((status) => (
-              <button
-                className={status === "URGENT" ? "ghost-button danger-button" : "ghost-button"}
-                key={status}
-                type="button"
-                onClick={() =>
-                  void handleSetReminderItemStatus(reminder, status).catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                {statusLabels[status]}
-              </button>
-            ))
-          : null}
         {reminder.entityType !== "ITEM" ? (
           <button
             className="ghost-button"
