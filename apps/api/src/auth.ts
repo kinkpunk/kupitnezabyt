@@ -32,6 +32,12 @@ export type OAuthStateTokenRecord = {
   expiresAt: Date;
 };
 
+export type WorkspaceInvitationTokenRecord = {
+  acceptedAt: Date | null;
+  expiresAt: Date;
+  revokedAt: Date | null;
+};
+
 function base64UrlEncode(input: Buffer | string): string {
   return Buffer.from(input)
     .toString("base64")
@@ -119,11 +125,19 @@ export function generateMagicLinkToken(): string {
   return base64UrlEncode(crypto.randomBytes(32));
 }
 
+export function generateWorkspaceInvitationToken(): string {
+  return base64UrlEncode(crypto.randomBytes(32));
+}
+
 export function generateOAuthSecret(): string {
   return base64UrlEncode(crypto.randomBytes(32));
 }
 
 export function hashMagicLinkToken(token: string, config: ApiConfig): string {
+  return crypto.createHmac("sha256", config.jwtSecret).update(token).digest("hex");
+}
+
+export function hashWorkspaceInvitationToken(token: string, config: ApiConfig): string {
   return crypto.createHmac("sha256", config.jwtSecret).update(token).digest("hex");
 }
 
@@ -139,6 +153,10 @@ export function calculateOAuthStateExpiresAt(now: Date): Date {
   return new Date(now.getTime() + 10 * 60 * 1000);
 }
 
+export function calculateWorkspaceInvitationExpiresAt(now: Date): Date {
+  return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+}
+
 export function isUsableMagicLinkToken(
   token: MagicLinkTokenRecord | null,
   now = new Date()
@@ -151,6 +169,18 @@ export function isUsableOAuthStateToken(
   now = new Date()
 ): token is OAuthStateTokenRecord {
   return Boolean(token && !token.consumedAt && token.expiresAt.getTime() > now.getTime());
+}
+
+export function isUsableWorkspaceInvitationToken<T extends WorkspaceInvitationTokenRecord>(
+  token: T | null,
+  now = new Date()
+): token is T {
+  return Boolean(
+    token &&
+      !token.acceptedAt &&
+      !token.revokedAt &&
+      token.expiresAt.getTime() > now.getTime()
+  );
 }
 
 export function validateTelegramInitData(

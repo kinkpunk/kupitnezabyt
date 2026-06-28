@@ -5,10 +5,13 @@ import { describe, expect, it } from "vitest";
 import {
   calculateMagicLinkExpiresAt,
   calculateOAuthStateExpiresAt,
+  calculateWorkspaceInvitationExpiresAt,
   hashMagicLinkToken,
   hashOAuthSecret,
+  hashWorkspaceInvitationToken,
   isUsableMagicLinkToken,
   isUsableOAuthStateToken,
+  isUsableWorkspaceInvitationToken,
   normalizeEmail,
   signToken,
   validateTelegramInitData,
@@ -100,6 +103,40 @@ describe("OAuth state helpers", () => {
     expect(isUsableOAuthStateToken({ consumedAt: now, expiresAt }, now)).toBe(false);
     expect(isUsableOAuthStateToken({ consumedAt: null, expiresAt: now }, now)).toBe(false);
     expect(isUsableOAuthStateToken(null, now)).toBe(false);
+  });
+});
+
+describe("workspace invitation auth helpers", () => {
+  it("hashes invitation tokens without exposing raw values", () => {
+    const hash = hashWorkspaceInvitationToken("raw-invitation", config);
+
+    expect(hash).not.toBe("raw-invitation");
+    expect(hash).toBe(hashWorkspaceInvitationToken("raw-invitation", config));
+    expect(hash).not.toBe(hashWorkspaceInvitationToken("other-invitation", config));
+  });
+
+  it("calculates invitation expiry and rejects inactive invitations", () => {
+    const now = new Date("2026-06-25T12:00:00.000Z");
+    const expiresAt = calculateWorkspaceInvitationExpiresAt(now);
+
+    expect(expiresAt.toISOString()).toBe("2026-07-02T12:00:00.000Z");
+    expect(
+      isUsableWorkspaceInvitationToken({ acceptedAt: null, revokedAt: null, expiresAt }, now)
+    ).toBe(true);
+    expect(
+      isUsableWorkspaceInvitationToken({ acceptedAt: now, revokedAt: null, expiresAt }, now)
+    ).toBe(false);
+    expect(
+      isUsableWorkspaceInvitationToken({ acceptedAt: null, revokedAt: now, expiresAt }, now)
+    ).toBe(false);
+    expect(
+      isUsableWorkspaceInvitationToken({
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: now
+      }, now)
+    ).toBe(false);
+    expect(isUsableWorkspaceInvitationToken(null, now)).toBe(false);
   });
 });
 

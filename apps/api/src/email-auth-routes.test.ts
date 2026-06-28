@@ -36,7 +36,8 @@ vi.mock("@kupitnezabyt/database", () => ({
 }));
 
 vi.mock("./email.js", () => ({
-  sendMagicLinkEmail: mockSendMagicLinkEmail
+  sendMagicLinkEmail: mockSendMagicLinkEmail,
+  sendWorkspaceInvitationEmail: vi.fn()
 }));
 
 describe("email auth routes", () => {

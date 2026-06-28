@@ -28,6 +28,7 @@ model User {
   ownedWorkspaces          Workspace[]              @relation("WorkspaceOwner")
   recommendationDismissals RecommendationDismissal[]
   reminders                Reminder[]
+  sentWorkspaceInvitations WorkspaceInvitation[]    @relation("WorkspaceInvitationInviter")
   shoppingListItems        ShoppingListItem[]
   workspaceMemberships     WorkspaceMember[]
 }
@@ -44,6 +45,7 @@ model Workspace {
   checkSessions            CheckSession[]
   groups                   ItemGroup[]
   items                    Item[]
+  invitations              WorkspaceInvitation[]
   members                  WorkspaceMember[]
   recommendationDismissals RecommendationDismissal[]
   reminders                Reminder[]
@@ -69,6 +71,27 @@ model WorkspaceMember {
   @@unique([workspaceId, userId])
   @@index([userId])
   @@index([invitedEmail])
+}
+
+model WorkspaceInvitation {
+  id          String        @id @default(cuid())
+  workspaceId String
+  invitedById String
+  email       String
+  role        WorkspaceRole @default(EDITOR)
+  tokenHash   String        @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("WorkspaceInvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, email])
+  @@index([email, createdAt])
+  @@index([expiresAt])
 }
 
 model AuthAccount {

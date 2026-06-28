@@ -305,7 +305,9 @@ export default function HomePage() {
     async function boot() {
       try {
         const query = new URLSearchParams(window.location.search);
-        if (query.has("magic_token") || query.has("oauth_token")) {
+        if (query.has("workspace_invite_token")) {
+          setLoadingMessage("Принимаем приглашение...");
+        } else if (query.has("magic_token") || query.has("oauth_token")) {
           setLoadingMessage("Завершаем вход...");
         } else if (query.has("oauth_error")) {
           setLoadingMessage("Возвращаемся ко входу...");
@@ -2640,7 +2642,10 @@ function getFriendlyErrorMessage(message: string): string {
     APPLE_AUTH_INVALID_CALLBACK: "Apple вернул неполный ответ. Попробуйте войти еще раз.",
     APPLE_AUTH_INVALID_STATE: "Сессия входа устарела. Начните вход через Apple заново.",
     APPLE_AUTH_INVALID_TOKEN: "Не удалось проверить Apple ID. Попробуйте еще раз.",
-    APPLE_AUTH_NOT_CONFIGURED: "Вход через Apple временно недоступен. Используйте email-ссылку."
+    APPLE_AUTH_NOT_CONFIGURED: "Вход через Apple временно недоступен. Используйте email-ссылку.",
+    EMAIL_VERIFICATION_REQUIRED: "Войдите через email, на который пришло приглашение.",
+    INVALID_INVITATION: "Приглашение недействительно или устарело.",
+    INVITATION_EMAIL_MISMATCH: "Это приглашение отправлено на другой email."
   };
 
   return authErrorMessages[message] ?? message;

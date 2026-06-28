@@ -642,7 +642,7 @@ Implemented notes:
 
 ### Slice 28: Email Invitations
 
-Status: planned.
+Status: implemented backend.
 
 Goal: let a user invite another verified email user into a shared workspace.
 
@@ -662,6 +662,27 @@ Tests:
 
 - API tests for invite creation, acceptance, expiry, revocation, and email
   mismatch.
+
+Implemented notes:
+
+- Added `WorkspaceInvitation` with hashed token storage, expiry,
+  accepted/revoked timestamps, inviter, invited email, role, and workspace
+  relation.
+- Added owner-only `POST /api/workspaces/:workspaceId/invitations` for inviting
+  an existing verified email user.
+- Added owner-only pending invitation/member listing and invitation revocation
+  endpoints for the future settings UI.
+- Added `POST /api/workspace-invitations/accept` for signed-in users to accept
+  only invitations matching their own verified email.
+- Added invitation email delivery through the existing email provider with a
+  development fallback link.
+- Webapp login bootstrap now accepts `workspace_invite_token` links after the
+  user is authenticated and shows friendly invitation errors.
+- Added API and auth-helper tests for invitation creation, listing, revocation,
+  acceptance, owner checks, email mismatch, hashing, expiry, accepted and
+  revoked states.
+- Settings UI for pending invites/member management remains part of Slice 30,
+  where collaboration UX is introduced alongside workspace switching.
 
 ### Slice 29: Shared Access API Contracts
 

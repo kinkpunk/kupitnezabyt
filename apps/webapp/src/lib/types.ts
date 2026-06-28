@@ -114,6 +114,17 @@ export type OAuthStartResponse = {
   authUrl: string;
 };
 
+export type WorkspaceInvitationAcceptResponse = {
+  accepted: boolean;
+  member: {
+    id: string;
+    workspaceId: string;
+    userId: string;
+    role: "OWNER" | "EDITOR" | "VIEWER";
+    joinedAt: string | null;
+  };
+};
+
 export type DeletedCountResponse = {
   deletedCount: number;
 };

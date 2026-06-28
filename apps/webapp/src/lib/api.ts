@@ -13,7 +13,8 @@ import type {
   OAuthStartResponse,
   RecommendationSuggestion,
   ShoppingListEntry,
-  UserDataExport
+  UserDataExport,
+  WorkspaceInvitationAcceptResponse
 } from "./types";
 
 declare global {
@@ -54,6 +55,7 @@ export async function login(): Promise<string> {
   const magicToken = searchParams.get("magic_token");
   const oauthToken = searchParams.get("oauth_token");
   const oauthError = searchParams.get("oauth_error");
+  const workspaceInvitationToken = searchParams.get("workspace_invite_token");
 
   if (oauthToken) {
     window.localStorage.setItem(tokenStorageKey, oauthToken);
@@ -71,12 +73,17 @@ export async function login(): Promise<string> {
       token: magicToken
     });
     window.localStorage.setItem(tokenStorageKey, response.token);
+    await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);
     window.history.replaceState({}, "", window.location.pathname);
     return response.token;
   }
 
   const savedToken = window.localStorage.getItem(tokenStorageKey);
   if (savedToken) {
+    await acceptWorkspaceInvitationIfPresent(savedToken, workspaceInvitationToken);
+    if (workspaceInvitationToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     return savedToken;
   }
 
@@ -84,6 +91,10 @@ export async function login(): Promise<string> {
   if (initData) {
     const response = await post<AuthResponse>("/api/auth/telegram", undefined, { initData });
     window.localStorage.setItem(tokenStorageKey, response.token);
+    await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);
+    if (workspaceInvitationToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     return response.token;
   }
 
@@ -93,6 +104,10 @@ export async function login(): Promise<string> {
       firstName: "Dev"
     });
     window.localStorage.setItem(tokenStorageKey, response.token);
+    await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);
+    if (workspaceInvitationToken) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
     return response.token;
   }
 
@@ -113,6 +128,24 @@ export function startGoogleSignIn(): Promise<OAuthStartResponse> {
 
 export function startAppleSignIn(): Promise<OAuthStartResponse> {
   return post<OAuthStartResponse>("/api/auth/apple/start", undefined, {});
+}
+
+export function acceptWorkspaceInvitation(
+  token: string,
+  invitationToken: string
+): Promise<WorkspaceInvitationAcceptResponse> {
+  return post<WorkspaceInvitationAcceptResponse>("/api/workspace-invitations/accept", token, {
+    token: invitationToken
+  });
+}
+
+async function acceptWorkspaceInvitationIfPresent(
+  token: string,
+  invitationToken: string | null
+): Promise<void> {
+  if (invitationToken) {
+    await acceptWorkspaceInvitation(token, invitationToken);
+  }
 }
 
 function prepareTelegramWebApp(): void {

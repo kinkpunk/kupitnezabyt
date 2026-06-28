@@ -125,6 +125,65 @@ All endpoints below require:
 Authorization: Bearer <token>
 ```
 
+## Workspace Invitations
+
+```http
+GET  /api/workspaces/:workspaceId/invitations
+POST /api/workspaces/:workspaceId/invitations
+POST /api/workspace-invitations/accept
+POST /api/workspace-invitations/:invitationId/revoke
+```
+
+Workspace invitation endpoints are part of the post-MVP collaboration
+foundation. Creating an invitation requires the authenticated user to own the
+workspace. The invited email must belong to an existing verified email user.
+Invitation tokens are stored only as hashes, expire after seven days, and can be
+accepted once.
+
+Create invitation body:
+
+```json
+{
+  "email": "member@example.com"
+}
+```
+
+Successful response:
+
+```json
+{
+  "sent": true,
+  "invitation": {
+    "id": "...",
+    "workspaceId": "...",
+    "email": "member@example.com",
+    "role": "EDITOR",
+    "expiresAt": "2026-07-02T12:00:00.000Z"
+  }
+}
+```
+
+Development responses may also include `devInvitationLink` when no email
+provider API key is configured. Invitation email links point at the webapp with
+`workspace_invite_token=...`; the webapp accepts the invitation after the user
+is authenticated.
+
+Accept invitation body:
+
+```json
+{
+  "token": "..."
+}
+```
+
+The signed-in user must have a verified email matching the invited email.
+Successful acceptance returns the created or updated workspace membership.
+
+`GET /api/workspaces/:workspaceId/invitations` is owner-only and returns the
+workspace, pending invitations, and current members for the future settings UI.
+`POST /api/workspace-invitations/:invitationId/revoke` is owner-only, marks a
+pending invitation as revoked, and rejects already accepted invitations.
+
 ## Me
 
 ```http
