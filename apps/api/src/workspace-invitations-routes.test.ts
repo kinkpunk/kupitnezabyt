@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockSendWorkspaceInvitationEmail = vi.hoisted(() => vi.fn());
+const mockEnsurePersonalWorkspace = vi.hoisted(() => vi.fn());
 
 const mockTx = vi.hoisted(() => ({
   workspaceInvitation: {
@@ -33,7 +34,7 @@ const mockPrisma = vi.hoisted(() => ({
 }));
 
 vi.mock("@kupitnezabyt/database", () => ({
-  ensurePersonalWorkspace: vi.fn(),
+  ensurePersonalWorkspace: mockEnsurePersonalWorkspace,
   getPersonalWorkspaceId: (userId: string) => `workspace_${userId}`,
   prisma: mockPrisma
 }));
@@ -55,6 +56,132 @@ describe("workspace invitation routes", () => {
     mockSendWorkspaceInvitationEmail.mockResolvedValue({
       devInvitationLink: "http://localhost:3000/?workspace_invite_token=dev-token"
     });
+  });
+
+  it("lists workspaces available to the signed-in user", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findMany.mockResolvedValue([
+      {
+        id: "membership-1",
+        role: "OWNER",
+        joinedAt: new Date("2026-06-25T09:00:00.000Z"),
+        workspace: {
+          id: "workspace_user-1",
+          name: "Личный список",
+          ownerId: "user-1",
+          owner: {
+            id: "user-1",
+            email: "owner@example.com",
+            displayName: "Alice",
+            firstName: null
+          },
+          _count: {
+            members: 1
+          }
+        }
+      },
+      {
+        id: "membership-2",
+        role: "EDITOR",
+        joinedAt: new Date("2026-06-26T09:00:00.000Z"),
+        workspace: {
+          id: "workspace-shared",
+          name: "Дом",
+          ownerId: "owner-2",
+          owner: {
+            id: "owner-2",
+            email: "home@example.com",
+            displayName: null,
+            firstName: "Юля"
+          },
+          _count: {
+            members: 2
+          }
+        }
+      }
+    ]);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/workspaces",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "user-1")}`
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual([
+      {
+        id: "workspace_user-1",
+        name: "Личный список",
+        ownerId: "user-1",
+        role: "OWNER",
+        joinedAt: "2026-06-25T09:00:00.000Z",
+        memberCount: 1,
+        owner: {
+          id: "user-1",
+          email: "owner@example.com",
+          displayName: "Alice",
+          firstName: null
+        }
+      },
+      {
+        id: "workspace-shared",
+        name: "Дом",
+        ownerId: "owner-2",
+        role: "EDITOR",
+        joinedAt: "2026-06-26T09:00:00.000Z",
+        memberCount: 2,
+        owner: {
+          id: "owner-2",
+          email: "home@example.com",
+          displayName: null,
+          firstName: "Юля"
+        }
+      }
+    ]);
+    expect(mockEnsurePersonalWorkspace).toHaveBeenCalledWith(mockPrisma, {
+      userId: "user-1",
+      name: "Личный список"
+    });
+    expect(mockPrisma.workspaceMember.findMany).toHaveBeenCalledWith({
+      where: {
+        userId: "user-1"
+      },
+      orderBy: {
+        joinedAt: "asc"
+      },
+      select: {
+        id: true,
+        role: true,
+        joinedAt: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerId: true,
+            owner: {
+              select: {
+                id: true,
+                email: true,
+                displayName: true,
+                firstName: true
+              }
+            },
+            _count: {
+              select: {
+                members: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    await app.close();
   });
 
   it("lets a workspace owner invite a verified email user", async () => {

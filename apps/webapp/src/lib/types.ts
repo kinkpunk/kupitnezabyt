@@ -125,6 +125,62 @@ export type WorkspaceInvitationAcceptResponse = {
   };
 };
 
+export type WorkspaceSummary = {
+  id: string;
+  name: string;
+  ownerId: string;
+  role: "OWNER" | "EDITOR" | "VIEWER";
+  joinedAt: string | null;
+  memberCount: number;
+  owner: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+    firstName: string | null;
+  };
+};
+
+export type WorkspaceInvitation = {
+  id: string;
+  email: string;
+  role: "OWNER" | "EDITOR" | "VIEWER";
+  expiresAt: string;
+  createdAt: string;
+};
+
+export type WorkspaceMember = {
+  id: string;
+  role: "OWNER" | "EDITOR" | "VIEWER";
+  joinedAt: string | null;
+  user: {
+    id: string;
+    email: string | null;
+    displayName: string | null;
+    firstName: string | null;
+  };
+};
+
+export type WorkspaceInvitationsResponse = {
+  workspace: {
+    id: string;
+    name: string;
+  };
+  invitations: WorkspaceInvitation[];
+  members: WorkspaceMember[];
+};
+
+export type WorkspaceInvitationCreateResponse = {
+  sent: boolean;
+  invitation: {
+    id: string;
+    workspaceId: string;
+    email: string;
+    role: "OWNER" | "EDITOR" | "VIEWER";
+    expiresAt: string;
+  };
+  devInvitationLink?: string;
+};
+
 export type DeletedCountResponse = {
   deletedCount: number;
 };

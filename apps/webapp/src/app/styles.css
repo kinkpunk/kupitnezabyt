@@ -101,8 +101,10 @@ select {
 
 .topbar {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 4px 0 18px;
 }
 
@@ -145,6 +147,23 @@ select {
 
 .brand-accent {
   color: var(--brand-accent);
+}
+
+.workspace-switcher {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+}
+
+.workspace-switcher span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workspace-switcher select {
+  width: 100%;
 }
 
 .eyebrow,
@@ -699,6 +718,80 @@ select {
   gap: 8px;
 }
 
+.workspace-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.workspace-panel > .section-heading {
+  align-items: center;
+}
+
+.workspace-invite-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.workspace-invite-form button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.success-message,
+.dev-link {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.success-message {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.dev-link span {
+  overflow-wrap: anywhere;
+}
+
+.workspace-lists,
+.workspace-list {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-lists h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.workspace-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  padding: 10px;
+}
+
+.workspace-row h4,
+.workspace-row p {
+  margin: 0;
+}
+
+.workspace-row p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .reminder-settings {
   display: grid;
   gap: 14px;
@@ -767,12 +860,30 @@ select {
 }
 
 @media (min-width: 520px) {
+  .topbar-with-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  }
+
+  .topbar-with-workspace .brand-lockup {
+    justify-self: start;
+  }
+
   .tabs {
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
 
   .shopping-form {
     grid-template-columns: 1fr 150px 120px auto;
+  }
+
+  .workspace-invite-form {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .workspace-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
   }
 
   .onboarding-actions {

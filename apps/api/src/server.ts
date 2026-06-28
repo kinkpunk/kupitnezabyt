@@ -1133,6 +1133,58 @@ export function buildServer() {
     };
   });
 
+  app.get("/api/workspaces", async (request) => {
+    const userId = requireUserId(request.userId);
+    await ensurePersonalWorkspace(prisma, {
+      userId,
+      name: "Личный список"
+    });
+
+    const memberships = await prisma.workspaceMember.findMany({
+      where: {
+        userId
+      },
+      orderBy: {
+        joinedAt: "asc"
+      },
+      select: {
+        id: true,
+        role: true,
+        joinedAt: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            ownerId: true,
+            owner: {
+              select: {
+                id: true,
+                email: true,
+                displayName: true,
+                firstName: true
+              }
+            },
+            _count: {
+              select: {
+                members: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return memberships.map((membership) => ({
+      id: membership.workspace.id,
+      name: membership.workspace.name,
+      ownerId: membership.workspace.ownerId,
+      role: membership.role,
+      joinedAt: membership.joinedAt,
+      memberCount: membership.workspace._count.members,
+      owner: membership.workspace.owner
+    }));
+  });
+
   app.get("/api/export/json", async (request, reply) => {
     const userId = requireUserId(request.userId);
     if (!(await checkRateLimit(reply, sensitiveRateLimiter, `sensitive:export:${userId}`))) {

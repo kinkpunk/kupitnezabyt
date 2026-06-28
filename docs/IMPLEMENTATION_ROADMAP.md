@@ -734,7 +734,7 @@ Implemented notes:
 
 ### Slice 30: Shared Workspace UX
 
-Status: planned.
+Status: implemented.
 
 Goal: make collaboration understandable in the mobile webapp without adding
 friction for users with only one personal workspace.
@@ -752,6 +752,29 @@ Tests:
 
 - E2E coverage for inviting a member, accepting the invite, editing a shared
   item, and seeing the updated shopping list from both accounts.
+
+Implemented notes:
+
+- Added `GET /api/workspaces` so the webapp can list all workspaces available
+  to the signed-in user and bootstrap a personal workspace for older accounts.
+- Added active workspace selection in the webapp API client through
+  `X-Workspace-Id`, with the switcher hidden until the user has more than one
+  workspace.
+- Added Settings UX for owners to view members, invite an existing verified
+  email user, see pending invitations, and revoke pending invitations.
+- Kept Home/Categories/Shopping/Check/Groups flows focused on the active
+  workspace by centralizing workspace context in the API client.
+- Added API route coverage for workspace listing. Full two-account browser E2E
+  remains a later hardening check because it needs production-like auth and DB
+  orchestration.
+
+Not implemented yet:
+
+- Full two-account E2E coverage for invite acceptance, shared item editing, and
+  cross-account shopping-list visibility.
+- Member removal, role changes, and ownership transfer.
+- Privacy/export/deletion rules for shared workspaces; these are handled in
+  Slice 31.
 
 ### Slice 31: Privacy, Export, And Deletion Hardening
 

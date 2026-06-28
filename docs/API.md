@@ -141,6 +141,37 @@ Account-level privacy operations remain user-wide: `GET /api/export/json`
 exports the authenticated user's data, and `DELETE /api/me` deletes the
 authenticated user's account.
 
+## Workspaces
+
+```http
+GET /api/workspaces
+```
+
+Returns workspaces available to the authenticated user and ensures the personal
+workspace exists for older accounts. The webapp uses this list to keep the
+workspace switcher hidden while the user has only one personal workspace.
+
+Successful response:
+
+```json
+[
+  {
+    "id": "workspace_user-1",
+    "name": "Личный список",
+    "ownerId": "user-1",
+    "role": "OWNER",
+    "joinedAt": "2026-06-25T09:00:00.000Z",
+    "memberCount": 1,
+    "owner": {
+      "id": "user-1",
+      "email": "owner@example.com",
+      "displayName": "Alice",
+      "firstName": null
+    }
+  }
+]
+```
+
 ## Workspace Invitations
 
 ```http

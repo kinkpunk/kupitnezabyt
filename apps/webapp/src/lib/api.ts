@@ -14,7 +14,10 @@ import type {
   RecommendationSuggestion,
   ShoppingListEntry,
   UserDataExport,
-  WorkspaceInvitationAcceptResponse
+  WorkspaceInvitationAcceptResponse,
+  WorkspaceInvitationCreateResponse,
+  WorkspaceInvitationsResponse,
+  WorkspaceSummary
 } from "./types";
 
 declare global {
@@ -32,6 +35,7 @@ declare global {
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const tokenStorageKey = "kupitnezabyt.token";
+const activeWorkspaceStorageKey = "kupitnezabyt.activeWorkspaceId";
 
 type TelegramThemeParams = {
   bg_color?: string;
@@ -116,6 +120,7 @@ export async function login(): Promise<string> {
 
 export function clearSavedToken(): void {
   window.localStorage.removeItem(tokenStorageKey);
+  clearActiveWorkspaceId();
 }
 
 export function requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
@@ -139,12 +144,53 @@ export function acceptWorkspaceInvitation(
   });
 }
 
+export function getActiveWorkspaceId(): string | null {
+  return window.localStorage.getItem(activeWorkspaceStorageKey);
+}
+
+export function setActiveWorkspaceId(workspaceId: string): void {
+  window.localStorage.setItem(activeWorkspaceStorageKey, workspaceId);
+}
+
+export function clearActiveWorkspaceId(): void {
+  window.localStorage.removeItem(activeWorkspaceStorageKey);
+}
+
+export function getWorkspaces(token: string): Promise<WorkspaceSummary[]> {
+  return get<WorkspaceSummary[]>("/api/workspaces", token);
+}
+
+export function getWorkspaceInvitations(
+  token: string,
+  workspaceId: string
+): Promise<WorkspaceInvitationsResponse> {
+  return get<WorkspaceInvitationsResponse>(`/api/workspaces/${workspaceId}/invitations`, token);
+}
+
+export function createWorkspaceInvitation(
+  token: string,
+  workspaceId: string,
+  email: string
+): Promise<WorkspaceInvitationCreateResponse> {
+  return post<WorkspaceInvitationCreateResponse>(`/api/workspaces/${workspaceId}/invitations`, token, {
+    email
+  });
+}
+
+export function revokeWorkspaceInvitation(
+  token: string,
+  invitationId: string
+): Promise<{ revoked: boolean }> {
+  return post<{ revoked: boolean }>(`/api/workspace-invitations/${invitationId}/revoke`, token, {});
+}
+
 async function acceptWorkspaceInvitationIfPresent(
   token: string,
   invitationToken: string | null
 ): Promise<void> {
   if (invitationToken) {
-    await acceptWorkspaceInvitation(token, invitationToken);
+    const response = await acceptWorkspaceInvitation(token, invitationToken);
+    setActiveWorkspaceId(response.member.workspaceId);
   }
 }
 
@@ -508,6 +554,10 @@ async function request<TResponse>(
 
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
+    const activeWorkspaceId = getActiveWorkspaceId();
+    if (activeWorkspaceId) {
+      headers["X-Workspace-Id"] = activeWorkspaceId;
+    }
   }
 
   const init: RequestInit = {

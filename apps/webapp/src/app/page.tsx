@@ -11,9 +11,11 @@ import {
   Mail,
   Pencil,
   Search,
+  Send,
   Settings,
   ShoppingCart,
-  Tags
+  Tags,
+  Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -49,13 +51,18 @@ import {
   getItems,
   getRecommendations,
   getShoppingList,
+  getActiveWorkspaceId,
+  getWorkspaceInvitations,
+  getWorkspaces,
   hideSimilarRecommendations,
   login,
   removeGroupItem,
   requestMagicLink,
+  revokeWorkspaceInvitation,
   restoreCategory,
   restoreItem,
   searchItems,
+  setActiveWorkspaceId,
   startAppleSignIn,
   setItemStatus,
   setCheckSessionItemStatus,
@@ -66,6 +73,7 @@ import {
   updateCategory,
   updateGroup,
   updateItem,
+  createWorkspaceInvitation,
   updateShoppingListItem
 } from "../lib/api";
 import type {
@@ -75,7 +83,10 @@ import type {
   Item,
   ItemGroup,
   RecommendationSuggestion,
-  ShoppingListEntry
+  ShoppingListEntry,
+  WorkspaceInvitation,
+  WorkspaceMember,
+  WorkspaceSummary
 } from "../lib/types";
 
 const statusLabels: Record<ItemStatus, string> = {
@@ -99,6 +110,12 @@ const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
   CATEGORY: "Категория",
   GROUP: "Набор",
   ITEM: "Товар"
+};
+
+const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
+  OWNER: "Владелец",
+  EDITOR: "Редактор",
+  VIEWER: "Просмотр"
 };
 
 const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
@@ -151,6 +168,13 @@ export default function HomePage() {
   const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
   const [inAppReminders, setInAppReminders] = useState<InAppReminder[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string | null>(null);
+  const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>([]);
+  const [workspaceInvitations, setWorkspaceInvitations] = useState<WorkspaceInvitation[]>([]);
+  const [workspaceInviteEmail, setWorkspaceInviteEmail] = useState("");
+  const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
+  const [devInvitationLink, setDevInvitationLink] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
     null
@@ -208,6 +232,13 @@ export default function HomePage() {
     () => groups.find((group) => group.id === selectedGroupId) ?? groups[0],
     [groups, selectedGroupId]
   );
+
+  const activeWorkspace = useMemo(
+    () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0] ?? null,
+    [activeWorkspaceId, workspaces]
+  );
+  const canManageActiveWorkspace = activeWorkspace?.role === "OWNER";
+  const showWorkspaceSwitcher = workspaces.length > 1;
 
   const visibleItems = useMemo(
     () =>
@@ -327,6 +358,7 @@ export default function HomePage() {
         }
 
         setToken(authToken);
+        await refreshWorkspaces(authToken);
         await refreshActiveData(authToken);
         await refreshActiveCheckSession(authToken);
         setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
@@ -372,6 +404,18 @@ export default function HomePage() {
 
     void refreshActiveCheckSession(token).catch((caughtError) => setError(formatError(caughtError)));
   }, [activeTab, checkSession?.status, token]);
+
+  useEffect(() => {
+    if (activeTab !== "settings" || !token || !activeWorkspaceId || !canManageActiveWorkspace) {
+      setWorkspaceMembers([]);
+      setWorkspaceInvitations([]);
+      return;
+    }
+
+    void refreshWorkspaceAccess(token, activeWorkspaceId).catch((caughtError) =>
+      setError(formatError(caughtError))
+    );
+  }, [activeTab, activeWorkspaceId, canManageActiveWorkspace, token]);
 
   useEffect(() => {
     const nextDrafts: Record<string, ReminderDraft> = {};
@@ -424,6 +468,35 @@ export default function HomePage() {
     setShoppingList(nextShoppingList);
     setGroups(nextGroups);
     setInAppReminders(nextInAppReminders);
+  }
+
+  async function refreshWorkspaces(authToken = token) {
+    if (!authToken) {
+      return [];
+    }
+
+    const nextWorkspaces = await getWorkspaces(authToken);
+    const savedWorkspaceId = getActiveWorkspaceId();
+    const nextActiveWorkspace =
+      nextWorkspaces.find((workspace) => workspace.id === savedWorkspaceId) ?? nextWorkspaces[0];
+
+    setWorkspaces(nextWorkspaces);
+    setActiveWorkspaceIdState(nextActiveWorkspace?.id ?? null);
+    if (nextActiveWorkspace) {
+      setActiveWorkspaceId(nextActiveWorkspace.id);
+    }
+
+    return nextWorkspaces;
+  }
+
+  async function refreshWorkspaceAccess(authToken = token, workspaceId = activeWorkspaceId) {
+    if (!authToken || !workspaceId) {
+      return;
+    }
+
+    const response = await getWorkspaceInvitations(authToken, workspaceId);
+    setWorkspaceMembers(response.members);
+    setWorkspaceInvitations(response.invitations);
   }
 
   async function refreshArchivedData(authToken = token) {
@@ -1088,6 +1161,25 @@ export default function HomePage() {
     setHasSearched(false);
   }
 
+  function clearWorkspaceScopedState() {
+    setCategories([]);
+    setItems([]);
+    setArchivedCategories([]);
+    setArchivedItems([]);
+    setGroups([]);
+    setShoppingList([]);
+    setInAppReminders([]);
+    setRecommendations([]);
+    setRecommendationSourceItemName(null);
+    setRecommendationSourceCategoryId(null);
+    setSelectedCategoryId(null);
+    setSelectedGroupId(null);
+    setCheckSession(null);
+    setPendingCheckItemName(null);
+    setSelectedReminderItemId("");
+    clearSearchSession();
+  }
+
   function handleSelectTab(tab: ActiveTab) {
     if (tab !== "search") {
       clearSearchSession();
@@ -1100,6 +1192,58 @@ export default function HomePage() {
     clearSearchSession();
     setSelectedCategoryId(categoryId);
     setActiveTab("items");
+  }
+
+  async function handleSelectWorkspace(workspaceId: string) {
+    if (!token || workspaceId === activeWorkspaceId) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    setActiveWorkspaceId(workspaceId);
+    setActiveWorkspaceIdState(workspaceId);
+    clearWorkspaceScopedState();
+    await refreshActiveData(token);
+    await refreshActiveCheckSession(token);
+    if (activeTab === "archive") {
+      await refreshArchivedData(token);
+    }
+  }
+
+  async function handleCreateWorkspaceInvitation() {
+    if (!token || !activeWorkspace || !workspaceInviteEmail.trim()) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    const response = await createWorkspaceInvitation(
+      token,
+      activeWorkspace.id,
+      workspaceInviteEmail.trim()
+    );
+    setWorkspaceInviteEmail("");
+    setWorkspaceMessage(`Приглашение отправлено на ${response.invitation.email}.`);
+    setDevInvitationLink(response.devInvitationLink ?? null);
+    await refreshWorkspaceAccess(token, activeWorkspace.id);
+  }
+
+  async function handleRevokeWorkspaceInvitation(invitation: WorkspaceInvitation) {
+    if (!token || !window.confirm(`Отозвать приглашение для ${invitation.email}?`)) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    await revokeWorkspaceInvitation(token, invitation.id);
+    setWorkspaceMessage(`Приглашение для ${invitation.email} отозвано.`);
+    if (activeWorkspace) {
+      await refreshWorkspaceAccess(token, activeWorkspace.id);
+    }
   }
 
   async function handleExportUserData() {
@@ -1146,6 +1290,10 @@ export default function HomePage() {
     setRecommendationSourceCategoryId(null);
     setSearchResults([]);
     setHasSearched(false);
+    setWorkspaces([]);
+    setActiveWorkspaceIdState(null);
+    setWorkspaceMembers([]);
+    setWorkspaceInvitations([]);
     window.localStorage.removeItem(onboardingStorageKey);
     setActiveTab("home");
   }
@@ -1449,13 +1597,33 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
+      <header className={showWorkspaceSwitcher ? "topbar topbar-with-workspace" : "topbar"}>
         <div className="brand-lockup">
           <img alt="" className="brand-logo" src="/logo.png" />
           <h1>
             <BrandWord />
           </h1>
         </div>
+        {showWorkspaceSwitcher && activeWorkspace ? (
+          <label className="workspace-switcher">
+            <span>Список</span>
+            <select
+              aria-label="Активный список"
+              value={activeWorkspace.id}
+              onChange={(event) =>
+                void handleSelectWorkspace(event.target.value).catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              {workspaces.map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>
+                  {workspace.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
       </header>
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
@@ -2429,9 +2597,112 @@ export default function HomePage() {
           <div className="section-heading">
             <div>
               <h2>Настройки</h2>
-              <p>Проверки, экспорт и удаление данных</p>
+              <p>Совместный доступ, проверки, экспорт и удаление данных</p>
             </div>
           </div>
+
+          {activeWorkspace ? (
+            <section className="workspace-panel" aria-label="Совместный доступ">
+              <div className="section-heading">
+                <div>
+                  <h2>Совместный доступ</h2>
+                  <p>
+                    {activeWorkspace.name} · {workspaceRoleLabels[activeWorkspace.role]} ·{" "}
+                    {activeWorkspace.memberCount}{" "}
+                    {activeWorkspace.memberCount === 1 ? "участник" : "участника"}
+                  </p>
+                </div>
+                <Users aria-hidden="true" size={22} />
+              </div>
+
+              {canManageActiveWorkspace ? (
+                <>
+                  <form
+                    className="workspace-invite-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleCreateWorkspaceInvitation().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      );
+                    }}
+                  >
+                    <input
+                      aria-label="Email участника"
+                      inputMode="email"
+                      placeholder="email участника"
+                      value={workspaceInviteEmail}
+                      onChange={(event) => setWorkspaceInviteEmail(event.target.value)}
+                    />
+                    <button type="submit" aria-label="Отправить приглашение">
+                      <Send aria-hidden="true" size={18} />
+                      <span>Пригласить</span>
+                    </button>
+                  </form>
+
+                  {workspaceMessage ? <p className="success-message">{workspaceMessage}</p> : null}
+                  {devInvitationLink ? (
+                    <p className="dev-link">
+                      Dev-ссылка: <span>{devInvitationLink}</span>
+                    </p>
+                  ) : null}
+
+                  <div className="workspace-lists">
+                    <div>
+                      <h3>Участники</h3>
+                      <div className="workspace-list">
+                        {workspaceMembers.length ? (
+                          workspaceMembers.map((member) => (
+                            <article className="workspace-row" key={member.id}>
+                              <div>
+                                <h4>{formatWorkspaceMemberName(member)}</h4>
+                                <p>{workspaceRoleLabels[member.role]}</p>
+                              </div>
+                            </article>
+                          ))
+                        ) : (
+                          <p className="empty">Участники загрузятся при открытии настроек.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3>Приглашения</h3>
+                      <div className="workspace-list">
+                        {workspaceInvitations.length ? (
+                          workspaceInvitations.map((invitation) => (
+                            <article className="workspace-row" key={invitation.id}>
+                              <div>
+                                <h4>{invitation.email}</h4>
+                                <p>До {formatDate(invitation.expiresAt)}</p>
+                              </div>
+                              <button
+                                className="ghost-button"
+                                type="button"
+                                onClick={() =>
+                                  void handleRevokeWorkspaceInvitation(invitation).catch(
+                                    (caughtError) => setError(formatError(caughtError))
+                                  )
+                                }
+                              >
+                                Отозвать
+                              </button>
+                            </article>
+                          ))
+                        ) : (
+                          <p className="empty">Активных приглашений нет.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="empty">
+                  Управлять участниками может владелец списка. Вы можете работать с товарами в
+                  текущем доступе.
+                </p>
+              )}
+            </section>
+          ) : null}
 
           <section className="reminder-settings" aria-label="Настройки проверок">
             <div className="section-heading">
@@ -2556,6 +2827,10 @@ export default function HomePage() {
 
 function getReminderDraftKey(entityType: InAppReminder["entityType"], entityId: string): string {
   return `${entityType}:${entityId}`;
+}
+
+function formatWorkspaceMemberName(member: WorkspaceMember): string {
+  return member.user.displayName ?? member.user.firstName ?? member.user.email ?? "Участник";
 }
 
 function BrandWord() {
