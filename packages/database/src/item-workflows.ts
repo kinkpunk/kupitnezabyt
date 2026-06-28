@@ -15,12 +15,13 @@ export async function setItemStatus(
   userId: string,
   itemId: string,
   status: ItemStatus,
-  now = new Date()
+  now = new Date(),
+  workspaceId?: string
 ): Promise<Item> {
   const item = await tx.item.findFirst({
     where: {
       id: itemId,
-      userId,
+      ...(workspaceId ? { workspaceId } : { userId }),
       archivedAt: null
     }
   });
@@ -48,12 +49,13 @@ export async function markShoppingListItemBought(
   tx: TransactionClient,
   userId: string,
   shoppingListItemId: string,
-  now = new Date()
+  now = new Date(),
+  workspaceId?: string
 ): Promise<ShoppingListItem> {
   const shoppingListItem = await tx.shoppingListItem.findFirst({
     where: {
       id: shoppingListItemId,
-      userId,
+      ...(workspaceId ? { workspaceId } : { userId }),
       isCompleted: false
     }
   });
@@ -66,7 +68,7 @@ export async function markShoppingListItemBought(
     const item = await tx.item.findFirst({
       where: {
         id: shoppingListItem.itemId,
-        userId,
+        ...(workspaceId ? { workspaceId } : { userId }),
         archivedAt: null
       }
     });
@@ -101,6 +103,7 @@ export async function upsertItemCheckReminder(
   tx: TransactionClient,
   input: {
     userId: string;
+    workspaceId?: string | null;
     itemId: string;
     scheduledFor: Date;
   }
@@ -124,7 +127,7 @@ export async function upsertItemCheckReminder(
     },
     create: {
       userId: input.userId,
-      workspaceId: getPersonalWorkspaceId(input.userId),
+      workspaceId: input.workspaceId ?? getPersonalWorkspaceId(input.userId),
       type: "ITEM_CHECK",
       itemId: input.itemId,
       scheduledFor: input.scheduledFor,
@@ -159,7 +162,7 @@ async function syncShoppingListItem(
   const action = getShoppingSyncAction(item.status);
   const openShoppingListItem = await tx.shoppingListItem.findFirst({
     where: {
-      userId: item.userId,
+      workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
       itemId: item.id,
       isCompleted: false
     }
@@ -210,6 +213,7 @@ async function syncShoppingListItem(
   if (item.nextCheckAt) {
     await upsertItemCheckReminder(tx, {
       userId: item.userId,
+      workspaceId: item.workspaceId,
       itemId: item.id,
       scheduledFor: item.nextCheckAt
     });

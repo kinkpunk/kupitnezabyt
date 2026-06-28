@@ -125,6 +125,22 @@ All endpoints below require:
 Authorization: Bearer <token>
 ```
 
+Product endpoints operate in the authenticated user's personal workspace by
+default and also accept:
+
+```http
+X-Workspace-Id: <workspace-id>
+```
+
+When this header is present, the backend verifies that the authenticated user is
+a joined workspace member. `OWNER` and `EDITOR` can write; `VIEWER` can read but
+cannot write. This contract applies to category, item, shopping-list, in-app
+reminder, group, check-session, and recommendation endpoints.
+
+Account-level privacy operations remain user-wide: `GET /api/export/json`
+exports the authenticated user's data, and `DELETE /api/me` deletes the
+authenticated user's account.
+
 ## Workspace Invitations
 
 ```http

@@ -16,7 +16,7 @@ import {
   parseRecommendationId
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
-import type { FastifyReply } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 import {
   createAppleAuthorizationUrl,
@@ -151,6 +151,11 @@ type ReorderCategoriesBody = {
   categoryIds?: unknown;
 };
 
+type WorkspaceAccess = {
+  role: "OWNER" | "EDITOR" | "VIEWER";
+  workspaceId: string;
+};
+
 type ArchivedQuery = {
   archived?: string;
 };
@@ -243,12 +248,16 @@ export function buildServer() {
 
   app.get<{ Querystring: RemindersQuery }>("/api/reminders/in-app", async (request) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
     const now = new Date();
     const upcomingWindowDays = readOptionalPositiveInteger(request.query.days) ?? 7;
     const [categories, groups, items] = await Promise.all([
       prisma.category.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -261,7 +270,7 @@ export function buildServer() {
       }),
       prisma.itemGroup.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -274,7 +283,7 @@ export function buildServer() {
       }),
       prisma.item.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -1231,10 +1240,15 @@ export function buildServer() {
   });
 
   app.get<{ Querystring: ArchivedQuery }>("/api/categories", async (request) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
     const archived = readBooleanFlag(request.query.archived);
     const categories = await prisma.category.findMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: archived ? { not: null } : null
       },
       include: {
@@ -1265,16 +1279,27 @@ export function buildServer() {
     }
 
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const categoryCount = await prisma.category.count({
       where: {
-        userId
+        workspaceId: workspaceAccess.workspaceId,
+        archivedAt: null
       }
     });
 
     const category = await prisma.category.create({
       data: {
         userId,
-        workspaceId: getPersonalWorkspaceId(userId),
+        workspaceId: workspaceAccess.workspaceId,
         name,
         icon: readOptionalString(request.body?.icon) ?? null,
         sortOrder: categoryCount
@@ -1301,9 +1326,19 @@ export function buildServer() {
     }
 
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const categories = await prisma.category.findMany({
       where: {
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       select: {
@@ -1344,7 +1379,7 @@ export function buildServer() {
 
     const updatedCategories = await prisma.category.findMany({
       where: {
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       include: {
@@ -1368,10 +1403,16 @@ export function buildServer() {
   });
 
   app.get<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
     const category = await prisma.category.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       include: {
@@ -1397,10 +1438,21 @@ export function buildServer() {
   app.patch<{ Body: CheckSettingsBody; Params: { id: string } }>(
     "/api/categories/:id",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const category = await prisma.category.findFirst({
         where: {
           id: request.params.id,
-          userId: requireUserId(request.userId),
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1456,7 +1508,7 @@ export function buildServer() {
       const categoryItems = await prisma.item.findMany({
         where: {
           categoryId: category.id,
-          userId: requireUserId(request.userId),
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -1474,11 +1526,20 @@ export function buildServer() {
 
   app.post<{ Params: { id: string } }>("/api/categories/:id/archive", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const now = new Date();
     const category = await prisma.category.findFirst({
       where: {
         id: request.params.id,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       }
     });
@@ -1492,7 +1553,7 @@ export function buildServer() {
       const [itemsToArchive, activeItems] = await Promise.all([
         tx.item.findMany({
           where: {
-            userId,
+            workspaceId: workspaceAccess.workspaceId,
             categoryId: category.id,
             archivedAt: null
           },
@@ -1505,7 +1566,7 @@ export function buildServer() {
         }),
         tx.item.findMany({
           where: {
-            userId,
+            workspaceId: workspaceAccess.workspaceId,
             archivedAt: null
           },
           select: {
@@ -1515,11 +1576,17 @@ export function buildServer() {
         })
       ]);
 
-      await clearRecommendationDismissalsForItems(tx, userId, itemsToArchive, activeItems);
+      await clearRecommendationDismissalsForItems(
+        tx,
+        userId,
+        workspaceAccess.workspaceId,
+        itemsToArchive,
+        activeItems
+      );
 
       await tx.item.updateMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           archivedAt: null
         },
@@ -1530,7 +1597,7 @@ export function buildServer() {
 
       await tx.shoppingListItem.updateMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           isCompleted: false
         },
@@ -1553,10 +1620,19 @@ export function buildServer() {
 
   app.post<{ Params: { id: string } }>("/api/categories/:id/restore", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Archived category was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const category = await prisma.category.findFirst({
       where: {
         id: request.params.id,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: {
           not: null
         }
@@ -1571,7 +1647,7 @@ export function buildServer() {
     return prisma.$transaction(async (tx) => {
       const itemsToRestore = await tx.item.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           archivedAt: category.archivedAt
         }
@@ -1588,7 +1664,7 @@ export function buildServer() {
 
       await tx.item.updateMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           archivedAt: category.archivedAt
         },
@@ -1604,7 +1680,7 @@ export function buildServer() {
       const categoryItems = await tx.item.findMany({
         where: {
           categoryId: category.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -1623,10 +1699,19 @@ export function buildServer() {
 
   app.delete<{ Params: { id: string } }>("/api/categories/:id", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const category = await prisma.category.findFirst({
       where: {
         id: request.params.id,
-        userId
+        workspaceId: workspaceAccess.workspaceId
       }
     });
 
@@ -1660,10 +1745,19 @@ export function buildServer() {
     "/api/check/category/:categoryId/start",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const category = await prisma.category.findFirst({
         where: {
           id: request.params.categoryId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1675,7 +1769,7 @@ export function buildServer() {
 
       const items = await prisma.item.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           archivedAt: null,
           status: {
@@ -1690,7 +1784,7 @@ export function buildServer() {
       return prisma.checkSession.create({
         data: {
           userId,
-          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           categoryId: category.id,
           items: {
             create: items.map((item, index) => ({
@@ -1705,9 +1799,15 @@ export function buildServer() {
   );
 
   app.get("/api/groups", async (request) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
+
     return prisma.itemGroup.findMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       include: groupInclude,
@@ -1725,10 +1825,19 @@ export function buildServer() {
     }
 
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     return prisma.itemGroup.create({
       data: {
         userId,
-        workspaceId: getPersonalWorkspaceId(userId),
+        workspaceId: workspaceAccess.workspaceId,
         name,
         icon: readOptionalString(request.body?.icon) ?? null
       },
@@ -1737,10 +1846,17 @@ export function buildServer() {
   });
 
   app.get<{ Params: { id: string } }>("/api/groups/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+      return;
+    }
+
     const group = await prisma.itemGroup.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       include: groupInclude
@@ -1757,10 +1873,21 @@ export function buildServer() {
   app.patch<{ Body: CheckSettingsBody; Params: { id: string } }>(
     "/api/groups/:id",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const group = await prisma.itemGroup.findFirst({
         where: {
           id: request.params.id,
-          userId: requireUserId(request.userId),
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1813,10 +1940,21 @@ export function buildServer() {
   );
 
   app.post<{ Params: { id: string } }>("/api/groups/:id/archive", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const group = await prisma.itemGroup.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       }
     });
@@ -1841,6 +1979,15 @@ export function buildServer() {
     "/api/groups/:id/items",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const itemId = readRequiredString(request.body?.itemId);
       if (!itemId) {
         await sendError(reply, 400, "ITEM_ID_REQUIRED", "Item id is required.");
@@ -1850,7 +1997,7 @@ export function buildServer() {
       const group = await prisma.itemGroup.findFirst({
         where: {
           id: request.params.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1863,7 +2010,7 @@ export function buildServer() {
       const item = await prisma.item.findFirst({
         where: {
           id: itemId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1900,10 +2047,19 @@ export function buildServer() {
     "/api/groups/:id/items/:itemId",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const group = await prisma.itemGroup.findFirst({
         where: {
           id: request.params.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -1918,7 +2074,7 @@ export function buildServer() {
           groupId: group.id,
           itemId: request.params.itemId,
           item: {
-            userId
+            workspaceId: workspaceAccess.workspaceId
           }
         }
       });
@@ -1936,10 +2092,19 @@ export function buildServer() {
     "/api/check/group/:groupId/start",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const group = await prisma.itemGroup.findFirst({
         where: {
           id: request.params.groupId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         include: groupInclude
@@ -1957,7 +2122,7 @@ export function buildServer() {
       return prisma.checkSession.create({
         data: {
           userId,
-          workspaceId: group.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           groupId: group.id,
           items: {
             create: activeItems.map((item, index) => ({
@@ -1972,12 +2137,17 @@ export function buildServer() {
   );
 
   app.get<{ Querystring: { categoryId?: string } & ArchivedQuery }>("/api/items", async (request) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
     const categoryId = readOptionalString(request.query.categoryId);
     const archived = readBooleanFlag(request.query.archived);
 
     return prisma.item.findMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         ...(categoryId ? { categoryId } : {}),
         archivedAt: archived ? { not: null } : null
       },
@@ -1991,6 +2161,11 @@ export function buildServer() {
   });
 
   app.get<{ Querystring: { q?: string } }>("/api/items/search", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
     const query = normalizeSearchQuery(request.query.q ?? "");
     if (!query) {
       await sendError(reply, 400, "SEARCH_QUERY_REQUIRED", "Search query is required.");
@@ -1999,7 +2174,7 @@ export function buildServer() {
 
     return prisma.item.findMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null,
         OR: [
           {
@@ -2042,6 +2217,16 @@ export function buildServer() {
 
   app.post<{ Body: CreateItemBody }>("/api/items", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const categoryId = readRequiredString(request.body?.categoryId);
     const name = readRequiredString(request.body?.name);
 
@@ -2058,7 +2243,7 @@ export function buildServer() {
     const category = await prisma.category.findFirst({
       where: {
         id: categoryId,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       }
     });
@@ -2072,7 +2257,7 @@ export function buildServer() {
       const item = await tx.item.create({
         data: {
           userId,
-          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           categoryId,
           name,
           status: "NEED_BUY",
@@ -2085,7 +2270,7 @@ export function buildServer() {
       await tx.shoppingListItem.create({
         data: {
           userId,
-          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           itemId: item.id,
           title: item.name,
           categoryId: item.categoryId,
@@ -2101,6 +2286,11 @@ export function buildServer() {
     "/api/recommendations",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
       const itemId = readRequiredString(request.query.itemId);
       if (!itemId) {
         await sendError(reply, 400, "ITEM_ID_REQUIRED", "Item id is required.");
@@ -2110,7 +2300,7 @@ export function buildServer() {
       const triggerItem = await prisma.item.findFirst({
         where: {
           id: itemId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2120,7 +2310,7 @@ export function buildServer() {
         return;
       }
 
-      return getRecommendationsForItem(userId, triggerItem);
+      return getRecommendationsForItem(userId, workspaceAccess.workspaceId, triggerItem);
     }
   );
 
@@ -2128,6 +2318,15 @@ export function buildServer() {
     "/api/recommendations/:id/accept",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const recommendationId = parseRecommendationId(request.params.id);
       if (!recommendationId) {
         await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
@@ -2137,7 +2336,7 @@ export function buildServer() {
       const triggerItem = await prisma.item.findFirst({
         where: {
           id: recommendationId.itemId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2149,7 +2348,7 @@ export function buildServer() {
 
       const activeItems = await prisma.item.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2181,7 +2380,7 @@ export function buildServer() {
       const category = await prisma.category.findFirst({
         where: {
           id: categoryId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2195,8 +2394,7 @@ export function buildServer() {
         const item = await tx.item.create({
           data: {
             userId,
-            workspaceId:
-              category.workspaceId ?? triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
+            workspaceId: workspaceAccess.workspaceId,
             categoryId: category.id,
             name: suggestion.suggestedItem,
             status: "NEED_BUY"
@@ -2206,8 +2404,7 @@ export function buildServer() {
         await tx.shoppingListItem.create({
           data: {
             userId,
-            workspaceId:
-              category.workspaceId ?? triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
+            workspaceId: workspaceAccess.workspaceId,
             itemId: item.id,
             title: item.name,
             categoryId: item.categoryId,
@@ -2224,6 +2421,15 @@ export function buildServer() {
     "/api/recommendations/:id/dismiss",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const recommendationId = parseRecommendationId(request.params.id);
       if (!recommendationId) {
         await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
@@ -2233,7 +2439,7 @@ export function buildServer() {
       const triggerItem = await prisma.item.findFirst({
         where: {
           id: recommendationId.itemId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2243,7 +2449,7 @@ export function buildServer() {
         return;
       }
 
-      const suggestion = (await getRecommendationsForItem(userId, triggerItem)).find(
+      const suggestion = (await getRecommendationsForItem(userId, workspaceAccess.workspaceId, triggerItem)).find(
         (currentSuggestion) =>
           currentSuggestion.ruleId === recommendationId.ruleId &&
           normalizeName(currentSuggestion.suggestedItem) ===
@@ -2266,7 +2472,7 @@ export function buildServer() {
         update: {},
         create: {
           userId,
-          workspaceId: triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           ruleId: recommendationId.ruleId,
           suggestedItem: suggestion.suggestedItem
         }
@@ -2282,6 +2488,15 @@ export function buildServer() {
     "/api/recommendations/:id/hide-similar",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const recommendationId = parseRecommendationId(request.params.id);
       if (!recommendationId) {
         await sendError(reply, 400, "INVALID_RECOMMENDATION", "Recommendation id is invalid.");
@@ -2291,7 +2506,7 @@ export function buildServer() {
       const triggerItem = await prisma.item.findFirst({
         where: {
           id: recommendationId.itemId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2301,7 +2516,7 @@ export function buildServer() {
         return;
       }
 
-      const suggestion = (await getRecommendationsForItem(userId, triggerItem)).find(
+      const suggestion = (await getRecommendationsForItem(userId, workspaceAccess.workspaceId, triggerItem)).find(
         (currentSuggestion) =>
           currentSuggestion.ruleId === recommendationId.ruleId &&
           normalizeName(currentSuggestion.suggestedItem) ===
@@ -2324,7 +2539,7 @@ export function buildServer() {
         update: {},
         create: {
           userId,
-          workspaceId: triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
+          workspaceId: workspaceAccess.workspaceId,
           ruleId: recommendationId.ruleId,
           suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM
         }
@@ -2338,10 +2553,17 @@ export function buildServer() {
   );
 
   app.get<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+
     const item = await prisma.item.findFirst({
       where: {
         id: request.params.id,
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       },
       include: {
@@ -2361,10 +2583,20 @@ export function buildServer() {
     "/api/items/:id",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const item = await prisma.item.findFirst({
         where: {
           id: request.params.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2388,7 +2620,7 @@ export function buildServer() {
         const category = await prisma.category.findFirst({
           where: {
             id: categoryId,
-            userId,
+            workspaceId: workspaceAccess.workspaceId,
             archivedAt: null
           }
         });
@@ -2443,7 +2675,7 @@ export function buildServer() {
 
         await tx.shoppingListItem.updateMany({
           where: {
-            userId,
+            workspaceId: workspaceAccess.workspaceId,
             itemId: item.id,
             isCompleted: false
           },
@@ -2456,6 +2688,7 @@ export function buildServer() {
         if (updatedItem.nextCheckAt && updatedItem.reminderEnabled && updatedItem.status !== "PAUSED") {
           await upsertItemCheckReminder(tx, {
             userId,
+            workspaceId: workspaceAccess.workspaceId,
             itemId: updatedItem.id,
             scheduledFor: updatedItem.nextCheckAt
           });
@@ -2471,6 +2704,17 @@ export function buildServer() {
   app.post<{ Body: StatusBody; Params: { id: string } }>(
     "/api/items/:id/status",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const status = request.body?.status;
       if (typeof status !== "string" || !isItemStatus(status)) {
         await sendError(reply, 400, "INVALID_STATUS", "Item status is invalid.");
@@ -2479,7 +2723,7 @@ export function buildServer() {
 
       try {
         return await prisma.$transaction((tx) =>
-          setItemStatus(tx, requireUserId(request.userId), request.params.id, status)
+          setItemStatus(tx, userId, request.params.id, status, new Date(), workspaceAccess.workspaceId)
         );
       } catch (error) {
         if (error instanceof Error && error.message === "ITEM_NOT_FOUND") {
@@ -2496,6 +2740,15 @@ export function buildServer() {
     "/api/items/:id/snooze",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const days = readOptionalPositiveInteger(request.body?.days);
       if (!days) {
         await sendError(reply, 400, "SNOOZE_DAYS_REQUIRED", "Positive snooze days are required.");
@@ -2505,7 +2758,7 @@ export function buildServer() {
       const item = await prisma.item.findFirst({
         where: {
           id: request.params.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2530,6 +2783,7 @@ export function buildServer() {
         await cancelPendingItemCheckReminders(tx, userId, item.id);
         await upsertItemCheckReminder(tx, {
           userId,
+          workspaceId: workspaceAccess.workspaceId,
           itemId: item.id,
           scheduledFor: nextCheckAt
         });
@@ -2548,11 +2802,20 @@ export function buildServer() {
 
   app.post<{ Params: { id: string } }>("/api/items/:id/archive", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const now = new Date();
     const item = await prisma.item.findFirst({
       where: {
         id: request.params.id,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: null
       }
     });
@@ -2565,7 +2828,7 @@ export function buildServer() {
     return prisma.$transaction(async (tx) => {
       const activeItems = await tx.item.findMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         },
         select: {
@@ -2574,11 +2837,17 @@ export function buildServer() {
         }
       });
 
-      await clearRecommendationDismissalsForItems(tx, userId, [item], activeItems);
+      await clearRecommendationDismissalsForItems(
+        tx,
+        userId,
+        workspaceAccess.workspaceId,
+        [item],
+        activeItems
+      );
 
       await tx.shoppingListItem.updateMany({
         where: {
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           itemId: item.id,
           isCompleted: false
         },
@@ -2601,10 +2870,19 @@ export function buildServer() {
 
   app.post<{ Params: { id: string } }>("/api/items/:id/restore", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Archived item was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const item = await prisma.item.findFirst({
       where: {
         id: request.params.id,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         archivedAt: {
           not: null
         }
@@ -2649,10 +2927,19 @@ export function buildServer() {
 
   app.delete<{ Params: { id: string } }>("/api/items/:id", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const item = await prisma.item.findFirst({
       where: {
         id: request.params.id,
-        userId
+        workspaceId: workspaceAccess.workspaceId
       }
     });
 
@@ -2678,9 +2965,15 @@ export function buildServer() {
   });
 
   app.get("/api/shopping-list", async (request) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return [];
+    }
+
     return prisma.shoppingListItem.findMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         isCompleted: false
       },
       include: {
@@ -2693,6 +2986,16 @@ export function buildServer() {
 
   app.post<{ Body: ShoppingListBody }>("/api/shopping-list", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const title = readRequiredString(request.body?.title);
     if (!title) {
       await sendError(reply, 400, "TITLE_REQUIRED", "Shopping list title is required.");
@@ -2704,7 +3007,7 @@ export function buildServer() {
       const category = await prisma.category.findFirst({
         where: {
           id: categoryId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
         }
       });
@@ -2724,7 +3027,7 @@ export function buildServer() {
     return prisma.shoppingListItem.create({
       data: {
         userId,
-        workspaceId: getPersonalWorkspaceId(userId),
+        workspaceId: workspaceAccess.workspaceId,
         title,
         categoryId: categoryId ?? null,
         priority
@@ -2740,10 +3043,24 @@ export function buildServer() {
     "/api/shopping-list/:id",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(
+          reply,
+          404,
+          "SHOPPING_LIST_ITEM_NOT_FOUND",
+          "Shopping list item was not found."
+        );
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const shoppingListItem = await prisma.shoppingListItem.findFirst({
         where: {
           id: request.params.id,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           isCompleted: false
         }
       });
@@ -2781,7 +3098,7 @@ export function buildServer() {
         const category = await prisma.category.findFirst({
           where: {
             id: categoryId,
-            userId,
+            workspaceId: workspaceAccess.workspaceId,
             archivedAt: null
           }
         });
@@ -2820,9 +3137,31 @@ export function buildServer() {
   app.post<{ Params: { id: string } }>(
     "/api/shopping-list/:id/complete",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(
+          reply,
+          404,
+          "SHOPPING_LIST_ITEM_NOT_FOUND",
+          "Shopping list item was not found."
+        );
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       try {
         const completedItem = await prisma.$transaction((tx) =>
-          markShoppingListItemBought(tx, requireUserId(request.userId), request.params.id)
+          markShoppingListItemBought(
+            tx,
+            userId,
+            request.params.id,
+            new Date(),
+            workspaceAccess.workspaceId
+          )
         );
         return prisma.shoppingListItem.findUniqueOrThrow({
           where: {
@@ -2851,10 +3190,24 @@ export function buildServer() {
 
   app.delete<{ Params: { id: string } }>("/api/shopping-list/:id", async (request, reply) => {
     const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(
+        reply,
+        404,
+        "SHOPPING_LIST_ITEM_NOT_FOUND",
+        "Shopping list item was not found."
+      );
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
     const shoppingListItem = await prisma.shoppingListItem.findFirst({
       where: {
         id: request.params.id,
-        userId,
+        workspaceId: workspaceAccess.workspaceId,
         isCompleted: false
       }
     });
@@ -2890,10 +3243,21 @@ export function buildServer() {
     };
   });
 
-  app.delete("/api/shopping-list/completed", async (request) => {
+  app.delete("/api/shopping-list/completed", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
     const result = await prisma.shoppingListItem.deleteMany({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         isCompleted: true
       }
     });
@@ -2904,9 +3268,15 @@ export function buildServer() {
   });
 
   app.get("/api/check/session/active", async (request) => {
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      return null;
+    }
+
     return prisma.checkSession.findFirst({
       where: {
-        userId: requireUserId(request.userId),
+        workspaceId: workspaceAccess.workspaceId,
         status: "IN_PROGRESS"
       },
       include: checkSessionInclude,
@@ -2919,10 +3289,17 @@ export function buildServer() {
   app.get<{ Params: { sessionId: string } }>(
     "/api/check/session/:sessionId",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+
       const session = await prisma.checkSession.findFirst({
         where: {
           id: request.params.sessionId,
-          userId: requireUserId(request.userId)
+          workspaceId: workspaceAccess.workspaceId
         },
         include: checkSessionInclude
       });
@@ -2940,6 +3317,15 @@ export function buildServer() {
     "/api/check/session/:sessionId/item/:itemId/status",
     async (request, reply) => {
       const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
       const status = request.body?.status;
       if (typeof status !== "string" || !isItemStatus(status) || status === "PAUSED") {
         await sendError(reply, 400, "INVALID_STATUS", "Item status is invalid for a check.");
@@ -2949,7 +3335,7 @@ export function buildServer() {
       const session = await prisma.checkSession.findFirst({
         where: {
           id: request.params.sessionId,
-          userId,
+          workspaceId: workspaceAccess.workspaceId,
           status: "IN_PROGRESS"
         }
       });
@@ -2972,7 +3358,7 @@ export function buildServer() {
       }
 
       await prisma.$transaction(async (tx) => {
-        await setItemStatus(tx, userId, request.params.itemId, status);
+        await setItemStatus(tx, userId, request.params.itemId, status, new Date(), workspaceAccess.workspaceId);
         await tx.checkSessionItem.update({
           where: {
             id: sessionItem.id
@@ -2996,10 +3382,21 @@ export function buildServer() {
   app.post<{ Params: { sessionId: string } }>(
     "/api/check/session/:sessionId/complete",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const session = await prisma.checkSession.findFirst({
         where: {
           id: request.params.sessionId,
-          userId: requireUserId(request.userId),
+          workspaceId: workspaceAccess.workspaceId,
           status: "IN_PROGRESS"
         }
       });
@@ -3058,10 +3455,21 @@ export function buildServer() {
   app.post<{ Params: { sessionId: string } }>(
     "/api/check/session/:sessionId/cancel",
     async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(reply, 404, "CHECK_SESSION_NOT_FOUND", "Check session was not found.");
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
       const session = await prisma.checkSession.findFirst({
         where: {
           id: request.params.sessionId,
-          userId: requireUserId(request.userId),
+          workspaceId: workspaceAccess.workspaceId,
           status: "IN_PROGRESS"
         }
       });
@@ -3113,6 +3521,7 @@ const groupInclude = {
 
 async function getRecommendationsForItem(
   userId: string,
+  workspaceId: string,
   triggerItem: {
     id: string;
     name: string;
@@ -3123,7 +3532,7 @@ async function getRecommendationsForItem(
   const [activeItems, dismissals] = await Promise.all([
     prisma.item.findMany({
       where: {
-        userId,
+        workspaceId,
         archivedAt: null
       },
       select: {
@@ -3133,7 +3542,8 @@ async function getRecommendationsForItem(
     }),
     prisma.recommendationDismissal.findMany({
       where: {
-        userId
+        userId,
+        workspaceId
       },
       select: {
         ruleId: true,
@@ -3154,6 +3564,7 @@ async function getRecommendationsForItem(
 async function clearRecommendationDismissalsForItems(
   tx: Prisma.TransactionClient,
   userId: string,
+  workspaceId: string,
   triggerItems: {
     id: string;
     name: string;
@@ -3199,6 +3610,7 @@ async function clearRecommendationDismissalsForItems(
   await tx.recommendationDismissal.deleteMany({
     where: {
       userId,
+      workspaceId,
       OR: dismissalFilters
     }
   });
@@ -3225,7 +3637,7 @@ async function syncRestoredItem(
   if (action.type === "UPSERT") {
     const openShoppingListItem = await tx.shoppingListItem.findFirst({
       where: {
-        userId: item.userId,
+        workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
         itemId: item.id,
         isCompleted: false
       }
@@ -3259,6 +3671,7 @@ async function syncRestoredItem(
   if (item.nextCheckAt) {
     await upsertItemCheckReminder(tx, {
       userId: item.userId,
+      workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
       itemId: item.id,
       scheduledFor: item.nextCheckAt
     });
@@ -3305,6 +3718,52 @@ function requireUserId(userId: string | undefined): string {
   }
 
   return userId;
+}
+
+async function resolveWorkspaceAccess(
+  request: FastifyRequest,
+  userId: string
+): Promise<WorkspaceAccess | null> {
+  const requestedWorkspaceId = readWorkspaceIdHeader(request);
+  const personalWorkspaceId = getPersonalWorkspaceId(userId);
+
+  if (!requestedWorkspaceId || requestedWorkspaceId === personalWorkspaceId) {
+    return {
+      role: "OWNER",
+      workspaceId: personalWorkspaceId
+    };
+  }
+
+  const membership = await prisma.workspaceMember.findFirst({
+    where: {
+      userId,
+      workspaceId: requestedWorkspaceId,
+      joinedAt: {
+        not: null
+      }
+    },
+    select: {
+      role: true,
+      workspaceId: true
+    }
+  });
+
+  return membership
+    ? {
+        role: membership.role,
+        workspaceId: membership.workspaceId
+      }
+    : null;
+}
+
+function canWriteWorkspace(workspaceAccess: WorkspaceAccess): boolean {
+  return workspaceAccess.role === "OWNER" || workspaceAccess.role === "EDITOR";
+}
+
+function readWorkspaceIdHeader(request: FastifyRequest): string | null {
+  const header = request.headers["x-workspace-id"];
+  const value = Array.isArray(header) ? header[0] : header;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 async function checkRateLimit(

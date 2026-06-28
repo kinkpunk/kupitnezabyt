@@ -686,7 +686,7 @@ Implemented notes:
 
 ### Slice 29: Shared Access API Contracts
 
-Status: planned.
+Status: implemented.
 
 Goal: move product APIs from direct owner-only `userId` filters to workspace
 membership authorization.
@@ -695,7 +695,9 @@ Backend:
 
 - Add shared helpers for workspace authorization and role checks.
 - Update category, item, shopping list, reminder, group, check session, search,
-  recommendation, export, and account deletion flows.
+  and recommendation flows.
+- Keep export and account deletion user-wide because they are privacy/account
+  operations, not active-workspace operations.
 - Keep status transitions and shopping synchronization centralized and
   workspace-safe.
 - Decide whether recommendation dismissals are per member or per workspace.
@@ -705,6 +707,30 @@ Tests:
 - DB-backed API coverage for cross-user isolation, editor write access, viewer
   read-only access if that role is introduced, and duplicate shopping list
   prevention inside a shared workspace.
+
+Implemented notes:
+
+- Added active workspace resolution through `X-Workspace-Id` with personal
+  workspace fallback for existing single-user flows.
+- Added role checks where `OWNER` and `EDITOR` can write and `VIEWER` is
+  read-only.
+- Migrated category list/create/reorder/detail/update/archive/restore/delete
+  routes to workspace access.
+- Migrated item list/search/create/detail/update/status/snooze/archive/restore/
+  delete routes and shopping-list list/create/update/complete/delete/clear
+  routes to workspace access.
+- Migrated in-app reminder, group, check-session, and recommendation routes to
+  workspace access.
+- Extended item status workflow helpers so shared workspace status changes keep
+  shopping-list synchronization inside the same workspace.
+- Added route tests for shared workspace category reads, editor writes, viewer
+  write rejection, item creation, item status write rejection, shopping-list
+  reads/updates, in-app reminders, and preserved personal workspace category
+  reorder behavior.
+- Recommendation reads and cleanup are workspace-scoped. Dismissal storage still
+  uses the existing `userId + ruleId + suggestedItem` uniqueness constraint, so
+  a future migration can make dismissals fully per-workspace without changing
+  old applied migrations.
 
 ### Slice 30: Shared Workspace UX
 

@@ -130,14 +130,14 @@ describe("archive routes", () => {
     expect(response.statusCode).toBe(200);
     expect(mockTx.item.findMany).toHaveBeenNthCalledWith(1, {
       where: {
-        userId: "user-1",
+        workspaceId: "workspace_user-1",
         categoryId: "category-1",
         archivedAt
       }
     });
     expect(mockTx.item.updateMany).toHaveBeenCalledWith({
       where: {
-        userId: "user-1",
+        workspaceId: "workspace_user-1",
         categoryId: "category-1",
         archivedAt
       },
@@ -174,7 +174,7 @@ describe("archive routes", () => {
     expect(mockPrisma.category.findFirst).toHaveBeenCalledWith({
       where: {
         id: "category-1",
-        userId: "user-1"
+        workspaceId: "workspace_user-1"
       }
     });
     expect(mockPrisma.category.delete).toHaveBeenCalledWith({
@@ -270,7 +270,7 @@ describe("archive routes", () => {
     ]);
     expect(mockPrisma.category.findMany).toHaveBeenNthCalledWith(1, {
       where: {
-        userId: "user-1",
+        workspaceId: "workspace_user-1",
         archivedAt: null
       },
       select: {
@@ -378,7 +378,7 @@ describe("archive routes", () => {
     expect(mockPrisma.item.findFirst).toHaveBeenCalledWith({
       where: {
         id: "item-1",
-        userId: "user-1"
+        workspaceId: "workspace_user-1"
       }
     });
     expect(mockPrisma.item.delete).toHaveBeenCalledWith({
@@ -493,6 +493,7 @@ describe("archive routes", () => {
     expect(mockTx.recommendationDismissal.deleteMany).toHaveBeenCalledWith({
       where: {
         userId: "user-1",
+        workspaceId: "workspace_user-1",
         OR: [
           { ruleId: "coffee-basics", suggestedItem: "Фильтры для кофе" },
           { ruleId: "coffee-basics", suggestedItem: "*" },
@@ -599,7 +600,7 @@ describe("check session routes", () => {
     expect(response.json()).toEqual(activeSession);
     expect(mockPrisma.checkSession.findFirst).toHaveBeenCalledWith({
       where: {
-        userId: "user-1",
+        workspaceId: "workspace_user-1",
         status: "IN_PROGRESS"
       },
       include: expect.any(Object),
