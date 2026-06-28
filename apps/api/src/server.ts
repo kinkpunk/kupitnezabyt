@@ -121,6 +121,10 @@ type WorkspaceInvitationAcceptBody = {
   token?: unknown;
 };
 
+type WorkspaceTransferOwnershipBody = {
+  memberId?: unknown;
+};
+
 type GoogleAuthCallbackQuery = {
   code?: string;
   error?: string;
@@ -972,6 +976,167 @@ export function buildServer() {
     }
   );
 
+  app.delete<{ Params: { workspaceId: string; memberId: string } }>(
+    "/api/workspaces/:workspaceId/members/:memberId",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const membership = await prisma.workspaceMember.findFirst({
+        where: {
+          id: request.params.memberId,
+          workspaceId: request.params.workspaceId,
+          workspace: {
+            ownerId: userId
+          }
+        },
+        select: {
+          id: true,
+          role: true,
+          userId: true
+        }
+      });
+
+      if (!membership) {
+        await sendError(reply, 404, "MEMBER_NOT_FOUND", "Workspace member was not found.");
+        return;
+      }
+
+      if (membership.userId === userId || membership.role === "OWNER") {
+        await sendError(
+          reply,
+          409,
+          "OWNER_MEMBER_CANNOT_BE_REMOVED",
+          "Workspace owner cannot be removed."
+        );
+        return;
+      }
+
+      await prisma.workspaceMember.delete({
+        where: {
+          id: membership.id
+        }
+      });
+
+      return {
+        removed: true
+      };
+    }
+  );
+
+  app.post<{ Params: { workspaceId: string }; Body: WorkspaceTransferOwnershipBody }>(
+    "/api/workspaces/:workspaceId/transfer-ownership",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const nextOwnerMemberId =
+        typeof request.body?.memberId === "string" ? request.body.memberId.trim() : null;
+      if (!nextOwnerMemberId) {
+        await sendError(reply, 400, "INVALID_MEMBER", "Member is invalid.");
+        return;
+      }
+
+      const result = await prisma.$transaction(async (tx) => {
+        const workspace = await tx.workspace.findFirst({
+          where: {
+            id: request.params.workspaceId,
+            ownerId: userId
+          },
+          select: {
+            id: true
+          }
+        });
+
+        if (!workspace) {
+          return {
+            status: "not_found" as const
+          };
+        }
+
+        const [currentOwnerMember, nextOwnerMember] = await Promise.all([
+          tx.workspaceMember.findUnique({
+            where: {
+              workspaceId_userId: {
+                workspaceId: workspace.id,
+                userId
+              }
+            },
+            select: {
+              id: true
+            }
+          }),
+          tx.workspaceMember.findFirst({
+            where: {
+              id: nextOwnerMemberId,
+              workspaceId: workspace.id,
+              userId: {
+                not: userId
+              }
+            },
+            select: {
+              id: true,
+              userId: true
+            }
+          })
+        ]);
+
+        if (!nextOwnerMember) {
+          return {
+            status: "member_not_found" as const
+          };
+        }
+
+        await tx.workspace.update({
+          where: {
+            id: workspace.id
+          },
+          data: {
+            ownerId: nextOwnerMember.userId
+          }
+        });
+
+        await tx.workspaceMember.update({
+          where: {
+            id: nextOwnerMember.id
+          },
+          data: {
+            role: "OWNER"
+          }
+        });
+
+        if (currentOwnerMember) {
+          await tx.workspaceMember.update({
+            where: {
+              id: currentOwnerMember.id
+            },
+            data: {
+              role: "EDITOR"
+            }
+          });
+        }
+
+        return {
+          status: "transferred" as const,
+          workspaceId: workspace.id,
+          ownerId: nextOwnerMember.userId
+        };
+      });
+
+      if (result.status === "not_found") {
+        await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+        return;
+      }
+
+      if (result.status === "member_not_found") {
+        await sendError(reply, 404, "MEMBER_NOT_FOUND", "Workspace member was not found.");
+        return;
+      }
+
+      return {
+        transferred: true,
+        workspaceId: result.workspaceId,
+        ownerId: result.ownerId
+      };
+    }
+  );
+
   app.post<{ Body: WorkspaceInvitationAcceptBody }>(
     "/api/workspace-invitations/accept",
     async (request, reply) => {
@@ -1122,6 +1287,33 @@ export function buildServer() {
       return;
     }
 
+    const ownedSharedWorkspace = await prisma.workspace.findFirst({
+      where: {
+        ownerId: userId,
+        members: {
+          some: {
+            userId: {
+              not: userId
+            }
+          }
+        }
+      },
+      select: {
+        id: true,
+        name: true
+      }
+    });
+
+    if (ownedSharedWorkspace) {
+      await sendError(
+        reply,
+        409,
+        "OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER",
+        `Transfer ownership or remove members before deleting "${ownedSharedWorkspace.name}".`
+      );
+      return;
+    }
+
     await prisma.user.delete({
       where: {
         id: userId
@@ -1199,7 +1391,9 @@ export function buildServer() {
       reminders,
       groups,
       checkSessions,
-      recommendationDismissals
+      recommendationDismissals,
+      workspaceMemberships,
+      ownedWorkspaces
     ] = await Promise.all([
       prisma.user.findUniqueOrThrow({
         where: {
@@ -1273,6 +1467,44 @@ export function buildServer() {
         orderBy: {
           createdAt: "asc"
         }
+      }),
+      prisma.workspaceMember.findMany({
+        where: {
+          userId
+        },
+        select: {
+          id: true,
+          workspaceId: true,
+          role: true,
+          invitedEmail: true,
+          invitedAt: true,
+          joinedAt: true,
+          createdAt: true,
+          updatedAt: true
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
+      }),
+      prisma.workspace.findMany({
+        where: {
+          ownerId: userId
+        },
+        select: {
+          id: true,
+          name: true,
+          ownerId: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: {
+              members: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: "asc"
+        }
       })
     ]);
 
@@ -1286,7 +1518,9 @@ export function buildServer() {
         reminders,
         groups,
         checkSessions,
-        recommendationDismissals
+        recommendationDismissals,
+        workspaceMemberships,
+        ownedWorkspaces
       }
     });
   });

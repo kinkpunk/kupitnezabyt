@@ -4,11 +4,18 @@ const mockSendWorkspaceInvitationEmail = vi.hoisted(() => vi.fn());
 const mockEnsurePersonalWorkspace = vi.hoisted(() => vi.fn());
 
 const mockTx = vi.hoisted(() => ({
+  workspace: {
+    findFirst: vi.fn(),
+    update: vi.fn()
+  },
   workspaceInvitation: {
     findUnique: vi.fn(),
     updateMany: vi.fn()
   },
   workspaceMember: {
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    update: vi.fn(),
     upsert: vi.fn()
   }
 }));
@@ -16,10 +23,13 @@ const mockTx = vi.hoisted(() => ({
 const mockPrisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
   user: {
+    delete: vi.fn(),
     findUnique: vi.fn()
   },
   workspace: {
-    findFirst: vi.fn()
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    update: vi.fn()
   },
   workspaceInvitation: {
     create: vi.fn(),
@@ -28,8 +38,11 @@ const mockPrisma = vi.hoisted(() => ({
     update: vi.fn()
   },
   workspaceMember: {
+    delete: vi.fn(),
+    findFirst: vi.fn(),
     findMany: vi.fn(),
-    findUnique: vi.fn()
+    findUnique: vi.fn(),
+    update: vi.fn()
   }
 }));
 
@@ -433,6 +446,167 @@ describe("workspace invitation routes", () => {
         revokedAt: expect.any(Date)
       }
     });
+
+    await app.close();
+  });
+
+  it("removes a non-owner workspace member", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      id: "membership-2",
+      role: "EDITOR",
+      userId: "member-1"
+    });
+    mockPrisma.workspaceMember.delete.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/workspaces/workspace-1/members/membership-2",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      removed: true
+    });
+    expect(mockPrisma.workspaceMember.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "membership-2",
+        workspaceId: "workspace-1",
+        workspace: {
+          ownerId: "owner-1"
+        }
+      },
+      select: {
+        id: true,
+        role: true,
+        userId: true
+      }
+    });
+    expect(mockPrisma.workspaceMember.delete).toHaveBeenCalledWith({
+      where: {
+        id: "membership-2"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("does not remove the workspace owner member", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      id: "membership-owner",
+      role: "OWNER",
+      userId: "owner-1"
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/workspaces/workspace-1/members/membership-owner",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe("OWNER_MEMBER_CANNOT_BE_REMOVED");
+    expect(mockPrisma.workspaceMember.delete).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("transfers workspace ownership to an existing member", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockTx.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1"
+    });
+    mockTx.workspaceMember.findUnique.mockResolvedValue({
+      id: "membership-owner"
+    });
+    mockTx.workspaceMember.findFirst.mockResolvedValue({
+      id: "membership-2",
+      userId: "member-1"
+    });
+    mockTx.workspace.update.mockResolvedValue({});
+    mockTx.workspaceMember.update.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/transfer-ownership",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        memberId: "membership-2"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      transferred: true,
+      workspaceId: "workspace-1",
+      ownerId: "member-1"
+    });
+    expect(mockTx.workspace.update).toHaveBeenCalledWith({
+      where: {
+        id: "workspace-1"
+      },
+      data: {
+        ownerId: "member-1"
+      }
+    });
+    expect(mockTx.workspaceMember.update).toHaveBeenCalledWith({
+      where: {
+        id: "membership-2"
+      },
+      data: {
+        role: "OWNER"
+      }
+    });
+    expect(mockTx.workspaceMember.update).toHaveBeenCalledWith({
+      where: {
+        id: "membership-owner"
+      },
+      data: {
+        role: "EDITOR"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("blocks account deletion while the user owns a shared workspace", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом"
+    });
+
+    const response = await app.inject({
+      method: "DELETE",
+      url: "/api/me",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe("OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER");
+    expect(mockPrisma.user.delete).not.toHaveBeenCalled();
 
     await app.close();
   });

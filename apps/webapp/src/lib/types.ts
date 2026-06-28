@@ -181,6 +181,16 @@ export type WorkspaceInvitationCreateResponse = {
   devInvitationLink?: string;
 };
 
+export type WorkspaceMemberRemoveResponse = {
+  removed: boolean;
+};
+
+export type WorkspaceOwnershipTransferResponse = {
+  transferred: boolean;
+  workspaceId: string;
+  ownerId: string;
+};
+
 export type DeletedCountResponse = {
   deletedCount: number;
 };

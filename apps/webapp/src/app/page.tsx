@@ -6,6 +6,7 @@ import type { CategoryStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
   Boxes,
+  Crown,
   Home,
   ListChecks,
   Mail,
@@ -15,6 +16,7 @@ import {
   Settings,
   ShoppingCart,
   Tags,
+  UserMinus,
   Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -58,6 +60,7 @@ import {
   login,
   removeGroupItem,
   requestMagicLink,
+  removeWorkspaceMember,
   revokeWorkspaceInvitation,
   restoreCategory,
   restoreItem,
@@ -74,6 +77,7 @@ import {
   updateGroup,
   updateItem,
   createWorkspaceInvitation,
+  transferWorkspaceOwnership,
   updateShoppingListItem
 } from "../lib/api";
 import type {
@@ -1244,6 +1248,44 @@ export default function HomePage() {
     if (activeWorkspace) {
       await refreshWorkspaceAccess(token, activeWorkspace.id);
     }
+  }
+
+  async function handleRemoveWorkspaceMember(member: WorkspaceMember) {
+    if (!token || !activeWorkspace) {
+      return;
+    }
+
+    const memberName = formatWorkspaceMemberName(member);
+    if (!window.confirm(`Удалить доступ для ${memberName}?`)) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    await removeWorkspaceMember(token, activeWorkspace.id, member.id);
+    setWorkspaceMessage(`Доступ для ${memberName} удален.`);
+    await refreshWorkspaces(token);
+    await refreshWorkspaceAccess(token, activeWorkspace.id);
+  }
+
+  async function handleTransferWorkspaceOwnership(member: WorkspaceMember) {
+    if (!token || !activeWorkspace) {
+      return;
+    }
+
+    const memberName = formatWorkspaceMemberName(member);
+    if (!window.confirm(`Передать владение списком "${activeWorkspace.name}" пользователю ${memberName}?`)) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    await transferWorkspaceOwnership(token, activeWorkspace.id, member.id);
+    setWorkspaceMessage(`${memberName} теперь владелец списка "${activeWorkspace.name}".`);
+    await refreshWorkspaces(token);
+    await refreshActiveData(token);
   }
 
   async function handleExportUserData() {
@@ -2651,14 +2693,46 @@ export default function HomePage() {
                       <h3>Участники</h3>
                       <div className="workspace-list">
                         {workspaceMembers.length ? (
-                          workspaceMembers.map((member) => (
-                            <article className="workspace-row" key={member.id}>
-                              <div>
-                                <h4>{formatWorkspaceMemberName(member)}</h4>
-                                <p>{workspaceRoleLabels[member.role]}</p>
-                              </div>
-                            </article>
-                          ))
+                          workspaceMembers.map((member) => {
+                            const isCurrentOwner = member.user.id === activeWorkspace.ownerId;
+
+                            return (
+                              <article className="workspace-row" key={member.id}>
+                                <div>
+                                  <h4>{formatWorkspaceMemberName(member)}</h4>
+                                  <p>{workspaceRoleLabels[member.role]}</p>
+                                </div>
+                                {!isCurrentOwner ? (
+                                  <div className="workspace-row-actions">
+                                    <button
+                                      className="ghost-button"
+                                      type="button"
+                                      onClick={() =>
+                                        void handleTransferWorkspaceOwnership(member).catch(
+                                          (caughtError) => setError(formatError(caughtError))
+                                        )
+                                      }
+                                    >
+                                      <Crown aria-hidden="true" size={17} />
+                                      <span>Передать</span>
+                                    </button>
+                                    <button
+                                      className="ghost-button danger-button icon-button"
+                                      type="button"
+                                      aria-label={`Удалить доступ для ${formatWorkspaceMemberName(member)}`}
+                                      onClick={() =>
+                                        void handleRemoveWorkspaceMember(member).catch(
+                                          (caughtError) => setError(formatError(caughtError))
+                                        )
+                                      }
+                                    >
+                                      <UserMinus aria-hidden="true" size={17} />
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </article>
+                            );
+                          })
                         ) : (
                           <p className="empty">Участники загрузятся при открытии настроек.</p>
                         )}

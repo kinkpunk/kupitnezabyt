@@ -179,6 +179,8 @@ GET  /api/workspaces/:workspaceId/invitations
 POST /api/workspaces/:workspaceId/invitations
 POST /api/workspace-invitations/accept
 POST /api/workspace-invitations/:invitationId/revoke
+DELETE /api/workspaces/:workspaceId/members/:memberId
+POST /api/workspaces/:workspaceId/transfer-ownership
 ```
 
 Workspace invitation endpoints are part of the post-MVP collaboration
@@ -230,6 +232,11 @@ Successful acceptance returns the created or updated workspace membership.
 workspace, pending invitations, and current members for the future settings UI.
 `POST /api/workspace-invitations/:invitationId/revoke` is owner-only, marks a
 pending invitation as revoked, and rejects already accepted invitations.
+`DELETE /api/workspaces/:workspaceId/members/:memberId` is owner-only and
+removes a non-owner member. Owners cannot remove themselves through this route.
+`POST /api/workspaces/:workspaceId/transfer-ownership` is owner-only and accepts
+`{ "memberId": "..." }`; the target member becomes `OWNER`, and the previous
+owner remains in the workspace as `EDITOR`.
 
 ## Me
 
@@ -239,8 +246,10 @@ DELETE /api/me
 ```
 
 `DELETE /api/me` deletes the authenticated user. Related user data is removed
-through database cascades and becomes inaccessible through the API. Account
-deletion is rate-limited per authenticated user.
+through database cascades and becomes inaccessible through the API. If the user
+owns a workspace with other members, deletion returns
+`OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER`; the user must transfer ownership or
+remove members first. Account deletion is rate-limited per authenticated user.
 
 ## Categories
 
@@ -533,7 +542,10 @@ dismissal: suggestions can appear again after a new relevant item cycle starts.
 GET /api/export/json
 ```
 
-Exports authenticated user data as JSON:
+Exports authenticated user data as JSON. Product records are scoped to rows
+created by the authenticated user (`userId`). Shared workspace data created by
+other members is not exported; only membership and owned-workspace metadata is
+included for context.
 
 ```json
 {
@@ -547,7 +559,9 @@ Exports authenticated user data as JSON:
     "reminders": [],
     "groups": [],
     "checkSessions": [],
-    "recommendationDismissals": []
+    "recommendationDismissals": [],
+    "workspaceMemberships": [],
+    "ownedWorkspaces": []
   }
 }
 ```

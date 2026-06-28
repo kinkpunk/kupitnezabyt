@@ -778,7 +778,7 @@ Not implemented yet:
 
 ### Slice 31: Privacy, Export, And Deletion Hardening
 
-Status: planned.
+Status: implemented.
 
 Goal: make account deletion, export, and privacy rules explicit for shared
 spaces before collaboration is considered production-ready.
@@ -796,6 +796,28 @@ Tests:
 
 - API tests for owner deletion, member removal, ownership transfer, export
   boundaries, and revoked access.
+
+Implemented notes:
+
+- Account deletion now rejects owners of shared workspaces with other members;
+  owners must transfer ownership or remove members before deleting the account.
+- Added owner-only member removal for non-owner members.
+- Added owner-only ownership transfer to an existing member. The new owner gets
+  `OWNER`; the previous owner remains as `EDITOR`.
+- Export remains user-scoped for product records and does not include items,
+  notes, shopping rows, reminders, groups, or check sessions created by other
+  shared workspace members. It includes workspace membership and owned-workspace
+  metadata for context.
+- Settings UI exposes member removal and ownership transfer for workspace
+  owners.
+- Added API tests for deletion guard, member removal, ownership transfer, and
+  export boundaries.
+
+Not implemented yet:
+
+- Full two-account browser E2E for ownership transfer followed by continued
+  shared-list editing.
+- Fine-grained role management beyond the fixed owner/editor behavior.
 
 ## Slice 1 Baseline
 

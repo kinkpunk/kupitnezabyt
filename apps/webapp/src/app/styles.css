@@ -792,6 +792,26 @@ select {
   font-size: 13px;
 }
 
+.workspace-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.workspace-row-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+}
+
+.workspace-row-actions .icon-button {
+  width: 36px;
+  padding: 0;
+}
+
 .reminder-settings {
   display: grid;
   gap: 14px;

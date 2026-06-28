@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockPrisma = vi.hoisted(() => ({
   user: {
     delete: vi.fn()
+  },
+  workspace: {
+    findFirst: vi.fn()
   }
 }));
 
@@ -54,6 +57,7 @@ describe("sensitive route rate limits", () => {
     });
 
     mockPrisma.user.delete.mockResolvedValue({});
+    mockPrisma.workspace.findFirst.mockResolvedValue(null);
 
     for (let index = 0; index < 10; index += 1) {
       const response = await app.inject({

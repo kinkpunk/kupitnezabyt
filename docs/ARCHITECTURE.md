@@ -118,9 +118,12 @@ Slice 27 introduces the collaboration foundation:
   recommendation dismissals carry `workspaceId` so data can later move from
   owner-only access to membership-based access.
 
-The current API still keeps `userId` filters as the active authorization
-boundary. Member-based workspace authorization is planned separately so shared
-access can be introduced without weakening current user isolation.
+Product API routes resolve an active workspace from `X-Workspace-Id` and verify
+that the authenticated user is a member. `OWNER` and `EDITOR` can write;
+`VIEWER` is read-only. Account-level operations remain user-scoped: export
+returns the authenticated user's own product records plus workspace metadata,
+and account deletion is blocked while the user still owns a shared workspace
+with other members.
 
 Slice 5 adds reminder scheduling data:
 

@@ -17,6 +17,8 @@ import type {
   WorkspaceInvitationAcceptResponse,
   WorkspaceInvitationCreateResponse,
   WorkspaceInvitationsResponse,
+  WorkspaceMemberRemoveResponse,
+  WorkspaceOwnershipTransferResponse,
   WorkspaceSummary
 } from "./types";
 
@@ -182,6 +184,31 @@ export function revokeWorkspaceInvitation(
   invitationId: string
 ): Promise<{ revoked: boolean }> {
   return post<{ revoked: boolean }>(`/api/workspace-invitations/${invitationId}/revoke`, token, {});
+}
+
+export function removeWorkspaceMember(
+  token: string,
+  workspaceId: string,
+  memberId: string
+): Promise<WorkspaceMemberRemoveResponse> {
+  return del<WorkspaceMemberRemoveResponse>(
+    `/api/workspaces/${workspaceId}/members/${memberId}`,
+    token
+  );
+}
+
+export function transferWorkspaceOwnership(
+  token: string,
+  workspaceId: string,
+  memberId: string
+): Promise<WorkspaceOwnershipTransferResponse> {
+  return post<WorkspaceOwnershipTransferResponse>(
+    `/api/workspaces/${workspaceId}/transfer-ownership`,
+    token,
+    {
+      memberId
+    }
+  );
 }
 
 async function acceptWorkspaceInvitationIfPresent(
