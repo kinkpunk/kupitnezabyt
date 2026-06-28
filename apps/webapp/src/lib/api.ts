@@ -608,7 +608,7 @@ async function request<TResponse>(
     const errorMessage =
       typeof payload?.error === "string"
         ? payload.error
-        : payload?.error?.message ?? payload?.error?.code;
+        : payload?.error?.code ?? payload?.error?.message;
     throw new ApiError(errorMessage ?? `HTTP_${response.status}`);
   }
 

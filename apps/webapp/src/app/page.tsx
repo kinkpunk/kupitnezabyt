@@ -30,6 +30,7 @@ import {
   archiveGroup,
   archiveItem,
   cancelCheckSession,
+  clearActiveWorkspaceId,
   clearCompletedShoppingList,
   completeCheckSession,
   completeShoppingListItem,
@@ -479,7 +480,16 @@ export default function HomePage() {
       return [];
     }
 
-    const nextWorkspaces = await getWorkspaces(authToken);
+    const nextWorkspaces = await getWorkspaces(authToken).catch((caughtError) => {
+      if (!isNotFoundError(caughtError)) {
+        throw caughtError;
+      }
+
+      clearActiveWorkspaceId();
+      setWorkspaces([]);
+      setActiveWorkspaceIdState(null);
+      return [];
+    });
     const savedWorkspaceId = getActiveWorkspaceId();
     const nextActiveWorkspace =
       nextWorkspaces.find((workspace) => workspace.id === savedWorkspaceId) ?? nextWorkspaces[0];
@@ -3031,11 +3041,33 @@ function getFriendlyErrorMessage(message: string): string {
     APPLE_AUTH_INVALID_TOKEN: "Не удалось проверить Apple ID. Попробуйте еще раз.",
     APPLE_AUTH_NOT_CONFIGURED: "Вход через Apple временно недоступен. Используйте email-ссылку.",
     EMAIL_VERIFICATION_REQUIRED: "Войдите через email, на который пришло приглашение.",
+    HTTP_404: "Данные не найдены. Обновите страницу и попробуйте еще раз.",
+    NOT_FOUND: "Данные не найдены. Обновите страницу и попробуйте еще раз.",
     INVALID_INVITATION: "Приглашение недействительно или устарело.",
-    INVITATION_EMAIL_MISMATCH: "Это приглашение отправлено на другой email."
+    INVITATION_EMAIL_MISMATCH: "Это приглашение отправлено на другой email.",
+    INVITEE_NOT_FOUND: "Пользователь с таким подтвержденным email пока не найден.",
+    MEMBER_NOT_FOUND: "Участник не найден. Обновите список и попробуйте еще раз.",
+    WORKSPACE_NOT_FOUND: "Список не найден или доступ к нему уже закрыт.",
+    OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER:
+      "Перед удалением аккаунта передайте владение общим списком или удалите участников."
   };
 
   return authErrorMessages[message] ?? message;
+}
+
+function isNotFoundError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const normalizedMessage = error.message.toLowerCase();
+  return (
+    error.message === "HTTP_404" ||
+    error.message === "NOT_FOUND" ||
+    error.message.endsWith("_NOT_FOUND") ||
+    normalizedMessage === "not found" ||
+    normalizedMessage.includes("was not found")
+  );
 }
 
 function ErrorNotice({
