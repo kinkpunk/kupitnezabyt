@@ -549,7 +549,8 @@ describe("archive routes", () => {
         status: "NEED_BUY",
         brand: null,
         notes: null,
-        usageCycleDays: null
+        usageCycleDays: null,
+        nextCheckAt: null
       }
     });
     expect(mockTx.shoppingListItem.create).toHaveBeenCalledWith({

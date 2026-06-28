@@ -86,14 +86,16 @@ Target release smoke after email auth is implemented:
 6. Complete or skip onboarding.
 7. Create a category.
 8. Add an item with `usageCycleDays`.
-9. Confirm the item appears in upcoming in-app reminders when due or near due.
-10. Snooze or update the reminder and confirm no duplicate shopping/reminder
+9. Confirm the item's next check date follows the configured cycle.
+10. Confirm the item appears in upcoming in-app reminders when due or near due,
+   and that the in-app reminder notice is shown on app open.
+11. Snooze or update the reminder and confirm no duplicate shopping/reminder
    entries are created.
-11. Change item status to `NEED_BUY`.
-12. Confirm the item appears in shopping list.
-13. Mark the shopping item bought.
-14. Confirm the tracked item returns to `IN_STOCK`.
-15. Export JSON from settings.
+12. Change item status to `NEED_BUY`.
+13. Confirm the item appears in shopping list.
+14. Mark the shopping item bought.
+15. Confirm the tracked item returns to `IN_STOCK`.
+16. Export JSON from settings.
 
 ## Optional Telegram Smoke Checklist
 

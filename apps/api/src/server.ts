@@ -2253,6 +2253,10 @@ export function buildServer() {
       return;
     }
 
+    const usageCycleDays = readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null;
+    const initialStatus = usageCycleDays ? "IN_STOCK" : "NEED_BUY";
+    const now = new Date();
+
     return prisma.$transaction(async (tx) => {
       const item = await tx.item.create({
         data: {
@@ -2260,23 +2264,35 @@ export function buildServer() {
           workspaceId: workspaceAccess.workspaceId,
           categoryId,
           name,
-          status: "NEED_BUY",
+          status: initialStatus,
           brand: readOptionalString(request.body?.brand) ?? null,
           notes: readOptionalString(request.body?.notes) ?? null,
-          usageCycleDays: readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null
+          usageCycleDays,
+          nextCheckAt: calculateNextCheckAt(initialStatus, now, usageCycleDays)
         }
       });
 
-      await tx.shoppingListItem.create({
-        data: {
+      if (initialStatus === "NEED_BUY") {
+        await tx.shoppingListItem.create({
+          data: {
+            userId,
+            workspaceId: workspaceAccess.workspaceId,
+            itemId: item.id,
+            title: item.name,
+            categoryId: item.categoryId,
+            priority: "NORMAL"
+          }
+        });
+      }
+
+      if (item.nextCheckAt) {
+        await upsertItemCheckReminder(tx, {
           userId,
           workspaceId: workspaceAccess.workspaceId,
           itemId: item.id,
-          title: item.name,
-          categoryId: item.categoryId,
-          priority: "NORMAL"
-        }
-      });
+          scheduledFor: item.nextCheckAt
+        });
+      }
 
       return item;
     });
@@ -2655,7 +2671,9 @@ export function buildServer() {
       const nextCheckAt = hasNextCheckAt
         ? nextCheckAtResult?.value ?? null
         : hasOwnProperty(body, "usageCycleDays")
-          ? calculateNextCheckAt(item.status, now, usageCycleDays)
+          ? item.status === "PAUSED"
+            ? null
+            : calculateConfiguredNextCheckAt(now, usageCycleDays)
           : item.nextCheckAt;
       return prisma.$transaction(async (tx) => {
         const updatedItem = await tx.item.update({

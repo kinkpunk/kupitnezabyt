@@ -185,6 +185,38 @@ select {
   font-size: 13px;
 }
 
+.reminder-notice {
+  position: sticky;
+  top: 8px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.reminder-notice strong {
+  display: block;
+  margin-top: 2px;
+}
+
+.reminder-notice-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.reminder-notice-actions button {
+  min-height: 36px;
+  padding: 0 10px;
+}
+
 .global-search {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

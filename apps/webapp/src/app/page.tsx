@@ -197,6 +197,7 @@ export default function HomePage() {
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
   const [selectedReminderItemId, setSelectedReminderItemId] = useState("");
+  const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -260,7 +261,9 @@ export default function HomePage() {
     return checkSession?.items.find((sessionItem) => !sessionItem.checkedAt) ?? null;
   }, [checkSession]);
 
-  const checkedCount = checkSession?.items.filter((sessionItem) => sessionItem.checkedAt).length ?? 0;
+  const checkedCount =
+    checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
+      .length ?? 0;
 
   const readiness = useMemo(() => calculateReadiness(items), [items]);
 
@@ -281,6 +284,11 @@ export default function HomePage() {
     () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
     [inAppReminders]
   );
+  const reminderNoticeKey = useMemo(
+    () => inAppReminders.map((reminder) => `${reminder.id}:${reminder.nextCheckAt}`).join("|"),
+    [inAppReminders]
+  );
+  const hasReminderNotice = Boolean(reminderNoticeKey && dismissedReminderNoticeKey !== reminderNoticeKey);
   const configuredReminderItems = useMemo(() => {
     const configuredItems = items.filter(
       (item) => item.usageCycleDays !== null || item.nextCheckAt !== null
@@ -983,7 +991,7 @@ export default function HomePage() {
         status
       );
 
-      if (session.items.every((sessionItem) => sessionItem.checkedAt)) {
+      if (session.items.every((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)) {
         const completedSession = await completeCheckSession(token, session.id);
         setCheckSession(completedSession);
       } else {
@@ -1451,6 +1459,36 @@ export default function HomePage() {
       </header>
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
+      {hasReminderNotice ? (
+        <div className="reminder-notice" role="status">
+          <div>
+            <p className="eyebrow">Напоминания</p>
+            <strong>
+              {inAppReminders.length}{" "}
+              {inAppReminders.length === 1 ? "активное напоминание" : "активных напоминаний"}
+            </strong>
+          </div>
+          <div className="reminder-notice-actions">
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => {
+                setActiveTab("home");
+                setDismissedReminderNoticeKey(reminderNoticeKey);
+              }}
+            >
+              Открыть
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={() => setDismissedReminderNoticeKey(reminderNoticeKey)}
+            >
+              Позже
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <form
         className="global-search"

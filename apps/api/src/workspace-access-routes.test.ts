@@ -34,6 +34,7 @@ const mockTx = vi.hoisted(() => ({
     create: vi.fn()
   }
 }));
+const mockUpsertItemCheckReminder = vi.hoisted(() => vi.fn());
 
 vi.mock("@kupitnezabyt/database", () => ({
   cancelPendingItemCheckReminders: vi.fn(),
@@ -42,7 +43,7 @@ vi.mock("@kupitnezabyt/database", () => ({
   markShoppingListItemBought: vi.fn(),
   prisma: mockPrisma,
   setItemStatus: vi.fn(),
-  upsertItemCheckReminder: vi.fn()
+  upsertItemCheckReminder: mockUpsertItemCheckReminder
 }));
 
 describe("workspace access routes", () => {
@@ -248,7 +249,8 @@ describe("workspace access routes", () => {
         status: "NEED_BUY",
         brand: null,
         notes: null,
-        usageCycleDays: null
+        usageCycleDays: null,
+        nextCheckAt: null
       }
     });
     expect(mockTx.shoppingListItem.create).toHaveBeenCalledWith({
@@ -261,6 +263,77 @@ describe("workspace access routes", () => {
         priority: "NORMAL"
       }
     });
+
+    await app.close();
+  });
+
+  it("creates cycle-tracked items as in-stock with a scheduled reminder", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      workspaceId: "workspace-shared",
+      archivedAt: null
+    });
+    mockTx.item.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: "item-1",
+        ...data
+      })
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        categoryId: "category-1",
+        name: "Шампунь",
+        usageCycleDays: 14
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.item.create).toHaveBeenCalledWith({
+      data: {
+        userId: "member-1",
+        workspaceId: "workspace-shared",
+        categoryId: "category-1",
+        name: "Шампунь",
+        status: "IN_STOCK",
+        brand: null,
+        notes: null,
+        usageCycleDays: 14,
+        nextCheckAt: expect.any(Date)
+      }
+    });
+    expect(mockTx.shoppingListItem.create).not.toHaveBeenCalled();
+    expect(mockUpsertItemCheckReminder).toHaveBeenCalledWith(mockTx, {
+      userId: "member-1",
+      workspaceId: "workspace-shared",
+      itemId: "item-1",
+      scheduledFor: expect.any(Date)
+    });
+    const createCall = mockTx.item.create.mock.calls[0]?.[0] as
+      | { data?: { nextCheckAt?: Date } }
+      | undefined;
+    const scheduledFor = createCall?.data?.nextCheckAt;
+    expect(scheduledFor).toBeInstanceOf(Date);
+    expect(scheduledFor ? scheduledFor.getTime() - Date.now() : 0).toBeGreaterThan(
+      13 * 24 * 60 * 60 * 1000
+    );
+    expect(scheduledFor ? scheduledFor.getTime() - Date.now() : 0).toBeLessThan(
+      15 * 24 * 60 * 60 * 1000
+    );
 
     await app.close();
   });
