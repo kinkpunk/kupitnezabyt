@@ -6,6 +6,8 @@ import {
 import type { ItemStatus } from "@kupitnezabyt/shared";
 import type { Item, Prisma, ShoppingListItem } from "@prisma/client";
 
+import { getPersonalWorkspaceId } from "./workspaces.js";
+
 type TransactionClient = Prisma.TransactionClient;
 
 export async function setItemStatus(
@@ -122,6 +124,7 @@ export async function upsertItemCheckReminder(
     },
     create: {
       userId: input.userId,
+      workspaceId: getPersonalWorkspaceId(input.userId),
       type: "ITEM_CHECK",
       itemId: input.itemId,
       scheduledFor: input.scheduledFor,
@@ -182,6 +185,7 @@ async function syncShoppingListItem(
     await tx.shoppingListItem.create({
       data: {
         userId: item.userId,
+        workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
         itemId: item.id,
         title: item.name,
         categoryId: item.categoryId,

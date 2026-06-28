@@ -1,3 +1,4 @@
+import { ensurePersonalWorkspace } from "@kupitnezabyt/database";
 import type { AuthProvider, Prisma } from "@kupitnezabyt/database";
 
 export type OAuthProviderIdentity = {
@@ -39,7 +40,7 @@ export async function resolveOAuthUser(
       }
     });
 
-    return tx.user.update({
+    const user = await tx.user.update({
       where: {
         id: existingAccount.userId
       },
@@ -50,6 +51,13 @@ export async function resolveOAuthUser(
         displayName: true
       }
     });
+
+    await ensurePersonalWorkspace(tx, {
+      userId: user.id,
+      name: user.displayName ?? user.email,
+      now
+    });
+    return user;
   }
 
   const matchedUser =
@@ -80,6 +88,11 @@ export async function resolveOAuthUser(
     });
 
     await createAuthAccount(tx, user.id, identity, normalizedEmail);
+    await ensurePersonalWorkspace(tx, {
+      userId: user.id,
+      name: user.displayName ?? user.email,
+      now
+    });
     return user;
   }
 
@@ -99,6 +112,11 @@ export async function resolveOAuthUser(
   });
 
   await createAuthAccount(tx, user.id, identity, normalizedEmail);
+  await ensurePersonalWorkspace(tx, {
+    userId: user.id,
+    name: user.displayName ?? user.email,
+    now
+  });
   return user;
 }
 

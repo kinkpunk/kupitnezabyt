@@ -12,6 +12,12 @@ const mockTx = {
     create: vi.fn(),
     findUnique: vi.fn(),
     update: vi.fn()
+  },
+  workspace: {
+    upsert: vi.fn()
+  },
+  workspaceMember: {
+    upsert: vi.fn()
   }
 };
 

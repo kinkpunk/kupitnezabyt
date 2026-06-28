@@ -52,6 +52,8 @@ const mockTx = vi.hoisted(() => ({
 
 vi.mock("@kupitnezabyt/database", () => ({
   cancelPendingItemCheckReminders: vi.fn(),
+  ensurePersonalWorkspace: vi.fn(),
+  getPersonalWorkspaceId: (userId: string) => `workspace_${userId}`,
   markShoppingListItemBought: mockMarkShoppingListItemBought,
   prisma: mockPrisma,
   setItemStatus: vi.fn(),
@@ -540,6 +542,7 @@ describe("archive routes", () => {
     expect(mockTx.item.create).toHaveBeenCalledWith({
       data: {
         userId: "user-1",
+        workspaceId: "workspace_user-1",
         categoryId: "category-1",
         name: "Кофе",
         status: "NEED_BUY",
@@ -551,6 +554,7 @@ describe("archive routes", () => {
     expect(mockTx.shoppingListItem.create).toHaveBeenCalledWith({
       data: {
         userId: "user-1",
+        workspaceId: "workspace_user-1",
         itemId: "item-1",
         title: "Кофе",
         categoryId: "category-1",

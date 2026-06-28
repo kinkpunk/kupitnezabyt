@@ -106,6 +106,22 @@ The Slice 1 data-model baseline included only:
 The database migration adds a PostgreSQL partial unique index to prevent more
 than one open shopping list entry for the same tracked item.
 
+Slice 27 introduces the collaboration foundation:
+
+- `Workspace` is the explicit shared space for personal and future collaborative
+  stock lists.
+- `WorkspaceMember` stores the user, workspace, role, invitation metadata, and
+  membership timestamps.
+- Existing users receive a deterministic personal workspace during migration,
+  and auth flows idempotently ensure that workspace for new or returning users.
+- Categories, items, shopping list rows, reminders, groups, check sessions, and
+  recommendation dismissals carry `workspaceId` so data can later move from
+  owner-only access to membership-based access.
+
+The current API still keeps `userId` filters as the active authorization
+boundary. Member-based workspace authorization is planned separately so shared
+access can be introduced without weakening current user isolation.
+
 Slice 5 adds reminder scheduling data:
 
 - `Category.usageCycleDays`

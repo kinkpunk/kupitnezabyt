@@ -1,5 +1,5 @@
 import cors from "@fastify/cors";
-import { prisma } from "@kupitnezabyt/database";
+import { ensurePersonalWorkspace, getPersonalWorkspaceId, prisma } from "@kupitnezabyt/database";
 import type { Prisma } from "@kupitnezabyt/database";
 import {
   aggregateCategoryStatus,
@@ -337,6 +337,10 @@ export function buildServer() {
         timezone: "Europe/Minsk"
       }
     });
+    await ensurePersonalWorkspace(prisma, {
+      userId: user.id,
+      name: firstName
+    });
 
     return {
       token: signToken(user.id, config),
@@ -365,6 +369,10 @@ export function buildServer() {
     }
 
     const user = await upsertTelegramUser(telegramUser);
+    await ensurePersonalWorkspace(prisma, {
+      userId: user.id,
+      name: user.firstName
+    });
     return {
       token: signToken(user.id, config),
       user
@@ -466,6 +474,11 @@ export function buildServer() {
           language: "ru",
           timezone: "Europe/Minsk"
         }
+      });
+      await ensurePersonalWorkspace(tx, {
+        userId: user.id,
+        name: user.displayName ?? user.email,
+        now
       });
 
       return user;
@@ -869,6 +882,7 @@ export function buildServer() {
     const category = await prisma.category.create({
       data: {
         userId,
+        workspaceId: getPersonalWorkspaceId(userId),
         name,
         icon: readOptionalString(request.body?.icon) ?? null,
         sortOrder: categoryCount
@@ -1284,6 +1298,7 @@ export function buildServer() {
       return prisma.checkSession.create({
         data: {
           userId,
+          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
           categoryId: category.id,
           items: {
             create: items.map((item, index) => ({
@@ -1317,9 +1332,11 @@ export function buildServer() {
       return;
     }
 
+    const userId = requireUserId(request.userId);
     return prisma.itemGroup.create({
       data: {
-        userId: requireUserId(request.userId),
+        userId,
+        workspaceId: getPersonalWorkspaceId(userId),
         name,
         icon: readOptionalString(request.body?.icon) ?? null
       },
@@ -1548,6 +1565,7 @@ export function buildServer() {
       return prisma.checkSession.create({
         data: {
           userId,
+          workspaceId: group.workspaceId ?? getPersonalWorkspaceId(userId),
           groupId: group.id,
           items: {
             create: activeItems.map((item, index) => ({
@@ -1662,6 +1680,7 @@ export function buildServer() {
       const item = await tx.item.create({
         data: {
           userId,
+          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
           categoryId,
           name,
           status: "NEED_BUY",
@@ -1674,6 +1693,7 @@ export function buildServer() {
       await tx.shoppingListItem.create({
         data: {
           userId,
+          workspaceId: category.workspaceId ?? getPersonalWorkspaceId(userId),
           itemId: item.id,
           title: item.name,
           categoryId: item.categoryId,
@@ -1783,6 +1803,8 @@ export function buildServer() {
         const item = await tx.item.create({
           data: {
             userId,
+            workspaceId:
+              category.workspaceId ?? triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
             categoryId: category.id,
             name: suggestion.suggestedItem,
             status: "NEED_BUY"
@@ -1792,6 +1814,8 @@ export function buildServer() {
         await tx.shoppingListItem.create({
           data: {
             userId,
+            workspaceId:
+              category.workspaceId ?? triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
             itemId: item.id,
             title: item.name,
             categoryId: item.categoryId,
@@ -1850,6 +1874,7 @@ export function buildServer() {
         update: {},
         create: {
           userId,
+          workspaceId: triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
           ruleId: recommendationId.ruleId,
           suggestedItem: suggestion.suggestedItem
         }
@@ -1907,6 +1932,7 @@ export function buildServer() {
         update: {},
         create: {
           userId,
+          workspaceId: triggerItem.workspaceId ?? getPersonalWorkspaceId(userId),
           ruleId: recommendationId.ruleId,
           suggestedItem: HIDE_SIMILAR_RECOMMENDATION_ITEM
         }
@@ -2306,6 +2332,7 @@ export function buildServer() {
     return prisma.shoppingListItem.create({
       data: {
         userId,
+        workspaceId: getPersonalWorkspaceId(userId),
         title,
         categoryId: categoryId ?? null,
         priority
@@ -2790,6 +2817,7 @@ async function syncRestoredItem(
   item: {
     id: string;
     userId: string;
+    workspaceId?: string | null;
     categoryId: string;
     name: string;
     status: string;
@@ -2826,6 +2854,7 @@ async function syncRestoredItem(
       await tx.shoppingListItem.create({
         data: {
           userId: item.userId,
+          workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
           itemId: item.id,
           title: item.name,
           categoryId: item.categoryId,

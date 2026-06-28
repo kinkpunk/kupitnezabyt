@@ -25,9 +25,50 @@ model User {
   checkSessions            CheckSession[]
   groups                   ItemGroup[]
   items                    Item[]
+  ownedWorkspaces          Workspace[]              @relation("WorkspaceOwner")
   recommendationDismissals RecommendationDismissal[]
   reminders                Reminder[]
   shoppingListItems        ShoppingListItem[]
+  workspaceMemberships     WorkspaceMember[]
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  ownerId   String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner                    User                       @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  categories               Category[]
+  checkSessions            CheckSession[]
+  groups                   ItemGroup[]
+  items                    Item[]
+  members                  WorkspaceMember[]
+  recommendationDismissals RecommendationDismissal[]
+  reminders                Reminder[]
+  shoppingListItems        ShoppingListItem[]
+
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id           String        @id @default(cuid())
+  workspaceId  String
+  userId       String
+  role         WorkspaceRole @default(EDITOR)
+  invitedEmail String?
+  invitedAt    DateTime?
+  joinedAt     DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@index([invitedEmail])
 }
 
 model AuthAccount {
@@ -76,6 +117,7 @@ model OAuthStateToken {
 model Category {
   id              String    @id @default(cuid())
   userId          String
+  workspaceId     String?
   name            String
   icon            String?
   sortOrder       Int       @default(0)
@@ -87,6 +129,7 @@ model Category {
   archivedAt      DateTime?
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace         Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   checkSessions     CheckSession[]
   items             Item[]
   reminders         Reminder[]
@@ -94,11 +137,14 @@ model Category {
 
   @@index([userId, archivedAt])
   @@index([userId, nextCheckAt])
+  @@index([workspaceId, archivedAt])
+  @@index([workspaceId, nextCheckAt])
 }
 
 model Item {
   id              String         @id @default(cuid())
   userId          String
+  workspaceId     String?
   categoryId      String
   name            String
   brand           String?
@@ -115,6 +161,7 @@ model Item {
   archivedAt      DateTime?
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace         Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   checkSessionItems CheckSessionItem[]
   groupItems        ItemGroupItem[]
@@ -124,11 +171,15 @@ model Item {
   @@index([userId, categoryId, archivedAt])
   @@index([userId, status])
   @@index([userId, nextCheckAt])
+  @@index([workspaceId, categoryId, archivedAt])
+  @@index([workspaceId, status])
+  @@index([workspaceId, nextCheckAt])
 }
 
 model ShoppingListItem {
   id          String           @id @default(cuid())
   userId      String
+  workspaceId String?
   itemId      String?
   title       String
   categoryId  String?
@@ -138,17 +189,20 @@ model ShoppingListItem {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  item     Item?     @relation(fields: [itemId], references: [id], onDelete: SetNull)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  item      Item?      @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  category  Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([userId, isCompleted, priority])
+  @@index([workspaceId, isCompleted, priority])
   @@index([itemId, isCompleted])
 }
 
 model Reminder {
   id             String         @id @default(cuid())
   userId         String
+  workspaceId    String?
   type           ReminderType
   itemId         String?
   categoryId     String?
@@ -161,11 +215,13 @@ model Reminder {
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  item     Item?     @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  item      Item?      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  category  Category?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@index([userId, status, scheduledFor])
+  @@index([workspaceId, status, scheduledFor])
   @@index([itemId, scheduledFor])
   @@index([categoryId, scheduledFor])
   @@index([groupId, scheduledFor])
@@ -174,6 +230,7 @@ model Reminder {
 model ItemGroup {
   id              String    @id @default(cuid())
   userId          String
+  workspaceId     String?
   name            String
   icon            String?
   usageCycleDays  Int?
@@ -184,11 +241,14 @@ model ItemGroup {
   archivedAt      DateTime?
 
   user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace     Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   checkSessions CheckSession[]
   items         ItemGroupItem[]
 
   @@index([userId, archivedAt])
   @@index([userId, nextCheckAt])
+  @@index([workspaceId, archivedAt])
+  @@index([workspaceId, nextCheckAt])
 }
 
 model ItemGroupItem {
@@ -207,18 +267,21 @@ model ItemGroupItem {
 model CheckSession {
   id          String             @id @default(cuid())
   userId      String
+  workspaceId String?
   categoryId  String?
   groupId     String?
   status      CheckSessionStatus @default(IN_PROGRESS)
   startedAt   DateTime           @default(now())
   completedAt DateTime?
 
-  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  group    ItemGroup?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  items    CheckSessionItem[]
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  category  Category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  group     ItemGroup?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  items     CheckSessionItem[]
 
   @@index([userId, status, startedAt])
+  @@index([workspaceId, status, startedAt])
   @@index([categoryId, status])
   @@index([groupId, status])
 }
@@ -241,14 +304,23 @@ model CheckSessionItem {
 model RecommendationDismissal {
   id            String   @id @default(cuid())
   userId        String
+  workspaceId   String?
   ruleId        String
   suggestedItem String
   createdAt     DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([userId, ruleId, suggestedItem])
   @@index([userId, ruleId])
+  @@index([workspaceId, ruleId])
+}
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  VIEWER
 }
 
 enum ItemStatus {

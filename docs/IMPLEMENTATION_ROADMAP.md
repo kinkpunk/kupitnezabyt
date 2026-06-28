@@ -598,7 +598,7 @@ that model.
 
 ### Slice 27: Shared Workspace Data Model
 
-Status: planned.
+Status: implemented foundation.
 
 Goal: introduce an explicit shared space for personal and collaborative stock
 lists while preserving existing single-user behavior.
@@ -624,6 +624,21 @@ Tests:
 - Migration/backfill coverage where practical.
 - API tests proving that users cannot access workspaces where they are not
   members.
+
+Implemented notes:
+
+- Added `Workspace`, `WorkspaceMember`, and `WorkspaceRole`.
+- Added nullable `workspaceId` links to categories, items, shopping list rows,
+  reminders, groups, check sessions, and recommendation dismissals.
+- Added a migration that creates a personal workspace and owner membership for
+  every existing user, then backfills existing records into that workspace.
+- Added database helpers for deterministic personal workspace ids and
+  idempotent personal workspace creation.
+- Auth flows now ensure a personal workspace exists, and new product records
+  created by current single-user APIs store the user's personal `workspaceId`.
+- Full member-based API authorization remains intentionally deferred to Slice
+  29, where product APIs move from owner-only `userId` filters to workspace
+  membership checks.
 
 ### Slice 28: Email Invitations
 

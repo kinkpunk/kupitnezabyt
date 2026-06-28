@@ -13,6 +13,8 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock("@kupitnezabyt/database", () => ({
   cancelPendingItemCheckReminders: vi.fn(),
+  ensurePersonalWorkspace: vi.fn(),
+  getPersonalWorkspaceId: (userId: string) => `workspace_${userId}`,
   markShoppingListItemBought: vi.fn(),
   prisma: mockPrisma,
   setItemStatus: vi.fn(),
@@ -66,6 +68,7 @@ describe("recommendation routes", () => {
       update: {},
       create: {
         userId: "user-1",
+        workspaceId: "workspace_user-1",
         ruleId: "coffee-basics",
         suggestedItem: "*"
       }

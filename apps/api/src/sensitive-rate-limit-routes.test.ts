@@ -8,6 +8,8 @@ const mockPrisma = vi.hoisted(() => ({
 
 vi.mock("@kupitnezabyt/database", () => ({
   cancelPendingItemCheckReminders: vi.fn(),
+  ensurePersonalWorkspace: vi.fn(),
+  getPersonalWorkspaceId: (userId: string) => `workspace_${userId}`,
   markShoppingListItemBought: vi.fn(),
   prisma: mockPrisma,
   setItemStatus: vi.fn(),
