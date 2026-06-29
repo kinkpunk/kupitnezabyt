@@ -155,6 +155,12 @@ select {
   width: 100%;
 }
 
+.workspace-actions {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
 .workspace-switcher span {
   color: var(--muted);
   font-size: 12px;
@@ -163,6 +169,14 @@ select {
 }
 
 .workspace-switcher select {
+  width: 100%;
+}
+
+.workspace-share-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   width: 100%;
 }
 
@@ -899,6 +913,10 @@ select {
 
   .topbar-with-workspace .brand-lockup {
     justify-self: start;
+  }
+
+  .workspace-actions {
+    justify-self: end;
   }
 
   .tabs {

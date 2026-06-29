@@ -1316,7 +1316,7 @@ export default function HomePage() {
         workspaceInviteEmail.trim()
       );
       setWorkspaceInviteEmail("");
-      setWorkspaceMessage(`Приглашение отправлено на ${response.invitation.email}.`);
+      setWorkspaceMessage(`Доступ к списку отправлен на ${response.invitation.email}.`);
       setDevInvitationLink(response.devInvitationLink ?? null);
       await refreshWorkspaceAccess(token, activeWorkspace.id);
     } finally {
@@ -1750,25 +1750,39 @@ export default function HomePage() {
             <BrandWord />
           </h1>
         </div>
-        {showWorkspaceSwitcher && activeWorkspace ? (
-          <label className="workspace-switcher">
-            <span>Список</span>
-            <select
-              aria-label="Активный список"
-              value={activeWorkspace.id}
-              onChange={(event) =>
-                void handleSelectWorkspace(event.target.value).catch((caughtError) =>
-                  setError(formatError(caughtError))
-                )
-              }
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        {activeWorkspace ? (
+          <div className="workspace-actions">
+            {showWorkspaceSwitcher ? (
+              <label className="workspace-switcher">
+                <span>Список</span>
+                <select
+                  aria-label="Активный список"
+                  value={activeWorkspace.id}
+                  onChange={(event) =>
+                    void handleSelectWorkspace(event.target.value).catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {canManageActiveWorkspace ? (
+              <button
+                className="ghost-button workspace-share-button"
+                type="button"
+                onClick={() => setActiveTab("settings")}
+              >
+                <Users aria-hidden="true" size={17} />
+                <span>Поделиться</span>
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </header>
 
@@ -2780,16 +2794,19 @@ export default function HomePage() {
           </div>
 
           {activeWorkspace ? (
-            <section className="workspace-panel" aria-label="Совместный доступ">
+            <section className="workspace-panel" aria-label="Поделиться списком">
               <div className="section-heading">
                 <div>
-                  <h2>Совместный доступ</h2>
+                  <h2>Поделиться списком</h2>
                   <p>
                     {activeWorkspace.name} · {workspaceRoleLabels[activeWorkspace.role]} ·{" "}
                     {activeWorkspace.memberCount}{" "}
                     {activeWorkspace.memberCount === 1 ? "участник" : "участника"}
                   </p>
-                  <p>Приглашенные участники видят и редактируют этот общий список целиком.</p>
+                  <p>
+                    Приглашенный пользователь получит доступ ко всему этому списку. Сейчас можно
+                    приглашать только email, который уже входил в сервис.
+                  </p>
                 </div>
                 <Users aria-hidden="true" size={22} />
               </div>
@@ -2808,7 +2825,7 @@ export default function HomePage() {
                     <input
                       aria-label="Email участника"
                       inputMode="email"
-                      placeholder="email участника"
+                      placeholder="email пользователя в сервисе"
                       value={workspaceInviteEmail}
                       disabled={workspaceAction === "invite"}
                       onChange={(event) => setWorkspaceInviteEmail(event.target.value)}
@@ -2819,7 +2836,9 @@ export default function HomePage() {
                       disabled={workspaceAction === "invite" || !workspaceInviteEmail.trim()}
                     >
                       <Send aria-hidden="true" size={18} />
-                      <span>{workspaceAction === "invite" ? "Отправляем..." : "Пригласить"}</span>
+                      <span>
+                        {workspaceAction === "invite" ? "Отправляем..." : "Поделиться"}
+                      </span>
                     </button>
                   </form>
 
@@ -2920,8 +2939,8 @@ export default function HomePage() {
                 </>
               ) : (
                 <p className="empty">
-                  Управлять участниками может владелец списка. Вы можете работать с товарами в
-                  текущем доступе.
+                  Управлять доступом может владелец списка. Вы можете работать с товарами в
+                  текущем списке.
                 </p>
               )}
             </section>
@@ -3185,7 +3204,8 @@ function getFriendlyErrorMessage(message: string): string {
     NOT_FOUND: "Данные не найдены. Обновите страницу и попробуйте еще раз.",
     INVALID_INVITATION: "Приглашение недействительно или устарело.",
     INVITATION_EMAIL_MISMATCH: "Это приглашение отправлено на другой email.",
-    INVITEE_NOT_FOUND: "Пользователь с таким подтвержденным email пока не найден.",
+    INVITEE_NOT_FOUND:
+      "Пользователь с таким email пока не найден. Сейчас можно приглашать только тех, кто уже входил в сервис.",
     MEMBER_NOT_FOUND: "Участник не найден. Обновите список и попробуйте еще раз.",
     WORKSPACE_NOT_FOUND: "Список не найден или доступ к нему уже закрыт.",
     OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER:

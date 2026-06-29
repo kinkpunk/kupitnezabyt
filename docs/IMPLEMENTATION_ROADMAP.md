@@ -773,8 +773,8 @@ Not implemented yet:
 - Full two-account E2E coverage for invite acceptance, shared item editing, and
   cross-account shopping-list visibility.
 - Fine-grained role changes beyond the fixed owner/editor behavior.
-- Invite acceptance for emails that have not signed in and verified an account
-  yet; current invitations require an existing verified email user.
+- Clear user-facing affordance for sharing a list with an existing verified
+  email user.
 - Privacy/export/deletion rules for shared workspaces are handled in Slice 31.
 
 ### Slice 31: Privacy, Export, And Deletion Hardening
@@ -839,24 +839,26 @@ Product scope:
 
 Backend:
 
-- Allow owners to create invitations for an email that is not yet an existing
-  verified user.
-- Preserve the security rule that invitation acceptance only succeeds after the
-  signed-in user has a verified email matching the invitation email.
-- Ensure accepting an invite for a newly registered email creates membership in
-  the invited workspace and selects that workspace in the webapp.
+- Keep the current beta constraint: owners can invite only existing verified
+  email users.
+- Preserve the security rule that invitation acceptance only succeeds for the
+  signed-in user whose verified email matches the invitation email.
+- Ensure accepting an invite creates membership in the invited workspace and
+  selects that workspace in the webapp.
 - Keep invitation tokens hashed, single-use, expiring, revocable, and scoped to
   the invited email.
-- Add or confirm API coverage for inviting a not-yet-registered email,
-  accepting after magic-link signup, duplicate invite/member behavior, revoked
-  invite rejection, and cross-user isolation.
+- Add or confirm API coverage for inviting an existing verified email,
+  duplicate invite/member behavior, revoked invite rejection, email mismatch,
+  and cross-user isolation.
 
 Webapp:
 
+- Add a visible "Поделиться" entry point for owners of the active list, not only
+  a settings section users have to discover.
 - Make the Settings copy explicit that sharing grants access to the whole
   active list/workspace, not an individual group.
-- Show pending invite status clearly, including that the recipient may need to
-  sign in with the invited email first.
+- Show pending invite status clearly, including that the invited email must
+  already belong to a verified user in the service during beta.
 - After accepting an invitation, surface a success message and switch to the
   invited workspace.
 - Keep loading/disabled states for invite, revoke, remove member, and ownership
@@ -865,8 +867,8 @@ Webapp:
 
 Tests:
 
-- API route tests for invites to non-existing users and acceptance after account
-  creation.
+- API route tests for invites to existing verified users and clear rejection of
+  unknown/unverified emails.
 - Browser E2E or documented manual smoke for two real accounts:
   owner invites, invitee accepts, both see the workspace, editor changes an
   item/status/shopping row, owner removes access, removed user loses access.
