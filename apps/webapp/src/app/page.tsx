@@ -236,6 +236,7 @@ export default function HomePage() {
   const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
+  const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -253,6 +254,7 @@ export default function HomePage() {
   );
   const canManageActiveWorkspace = activeWorkspace?.role === "OWNER";
   const showWorkspaceSwitcher = workspaces.length > 1;
+  const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
 
   const visibleItems = useMemo(
     () =>
@@ -402,16 +404,16 @@ export default function HomePage() {
   }, [activeTab, checkSession?.status, token]);
 
   useEffect(() => {
-    if (activeTab !== "settings" || !token || !activeWorkspaceId || !canManageActiveWorkspace) {
+    if (activeTab !== "settings" || !token || !activeWorkspace?.id || !canManageActiveWorkspace) {
       setWorkspaceMembers([]);
       setWorkspaceInvitations([]);
       return;
     }
 
-    void refreshWorkspaceAccess(token, activeWorkspaceId).catch((caughtError) =>
+    void refreshWorkspaceAccess(token, activeWorkspace.id).catch((caughtError) =>
       setError(formatError(caughtError))
     );
-  }, [activeTab, activeWorkspaceId, canManageActiveWorkspace, token]);
+  }, [activeTab, activeWorkspace?.id, canManageActiveWorkspace, token]);
 
   useEffect(() => {
     const nextDrafts: Record<string, ReminderDraft> = {};
@@ -479,12 +481,14 @@ export default function HomePage() {
       clearActiveWorkspaceId();
       setWorkspaces([]);
       setActiveWorkspaceIdState(null);
+      setWorkspaceLoadFailed(true);
       return [];
     });
     const savedWorkspaceId = getActiveWorkspaceId();
     const nextActiveWorkspace =
       nextWorkspaces.find((workspace) => workspace.id === savedWorkspaceId) ?? nextWorkspaces[0];
 
+    setWorkspaceLoadFailed(false);
     setWorkspaces(nextWorkspaces);
     setActiveWorkspaceIdState(nextActiveWorkspace?.id ?? null);
     if (nextActiveWorkspace) {
@@ -492,6 +496,17 @@ export default function HomePage() {
     }
 
     return nextWorkspaces;
+  }
+
+  async function handleRetryWorkspaceLoad() {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    setWorkspaceMessage(null);
+    setDevInvitationLink(null);
+    await refreshWorkspaces(token);
   }
 
   async function refreshWorkspaceAccess(authToken = token, workspaceId = activeWorkspaceId) {
@@ -1440,6 +1455,7 @@ export default function HomePage() {
     setActiveWorkspaceIdState(null);
     setWorkspaceMembers([]);
     setWorkspaceInvitations([]);
+    setWorkspaceLoadFailed(false);
     window.localStorage.removeItem(onboardingStorageKey);
     setActiveTab("home");
   }
@@ -1743,16 +1759,20 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className={showWorkspaceSwitcher ? "topbar topbar-with-workspace" : "topbar"}>
+      <header
+        className={
+          showWorkspaceSwitcher || showShareEntryPoint ? "topbar topbar-with-workspace" : "topbar"
+        }
+      >
         <div className="brand-lockup">
           <img alt="" className="brand-logo" src="/logo.png" />
           <h1>
             <BrandWord />
           </h1>
         </div>
-        {activeWorkspace ? (
+        {activeWorkspace || showShareEntryPoint ? (
           <div className="workspace-actions">
-            {showWorkspaceSwitcher ? (
+            {activeWorkspace && showWorkspaceSwitcher ? (
               <label className="workspace-switcher">
                 <span>Список</span>
                 <select
@@ -1772,7 +1792,7 @@ export default function HomePage() {
                 </select>
               </label>
             ) : null}
-            {canManageActiveWorkspace ? (
+            {showShareEntryPoint ? (
               <button
                 className="ghost-button workspace-share-button"
                 type="button"
@@ -2944,7 +2964,35 @@ export default function HomePage() {
                 </p>
               )}
             </section>
-          ) : null}
+          ) : (
+            <section className="workspace-panel" aria-label="Поделиться списком">
+              <div className="section-heading">
+                <div>
+                  <h2>Поделиться списком</h2>
+                  <p>Не удалось загрузить данные списка, поэтому приглашения пока недоступны.</p>
+                  <p>
+                    Проверьте, что backend развернут с поддержкой совместных списков, и обновите
+                    списки.
+                  </p>
+                </div>
+                <Users aria-hidden="true" size={22} />
+              </div>
+              {workspaceLoadFailed ? (
+                <p className="workspace-warning">Сервис списков сейчас не ответил.</p>
+              ) : null}
+              <button
+                className="ghost-button workspace-retry-button"
+                type="button"
+                onClick={() =>
+                  void handleRetryWorkspaceLoad().catch((caughtError) =>
+                    setError(formatError(caughtError))
+                  )
+                }
+              >
+                Обновить списки
+              </button>
+            </section>
+          )}
 
           <section className="reminder-settings" aria-label="Настройки проверок">
             <div className="section-heading">

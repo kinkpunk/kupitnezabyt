@@ -770,6 +770,17 @@ select {
   font-weight: 700;
 }
 
+.workspace-warning {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.workspace-retry-button {
+  justify-self: start;
+}
+
 .dev-link span {
   overflow-wrap: anywhere;
 }
