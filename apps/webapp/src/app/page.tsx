@@ -232,14 +232,9 @@ export default function HomePage() {
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
-  const [categoryReminderDraft, setCategoryReminderDraft] = useState<ReminderDraft>({
-    usageCycleDays: "",
-    reminderEnabled: true
-  });
-  const [selectedReminderCategoryIds, setSelectedReminderCategoryIds] = useState<string[]>([]);
   const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
   const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
-  const [selectedReminderItemId, setSelectedReminderItemId] = useState("");
+  const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
 
   const selectedCategory = useMemo(
@@ -338,23 +333,6 @@ export default function HomePage() {
     [inAppReminders]
   );
   const hasReminderNotice = Boolean(reminderNoticeKey && dismissedReminderNoticeKey !== reminderNoticeKey);
-  const configuredReminderItems = useMemo(() => {
-    const configuredItems = items.filter(
-      (item) => item.usageCycleDays !== null || item.nextCheckAt !== null
-    );
-    const selectedReminderItem = selectedReminderItemId
-      ? items.find((item) => item.id === selectedReminderItemId)
-      : null;
-
-    if (
-      selectedReminderItem &&
-      !configuredItems.some((item) => item.id === selectedReminderItem.id)
-    ) {
-      return [...configuredItems, selectedReminderItem];
-    }
-
-    return configuredItems;
-  }, [items, selectedReminderItemId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -461,12 +439,6 @@ export default function HomePage() {
 
     setReminderDrafts(nextDrafts);
   }, [categories, groups, items]);
-
-  useEffect(() => {
-    setSelectedReminderCategoryIds((current) =>
-      current.filter((categoryId) => categories.some((category) => category.id === categoryId))
-    );
-  }, [categories]);
 
   async function refreshActiveData(authToken = token) {
     if (!authToken) {
@@ -578,12 +550,18 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const category = await createCategory(token, categoryName.trim());
-    setCategoryName("");
-    setShowCategoryForm(false);
-    setCategories((current) => [...current, category]);
-    setSelectedCategoryId(category.id);
+    const actionKey = "category:create";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const category = await createCategory(token, categoryName.trim());
+      setCategoryName("");
+      setShowCategoryForm(false);
+      setCategories((current) => [...current, category]);
+      setSelectedCategoryId(category.id);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleCreateItem() {
@@ -591,15 +569,21 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const item = await createItem(token, {
-      categoryId: selectedCategory.id,
-      name: itemName.trim()
-    });
-    setItemName("");
-    setItems((current) => [...current, item]);
-    await refreshActiveData(token);
-    await refreshRecommendations(token, item);
+    const actionKey = "item:create";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const item = await createItem(token, {
+        categoryId: selectedCategory.id,
+        name: itemName.trim()
+      });
+      setItemName("");
+      setItems((current) => [...current, item]);
+      await refreshActiveData(token);
+      await refreshRecommendations(token, item);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleSetStatus(item: Item, status: ItemStatus) {
@@ -607,13 +591,21 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const updatedItem = await setItemStatus(token, item.id, status);
-    setItems((current) =>
-      current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
-    );
-    await refreshActiveData(token);
-    await refreshRecommendations(token, updatedItem);
+    const actionKey = `item:status:${item.id}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const updatedItem = await setItemStatus(token, item.id, status);
+      setItems((current) =>
+        current.map((currentItem) =>
+          currentItem.id === updatedItem.id ? updatedItem : currentItem
+        )
+      );
+      await refreshActiveData(token);
+      await refreshRecommendations(token, updatedItem);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleAcceptRecommendation(recommendation: RecommendationSuggestion) {
@@ -625,10 +617,16 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const item = await acceptRecommendation(token, recommendation.id);
-    await refreshActiveData(token);
-    await refreshRecommendations(token, item);
+    const actionKey = `recommendation:add:${recommendation.id}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const item = await acceptRecommendation(token, recommendation.id);
+      await refreshActiveData(token);
+      await refreshRecommendations(token, item);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleDismissRecommendation(recommendation: RecommendationSuggestion) {
@@ -671,11 +669,17 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const completedEntry = await completeShoppingListItem(token, entry.id);
-    await refreshActiveData(token);
-    if (completedEntry.item) {
-      await refreshRecommendations(token, completedEntry.item);
+    const actionKey = `shopping:bought:${entry.id}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const completedEntry = await completeShoppingListItem(token, entry.id);
+      await refreshActiveData(token);
+      if (completedEntry.item) {
+        await refreshRecommendations(token, completedEntry.item);
+      }
+    } finally {
+      setPendingAction(actionKey, false);
     }
   }
 
@@ -684,16 +688,22 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    await createShoppingListItem(token, {
-      title: manualShoppingTitle.trim(),
-      categoryId: manualShoppingCategoryId || null,
-      priority: manualShoppingPriority
-    });
-    setManualShoppingTitle("");
-    setManualShoppingCategoryId("");
-    setManualShoppingPriority("NORMAL");
-    await refreshActiveData(token);
+    const actionKey = "shopping:add";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      await createShoppingListItem(token, {
+        title: manualShoppingTitle.trim(),
+        categoryId: manualShoppingCategoryId || null,
+        priority: manualShoppingPriority
+      });
+      setManualShoppingTitle("");
+      setManualShoppingCategoryId("");
+      setManualShoppingPriority("NORMAL");
+      await refreshActiveData(token);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleUpdateManualShoppingItem(entry: ShoppingListEntry) {
@@ -767,72 +777,73 @@ export default function HomePage() {
     });
   }
 
-  async function handleSaveReminderSettings(
+  function setPendingAction(key: string, isPending: boolean) {
+    setPendingActionKeys((current) => {
+      if (isPending) {
+        return current.includes(key) ? current : [...current, key];
+      }
+
+      return current.filter((currentKey) => currentKey !== key);
+    });
+  }
+
+  function isActionPending(key: string): boolean {
+    return pendingActionKeys.includes(key);
+  }
+
+  async function handleSaveReminderSettingsGroup(
     entityType: InAppReminder["entityType"],
-    entityId: string
+    entityIds: string[]
   ) {
     if (!token) {
       return;
     }
 
-    const draft = reminderDrafts[getReminderDraftKey(entityType, entityId)];
-    if (!draft) {
+    if (!entityIds.length) {
       return;
     }
 
-    const key = getReminderDraftKey(entityType, entityId);
+    const groupKey = `${entityType}:SECTION`;
     try {
       setError(null);
       setReminderSettingsMessage(null);
-      setReminderSaving(key, true);
-      const input = {
-        usageCycleDays: parseReminderCycleDays(draft),
-        reminderEnabled: draft.reminderEnabled
-      };
-
-      if (entityType === "CATEGORY") {
-        await updateCategory(token, entityId, input);
-      } else if (entityType === "GROUP") {
-        await updateGroup(token, entityId, input);
-      } else {
-        await updateItem(token, entityId, input);
-      }
-
-      await refreshActiveData(token);
-      setReminderSettingsMessage("Настройки проверки сохранены.");
-    } catch (caughtError) {
-      setError(formatError(caughtError));
-    } finally {
-      setReminderSaving(key, false);
-    }
-  }
-
-  async function handleSaveSelectedCategoryReminderSettings() {
-    if (!token || !selectedReminderCategoryIds.length) {
-      return;
-    }
-
-    const bulkKey = "CATEGORY:BULK";
-    try {
-      setError(null);
-      setReminderSettingsMessage(null);
-      setReminderSaving(bulkKey, true);
-      const input = {
-        usageCycleDays: parseReminderCycleDays(categoryReminderDraft),
-        reminderEnabled: categoryReminderDraft.reminderEnabled
-      };
-
+      setReminderSaving(groupKey, true);
       await Promise.all(
-        selectedReminderCategoryIds.map((categoryId) => updateCategory(token, categoryId, input))
+        entityIds.map((entityId) => {
+          const draft = reminderDrafts[getReminderDraftKey(entityType, entityId)];
+          if (!draft) {
+            return Promise.resolve(null);
+          }
+
+          const input = {
+            usageCycleDays: parseReminderCycleDays(draft),
+            reminderEnabled: draft.reminderEnabled
+          };
+
+          if (entityType === "CATEGORY") {
+            return updateCategory(token, entityId, input);
+          }
+
+          if (entityType === "GROUP") {
+            return updateGroup(token, entityId, input);
+          }
+
+          return updateItem(token, entityId, input);
+        })
       );
+
       await refreshActiveData(token);
       setReminderSettingsMessage(
-        `Настройки сохранены для ${selectedReminderCategoryIds.length} категорий.`
+        entityType === "CATEGORY"
+          ? "Настройки категорий сохранены."
+          : entityType === "ITEM"
+            ? "Настройки товаров сохранены."
+            : "Настройки наборов сохранены."
       );
     } catch (caughtError) {
       setError(formatError(caughtError));
     } finally {
-      setReminderSaving(bulkKey, false);
+      setReminderSaving(groupKey, false);
     }
   }
 
@@ -861,20 +872,26 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    if (reminder.entityType === "ITEM") {
-      await snoozeItemReminder(token, reminder.entityId, days);
-    } else if (reminder.entityType === "CATEGORY") {
-      await updateCategory(token, reminder.entityId, {
-        nextCheckAt: calculateSnoozedAt(days)
-      });
-    } else {
-      await updateGroup(token, reminder.entityId, {
-        nextCheckAt: calculateSnoozedAt(days)
-      });
-    }
+    const actionKey = `reminder:snooze:${reminder.id}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      if (reminder.entityType === "ITEM") {
+        await snoozeItemReminder(token, reminder.entityId, days);
+      } else if (reminder.entityType === "CATEGORY") {
+        await updateCategory(token, reminder.entityId, {
+          nextCheckAt: calculateSnoozedAt(days)
+        });
+      } else {
+        await updateGroup(token, reminder.entityId, {
+          nextCheckAt: calculateSnoozedAt(days)
+        });
+      }
 
-    await refreshActiveData(token);
+      await refreshActiveData(token);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleStartReminderCheck(reminder: InAppReminder) {
@@ -918,13 +935,14 @@ export default function HomePage() {
         <button
           className="ghost-button"
           type="button"
+          disabled={isActionPending(`reminder:snooze:${reminder.id}`)}
           onClick={() =>
             void handleSnoozeReminder(reminder).catch((caughtError) =>
               setError(formatError(caughtError))
             )
           }
         >
-          Позже
+          {isActionPending(`reminder:snooze:${reminder.id}`) ? "Откладываем..." : "Позже"}
         </button>
         <button className="ghost-button" type="button" onClick={() => handleOpenReminder(reminder)}>
           Открыть
@@ -1054,11 +1072,17 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const group = await createGroup(token, groupName.trim());
-    setGroupName("");
-    setGroups((current) => [...current, group]);
-    setSelectedGroupId(group.id);
+    const actionKey = "group:create";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const group = await createGroup(token, groupName.trim());
+      setGroupName("");
+      setGroups((current) => [...current, group]);
+      setSelectedGroupId(group.id);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleArchiveSelectedGroup() {
@@ -1077,10 +1101,18 @@ export default function HomePage() {
       return;
     }
 
-    setError(null);
-    const group = await addGroupItem(token, selectedGroup.id, groupItemId);
-    setGroups((current) => current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup)));
-    setGroupItemId("");
+    const actionKey = "group:item:add";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      const group = await addGroupItem(token, selectedGroup.id, groupItemId);
+      setGroups((current) =>
+        current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup))
+      );
+      setGroupItemId("");
+    } finally {
+      setPendingAction(actionKey, false);
+    }
   }
 
   async function handleRemoveGroupItem(itemId: string) {
@@ -1233,7 +1265,6 @@ export default function HomePage() {
     setSelectedGroupId(null);
     setCheckSession(null);
     setPendingCheckItemName(null);
-    setSelectedReminderItemId("");
     clearSearchSession();
   }
 
@@ -1867,13 +1898,14 @@ export default function HomePage() {
                     <button
                       className="ghost-button"
                       type="button"
+                      disabled={isActionPending(`item:status:${item.id}`)}
                       onClick={() =>
                         void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
                           setError(formatError(caughtError))
                         )
                       }
                     >
-                      Куплено
+                      {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
                     </button>
                   </article>
                 ))}
@@ -1981,9 +2013,15 @@ export default function HomePage() {
                 aria-label="Название категории"
                 placeholder="Название категории"
                 value={categoryName}
+                disabled={isActionPending("category:create")}
                 onChange={(event) => setCategoryName(event.target.value)}
               />
-              <button type="submit">Создать</button>
+              <button
+                type="submit"
+                disabled={isActionPending("category:create") || !categoryName.trim()}
+              >
+                {isActionPending("category:create") ? "Создаем..." : "Создать"}
+              </button>
             </form>
           ) : null}
 
@@ -2054,9 +2092,12 @@ export default function HomePage() {
                   aria-label="Название товара"
                   placeholder={`Товар: ${selectedCategory.name}`}
                   value={itemName}
+                  disabled={isActionPending("item:create")}
                   onChange={(event) => setItemName(event.target.value)}
                 />
-                <button type="submit">Добавить</button>
+                <button type="submit" disabled={isActionPending("item:create") || !itemName.trim()}>
+                  {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
+                </button>
               </form>
 
               {visibleRecommendations.length ? (
@@ -2101,13 +2142,16 @@ export default function HomePage() {
                           </button>
                           <button
                             type="button"
+                            disabled={isActionPending(`recommendation:add:${recommendation.id}`)}
                             onClick={() =>
                               void handleAcceptRecommendation(recommendation).catch(
                                 (caughtError) => setError(formatError(caughtError))
                               )
                             }
                           >
-                            Добавить
+                            {isActionPending(`recommendation:add:${recommendation.id}`)
+                              ? "Добавляем..."
+                              : "Добавить"}
                           </button>
                         </div>
                       </article>
@@ -2178,6 +2222,7 @@ export default function HomePage() {
                             className={item.status === status ? "active" : ""}
                             key={status}
                             type="button"
+                            disabled={isActionPending(`item:status:${item.id}`)}
                             onClick={() =>
                               void handleSetStatus(item, status).catch((caughtError) =>
                                 setError(formatError(caughtError))
@@ -2232,11 +2277,13 @@ export default function HomePage() {
               aria-label="Разовая покупка"
               placeholder="Разовая покупка"
               value={manualShoppingTitle}
+              disabled={isActionPending("shopping:add")}
               onChange={(event) => setManualShoppingTitle(event.target.value)}
             />
             <select
               aria-label="Категория покупки"
               value={manualShoppingCategoryId}
+              disabled={isActionPending("shopping:add")}
               onChange={(event) => setManualShoppingCategoryId(event.target.value)}
             >
               <option value="">Без категории</option>
@@ -2249,12 +2296,18 @@ export default function HomePage() {
             <select
               aria-label="Приоритет покупки"
               value={manualShoppingPriority}
+              disabled={isActionPending("shopping:add")}
               onChange={(event) => setManualShoppingPriority(event.target.value as ShoppingPriority)}
             >
               <option value="NORMAL">Купить</option>
               <option value="URGENT">Срочно</option>
             </select>
-            <button type="submit">Добавить</button>
+            <button
+              type="submit"
+              disabled={isActionPending("shopping:add") || !manualShoppingTitle.trim()}
+            >
+              {isActionPending("shopping:add") ? "Добавляем..." : "Добавить"}
+            </button>
           </form>
 
           {shoppingGroups.length ? (
@@ -2318,13 +2371,14 @@ export default function HomePage() {
                         ) : null}
                         <button
                           type="button"
+                          disabled={isActionPending(`shopping:bought:${entry.id}`)}
                           onClick={() =>
                             void handleCompleteShoppingListItem(entry).catch((caughtError) =>
                               setError(formatError(caughtError))
                             )
                           }
                         >
-                          Куплено
+                          {isActionPending(`shopping:bought:${entry.id}`) ? "Отмечаем..." : "Куплено"}
                         </button>
                       </div>
                     </article>
@@ -2349,9 +2403,12 @@ export default function HomePage() {
               aria-label="Название набора"
               placeholder="Новый набор"
               value={groupName}
+              disabled={isActionPending("group:create")}
               onChange={(event) => setGroupName(event.target.value)}
             />
-            <button type="submit">Добавить</button>
+            <button type="submit" disabled={isActionPending("group:create") || !groupName.trim()}>
+              {isActionPending("group:create") ? "Добавляем..." : "Добавить"}
+            </button>
           </form>
 
           <div className="category-row" aria-label="Наборы">
@@ -2411,6 +2468,7 @@ export default function HomePage() {
                 <select
                   aria-label="Товар для набора"
                   value={groupItemId}
+                  disabled={isActionPending("group:item:add")}
                   onChange={(event) => setGroupItemId(event.target.value)}
                 >
                   <option value="">Выберите товар</option>
@@ -2425,7 +2483,12 @@ export default function HomePage() {
                       </option>
                     ))}
                 </select>
-                <button type="submit">Добавить</button>
+                <button
+                  type="submit"
+                  disabled={isActionPending("group:item:add") || !groupItemId}
+                >
+                  {isActionPending("group:item:add") ? "Добавляем..." : "Добавить"}
+                </button>
               </form>
 
               <div className="item-list">
@@ -2878,34 +2941,34 @@ export default function HomePage() {
               </p>
             ) : null}
 
-            <CategoryReminderBulkSettings
+            <ReminderSettingsSection
+              title="Категории"
+              emptyMessage="Создайте категорию, чтобы настроить цикл проверки."
+              saveLabel="Сохранить категории"
+              isSaving={savingReminderKeys.includes("CATEGORY:SECTION")}
               rows={categories.map((category) => ({
                 id: category.id,
+                entityType: "CATEGORY",
                 title: category.name,
                 subtitle: category.nextCheckAt
                   ? `Следующая: ${formatDate(category.nextCheckAt)}`
-                  : "Дата не задана",
-                usageCycleDays: category.usageCycleDays,
-                reminderEnabled: category.reminderEnabled
+                  : "Дата не задана"
               }))}
-              selectedIds={selectedReminderCategoryIds}
-              draft={categoryReminderDraft}
-              isSaving={savingReminderKeys.includes("CATEGORY:BULK")}
-              onDraftChange={(draft) => {
-                setCategoryReminderDraft(draft);
-                setReminderSettingsMessage(null);
-              }}
-              onSelectionChange={setSelectedReminderCategoryIds}
+              drafts={reminderDrafts}
+              onDraftChange={updateReminderDraft}
               onSave={() =>
-                void handleSaveSelectedCategoryReminderSettings().catch((caughtError) =>
-                  setError(formatError(caughtError))
+                void handleSaveReminderSettingsGroup(
+                  "CATEGORY",
+                  categories.map((category) => category.id)
                 )
               }
             />
 
-            <ReminderSettingsGroup
+            <ReminderSettingsSection
               title="Наборы"
               emptyMessage="Создайте набор, чтобы настроить совместную проверку."
+              saveLabel="Сохранить наборы"
+              isSaving={savingReminderKeys.includes("GROUP:SECTION")}
               rows={groups.map((group) => ({
                 id: group.id,
                 entityType: "GROUP",
@@ -2916,49 +2979,36 @@ export default function HomePage() {
               }))}
               drafts={reminderDrafts}
               onDraftChange={updateReminderDraft}
-              savingKeys={savingReminderKeys}
-              onSave={handleSaveReminderSettings}
+              onSave={() =>
+                void handleSaveReminderSettingsGroup(
+                  "GROUP",
+                  groups.map((group) => group.id)
+                )
+              }
             />
 
-            <section className="reminder-settings-group">
-              <h3>Товары</h3>
-              {items.length ? (
-                <>
-                  <div className="reminder-item-picker">
-                    <select
-                      aria-label="Добавить товар в настройки напоминаний"
-                      value={selectedReminderItemId}
-                      onChange={(event) => setSelectedReminderItemId(event.target.value)}
-                    >
-                      <option value="">Выбрать товар</option>
-                      {items.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <ReminderSettingsGroup
-                    title="Настроенные товары"
-                    emptyMessage="Выберите товар, чтобы настроить индивидуальную проверку."
-                    rows={configuredReminderItems.map((item) => ({
-                      id: item.id,
-                      entityType: "ITEM",
-                      title: item.name,
-                      subtitle: item.nextCheckAt
-                        ? `Следующая: ${formatDate(item.nextCheckAt)}`
-                        : "Дата не задана"
-                    }))}
-                    drafts={reminderDrafts}
-                    onDraftChange={updateReminderDraft}
-                    savingKeys={savingReminderKeys}
-                    onSave={handleSaveReminderSettings}
-                  />
-                </>
-              ) : (
-                <p className="empty">Добавьте товар, чтобы настроить индивидуальную проверку.</p>
-              )}
-            </section>
+            <ReminderSettingsSection
+              title="Товары"
+              emptyMessage="Добавьте товар, чтобы настроить индивидуальную проверку."
+              saveLabel="Сохранить товары"
+              isSaving={savingReminderKeys.includes("ITEM:SECTION")}
+              rows={items.map((item) => ({
+                id: item.id,
+                entityType: "ITEM",
+                title: item.name,
+                subtitle: item.nextCheckAt
+                  ? `Следующая: ${formatDate(item.nextCheckAt)}`
+                  : "Дата не задана"
+              }))}
+              drafts={reminderDrafts}
+              onDraftChange={updateReminderDraft}
+              onSave={() =>
+                void handleSaveReminderSettingsGroup(
+                  "ITEM",
+                  items.map((item) => item.id)
+                )
+              }
+            />
           </section>
 
           <div className="settings-actions">
@@ -3007,142 +3057,20 @@ function BrandWord() {
   );
 }
 
-function CategoryReminderBulkSettings({
-  rows,
-  selectedIds,
-  draft,
-  isSaving,
-  onDraftChange,
-  onSelectionChange,
-  onSave
-}: {
-  rows: {
-    id: string;
-    title: string;
-    subtitle: string;
-    usageCycleDays: number | null;
-    reminderEnabled: boolean;
-  }[];
-  selectedIds: string[];
-  draft: ReminderDraft;
-  isSaving: boolean;
-  onDraftChange: (draft: ReminderDraft) => void;
-  onSelectionChange: (ids: string[]) => void;
-  onSave: () => void;
-}) {
-  const selectedIdSet = new Set(selectedIds);
-  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
-
-  return (
-    <section className="reminder-settings-group">
-      <div className="reminder-group-header">
-        <div>
-          <h3>Категории</h3>
-          <p>Выберите категории и примените один цикл проверки.</p>
-        </div>
-        {rows.length ? (
-          <button
-            className="ghost-button"
-            type="button"
-            disabled={isSaving}
-            onClick={() => onSelectionChange(allSelected ? [] : rows.map((row) => row.id))}
-          >
-            {allSelected ? "Снять все" : "Выбрать все"}
-          </button>
-        ) : null}
-      </div>
-
-      {rows.length ? (
-        <>
-          <div className="reminder-bulk-controls">
-            <label className="reminder-toggle">
-              <input
-                aria-label="Включить напоминания для выбранных категорий"
-                checked={draft.reminderEnabled}
-                disabled={isSaving}
-                type="checkbox"
-                onChange={(event) =>
-                  onDraftChange({
-                    ...draft,
-                    reminderEnabled: event.target.checked
-                  })
-                }
-              />
-              <span>Напоминать</span>
-            </label>
-            <input
-              aria-label="Цикл проверки для выбранных категорий"
-              disabled={isSaving}
-              inputMode="numeric"
-              min="1"
-              placeholder="Дней"
-              type="number"
-              value={draft.usageCycleDays}
-              onChange={(event) =>
-                onDraftChange({
-                  ...draft,
-                  usageCycleDays: event.target.value
-                })
-              }
-            />
-            <button
-              type="button"
-              disabled={isSaving || selectedIds.length === 0}
-              onClick={onSave}
-            >
-              {isSaving ? "Сохраняем..." : `Сохранить выбранные (${selectedIds.length})`}
-            </button>
-          </div>
-
-          <div className="reminder-settings-list">
-            {rows.map((row) => {
-              const checked = selectedIdSet.has(row.id);
-
-              return (
-                <label className="reminder-settings-row reminder-category-row" key={row.id}>
-                  <input
-                    aria-label={`Выбрать категорию ${row.title}`}
-                    checked={checked}
-                    disabled={isSaving}
-                    type="checkbox"
-                    onChange={(event) =>
-                      onSelectionChange(
-                        event.target.checked
-                          ? [...selectedIds, row.id]
-                          : selectedIds.filter((id) => id !== row.id)
-                      )
-                    }
-                  />
-                  <div>
-                    <h4>{row.title}</h4>
-                    <p>
-                      {row.subtitle} · {row.reminderEnabled ? "включено" : "выключено"} ·{" "}
-                      {row.usageCycleDays ? `${row.usageCycleDays} дн.` : "цикл не задан"}
-                    </p>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <p className="empty">Создайте категорию, чтобы настроить цикл проверки.</p>
-      )}
-    </section>
-  );
-}
-
-function ReminderSettingsGroup({
+function ReminderSettingsSection({
   title,
   emptyMessage,
+  saveLabel,
+  isSaving,
   rows,
   drafts,
   onDraftChange,
-  savingKeys,
   onSave
 }: {
   title: string;
   emptyMessage: string;
+  saveLabel: string;
+  isSaving: boolean;
   rows: {
     id: string;
     entityType: InAppReminder["entityType"];
@@ -3151,12 +3079,21 @@ function ReminderSettingsGroup({
   }[];
   drafts: Record<string, ReminderDraft>;
   onDraftChange: (key: string, draft: ReminderDraft) => void;
-  savingKeys: string[];
-  onSave: (entityType: InAppReminder["entityType"], entityId: string) => Promise<void>;
+  onSave: () => void;
 }) {
   return (
     <section className="reminder-settings-group">
-      <h3>{title}</h3>
+      <div className="reminder-group-header">
+        <div>
+          <h3>{title}</h3>
+          {rows.length ? <p>Настройте каждую карточку и сохраните секцию целиком.</p> : null}
+        </div>
+        {rows.length ? (
+          <button type="button" disabled={isSaving} onClick={onSave}>
+            {isSaving ? "Сохраняем..." : saveLabel}
+          </button>
+        ) : null}
+      </div>
       {rows.length ? (
         <div className="reminder-settings-list">
           {rows.map((row) => {
@@ -3165,7 +3102,6 @@ function ReminderSettingsGroup({
               usageCycleDays: "",
               reminderEnabled: true
             };
-            const isSaving = savingKeys.includes(key);
 
             return (
               <article className="reminder-settings-row" key={key}>
@@ -3203,14 +3139,6 @@ function ReminderSettingsGroup({
                     })
                   }
                 />
-                <button
-                  className="ghost-button"
-                  type="button"
-                  disabled={isSaving}
-                  onClick={() => void onSave(row.entityType, row.id)}
-                >
-                  {isSaving ? "Сохраняем..." : "Сохранить"}
-                </button>
               </article>
             );
           })}
