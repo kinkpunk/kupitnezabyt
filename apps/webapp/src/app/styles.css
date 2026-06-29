@@ -828,6 +828,28 @@ select {
   font-size: 14px;
 }
 
+.reminder-group-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.reminder-group-header p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.reminder-bulk-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
 .reminder-settings-list {
   display: grid;
   gap: 8px;
@@ -864,6 +886,16 @@ select {
 
 .reminder-settings-row input[type="number"] {
   width: 100%;
+}
+
+.reminder-category-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  cursor: pointer;
+}
+
+.reminder-category-row input[type="checkbox"] {
+  min-height: auto;
 }
 
 .reminder-toggle {
@@ -903,6 +935,16 @@ select {
 
   .workspace-row {
     grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .reminder-group-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .reminder-bulk-controls {
+    grid-template-columns: minmax(130px, 1fr) 96px auto;
     align-items: center;
   }
 

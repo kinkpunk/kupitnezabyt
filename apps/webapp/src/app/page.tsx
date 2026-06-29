@@ -144,6 +144,12 @@ type ReminderDraft = {
   reminderEnabled: boolean;
 };
 
+type WorkspaceAction =
+  | "invite"
+  | "transfer"
+  | `remove:${string}`
+  | `revoke:${string}`;
+
 type ActiveTab =
   | "archive"
   | "check"
@@ -179,6 +185,7 @@ export default function HomePage() {
   const [workspaceInvitations, setWorkspaceInvitations] = useState<WorkspaceInvitation[]>([]);
   const [workspaceInviteEmail, setWorkspaceInviteEmail] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
+  const [workspaceAction, setWorkspaceAction] = useState<WorkspaceAction | null>(null);
   const [devInvitationLink, setDevInvitationLink] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
@@ -225,6 +232,13 @@ export default function HomePage() {
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
+  const [categoryReminderDraft, setCategoryReminderDraft] = useState<ReminderDraft>({
+    usageCycleDays: "",
+    reminderEnabled: true
+  });
+  const [selectedReminderCategoryIds, setSelectedReminderCategoryIds] = useState<string[]>([]);
+  const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
+  const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
   const [selectedReminderItemId, setSelectedReminderItemId] = useState("");
   const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
 
@@ -447,6 +461,12 @@ export default function HomePage() {
 
     setReminderDrafts(nextDrafts);
   }, [categories, groups, items]);
+
+  useEffect(() => {
+    setSelectedReminderCategoryIds((current) =>
+      current.filter((categoryId) => categories.some((category) => category.id === categoryId))
+    );
+  }, [categories]);
 
   async function refreshActiveData(authToken = token) {
     if (!authToken) {
@@ -724,6 +744,27 @@ export default function HomePage() {
       ...current,
       [key]: draft
     }));
+    setReminderSettingsMessage(null);
+  }
+
+  function parseReminderCycleDays(draft: ReminderDraft): number | null {
+    const trimmedDays = draft.usageCycleDays.trim();
+    const usageCycleDays = trimmedDays ? Number(trimmedDays) : null;
+    if (usageCycleDays !== null && (!Number.isInteger(usageCycleDays) || usageCycleDays <= 0)) {
+      throw new Error("Цикл проверки должен быть целым числом дней.");
+    }
+
+    return usageCycleDays;
+  }
+
+  function setReminderSaving(key: string, isSaving: boolean) {
+    setSavingReminderKeys((current) => {
+      if (isSaving) {
+        return current.includes(key) ? current : [...current, key];
+      }
+
+      return current.filter((currentKey) => currentKey !== key);
+    });
   }
 
   async function handleSaveReminderSettings(
@@ -739,27 +780,60 @@ export default function HomePage() {
       return;
     }
 
-    const trimmedDays = draft.usageCycleDays.trim();
-    const usageCycleDays = trimmedDays ? Number(trimmedDays) : null;
-    if (usageCycleDays !== null && (!Number.isInteger(usageCycleDays) || usageCycleDays <= 0)) {
-      setError("Цикл проверки должен быть целым числом дней.");
+    const key = getReminderDraftKey(entityType, entityId);
+    try {
+      setError(null);
+      setReminderSettingsMessage(null);
+      setReminderSaving(key, true);
+      const input = {
+        usageCycleDays: parseReminderCycleDays(draft),
+        reminderEnabled: draft.reminderEnabled
+      };
+
+      if (entityType === "CATEGORY") {
+        await updateCategory(token, entityId, input);
+      } else if (entityType === "GROUP") {
+        await updateGroup(token, entityId, input);
+      } else {
+        await updateItem(token, entityId, input);
+      }
+
+      await refreshActiveData(token);
+      setReminderSettingsMessage("Настройки проверки сохранены.");
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+    } finally {
+      setReminderSaving(key, false);
+    }
+  }
+
+  async function handleSaveSelectedCategoryReminderSettings() {
+    if (!token || !selectedReminderCategoryIds.length) {
       return;
     }
 
-    const input = {
-      usageCycleDays,
-      reminderEnabled: draft.reminderEnabled
-    };
+    const bulkKey = "CATEGORY:BULK";
+    try {
+      setError(null);
+      setReminderSettingsMessage(null);
+      setReminderSaving(bulkKey, true);
+      const input = {
+        usageCycleDays: parseReminderCycleDays(categoryReminderDraft),
+        reminderEnabled: categoryReminderDraft.reminderEnabled
+      };
 
-    if (entityType === "CATEGORY") {
-      await updateCategory(token, entityId, input);
-    } else if (entityType === "GROUP") {
-      await updateGroup(token, entityId, input);
-    } else {
-      await updateItem(token, entityId, input);
+      await Promise.all(
+        selectedReminderCategoryIds.map((categoryId) => updateCategory(token, categoryId, input))
+      );
+      await refreshActiveData(token);
+      setReminderSettingsMessage(
+        `Настройки сохранены для ${selectedReminderCategoryIds.length} категорий.`
+      );
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+    } finally {
+      setReminderSaving(bulkKey, false);
     }
-
-    await refreshActiveData(token);
   }
 
   function handleOpenReminder(reminder: InAppReminder) {
@@ -1203,15 +1277,20 @@ export default function HomePage() {
     setError(null);
     setWorkspaceMessage(null);
     setDevInvitationLink(null);
-    const response = await createWorkspaceInvitation(
-      token,
-      activeWorkspace.id,
-      workspaceInviteEmail.trim()
-    );
-    setWorkspaceInviteEmail("");
-    setWorkspaceMessage(`Приглашение отправлено на ${response.invitation.email}.`);
-    setDevInvitationLink(response.devInvitationLink ?? null);
-    await refreshWorkspaceAccess(token, activeWorkspace.id);
+    setWorkspaceAction("invite");
+    try {
+      const response = await createWorkspaceInvitation(
+        token,
+        activeWorkspace.id,
+        workspaceInviteEmail.trim()
+      );
+      setWorkspaceInviteEmail("");
+      setWorkspaceMessage(`Приглашение отправлено на ${response.invitation.email}.`);
+      setDevInvitationLink(response.devInvitationLink ?? null);
+      await refreshWorkspaceAccess(token, activeWorkspace.id);
+    } finally {
+      setWorkspaceAction(null);
+    }
   }
 
   async function handleRevokeWorkspaceInvitation(invitation: WorkspaceInvitation) {
@@ -1222,10 +1301,15 @@ export default function HomePage() {
     setError(null);
     setWorkspaceMessage(null);
     setDevInvitationLink(null);
-    await revokeWorkspaceInvitation(token, invitation.id);
-    setWorkspaceMessage(`Приглашение для ${invitation.email} отозвано.`);
-    if (activeWorkspace) {
-      await refreshWorkspaceAccess(token, activeWorkspace.id);
+    setWorkspaceAction(`revoke:${invitation.id}`);
+    try {
+      await revokeWorkspaceInvitation(token, invitation.id);
+      setWorkspaceMessage(`Приглашение для ${invitation.email} отозвано.`);
+      if (activeWorkspace) {
+        await refreshWorkspaceAccess(token, activeWorkspace.id);
+      }
+    } finally {
+      setWorkspaceAction(null);
     }
   }
 
@@ -1242,10 +1326,15 @@ export default function HomePage() {
     setError(null);
     setWorkspaceMessage(null);
     setDevInvitationLink(null);
-    await removeWorkspaceMember(token, activeWorkspace.id, member.id);
-    setWorkspaceMessage(`Доступ для ${memberName} удален.`);
-    await refreshWorkspaces(token);
-    await refreshWorkspaceAccess(token, activeWorkspace.id);
+    setWorkspaceAction(`remove:${member.id}`);
+    try {
+      await removeWorkspaceMember(token, activeWorkspace.id, member.id);
+      setWorkspaceMessage(`Доступ для ${memberName} удален.`);
+      await refreshWorkspaces(token);
+      await refreshWorkspaceAccess(token, activeWorkspace.id);
+    } finally {
+      setWorkspaceAction(null);
+    }
   }
 
   async function handleTransferWorkspaceOwnership(member: WorkspaceMember) {
@@ -1261,10 +1350,15 @@ export default function HomePage() {
     setError(null);
     setWorkspaceMessage(null);
     setDevInvitationLink(null);
-    await transferWorkspaceOwnership(token, activeWorkspace.id, member.id);
-    setWorkspaceMessage(`${memberName} теперь владелец списка "${activeWorkspace.name}".`);
-    await refreshWorkspaces(token);
-    await refreshActiveData(token);
+    setWorkspaceAction("transfer");
+    try {
+      await transferWorkspaceOwnership(token, activeWorkspace.id, member.id);
+      setWorkspaceMessage(`${memberName} теперь владелец списка "${activeWorkspace.name}".`);
+      await refreshWorkspaces(token);
+      await refreshActiveData(token);
+    } finally {
+      setWorkspaceAction(null);
+    }
   }
 
   async function handleExportUserData() {
@@ -2632,6 +2726,7 @@ export default function HomePage() {
                     {activeWorkspace.memberCount}{" "}
                     {activeWorkspace.memberCount === 1 ? "участник" : "участника"}
                   </p>
+                  <p>Приглашенные участники видят и редактируют этот общий список целиком.</p>
                 </div>
                 <Users aria-hidden="true" size={22} />
               </div>
@@ -2652,11 +2747,16 @@ export default function HomePage() {
                       inputMode="email"
                       placeholder="email участника"
                       value={workspaceInviteEmail}
+                      disabled={workspaceAction === "invite"}
                       onChange={(event) => setWorkspaceInviteEmail(event.target.value)}
                     />
-                    <button type="submit" aria-label="Отправить приглашение">
+                    <button
+                      type="submit"
+                      aria-label="Отправить приглашение"
+                      disabled={workspaceAction === "invite" || !workspaceInviteEmail.trim()}
+                    >
                       <Send aria-hidden="true" size={18} />
-                      <span>Пригласить</span>
+                      <span>{workspaceAction === "invite" ? "Отправляем..." : "Пригласить"}</span>
                     </button>
                   </form>
 
@@ -2686,6 +2786,7 @@ export default function HomePage() {
                                     <button
                                       className="ghost-button"
                                       type="button"
+                                      disabled={workspaceAction !== null}
                                       onClick={() =>
                                         void handleTransferWorkspaceOwnership(member).catch(
                                           (caughtError) => setError(formatError(caughtError))
@@ -2693,12 +2794,15 @@ export default function HomePage() {
                                       }
                                     >
                                       <Crown aria-hidden="true" size={17} />
-                                      <span>Передать</span>
+                                      <span>
+                                        {workspaceAction === "transfer" ? "Передаем..." : "Передать"}
+                                      </span>
                                     </button>
                                     <button
                                       className="ghost-button danger-button icon-button"
                                       type="button"
                                       aria-label={`Удалить доступ для ${formatWorkspaceMemberName(member)}`}
+                                      disabled={workspaceAction !== null}
                                       onClick={() =>
                                         void handleRemoveWorkspaceMember(member).catch(
                                           (caughtError) => setError(formatError(caughtError))
@@ -2731,13 +2835,16 @@ export default function HomePage() {
                               <button
                                 className="ghost-button"
                                 type="button"
+                                disabled={workspaceAction !== null}
                                 onClick={() =>
                                   void handleRevokeWorkspaceInvitation(invitation).catch(
                                     (caughtError) => setError(formatError(caughtError))
                                   )
                                 }
                               >
-                                Отозвать
+                                {workspaceAction === `revoke:${invitation.id}`
+                                  ? "Отзываем..."
+                                  : "Отозвать"}
                               </button>
                             </article>
                           ))
@@ -2765,21 +2872,32 @@ export default function HomePage() {
               </div>
             </div>
 
-            <ReminderSettingsGroup
-              title="Категории"
-              emptyMessage="Создайте категорию, чтобы настроить цикл проверки."
+            {reminderSettingsMessage ? (
+              <p className="success-message" role="status">
+                {reminderSettingsMessage}
+              </p>
+            ) : null}
+
+            <CategoryReminderBulkSettings
               rows={categories.map((category) => ({
                 id: category.id,
-                entityType: "CATEGORY",
                 title: category.name,
                 subtitle: category.nextCheckAt
                   ? `Следующая: ${formatDate(category.nextCheckAt)}`
-                  : "Дата не задана"
+                  : "Дата не задана",
+                usageCycleDays: category.usageCycleDays,
+                reminderEnabled: category.reminderEnabled
               }))}
-              drafts={reminderDrafts}
-              onDraftChange={updateReminderDraft}
-              onSave={(entityType, entityId) =>
-                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
+              selectedIds={selectedReminderCategoryIds}
+              draft={categoryReminderDraft}
+              isSaving={savingReminderKeys.includes("CATEGORY:BULK")}
+              onDraftChange={(draft) => {
+                setCategoryReminderDraft(draft);
+                setReminderSettingsMessage(null);
+              }}
+              onSelectionChange={setSelectedReminderCategoryIds}
+              onSave={() =>
+                void handleSaveSelectedCategoryReminderSettings().catch((caughtError) =>
                   setError(formatError(caughtError))
                 )
               }
@@ -2798,11 +2916,8 @@ export default function HomePage() {
               }))}
               drafts={reminderDrafts}
               onDraftChange={updateReminderDraft}
-              onSave={(entityType, entityId) =>
-                void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
-                  setError(formatError(caughtError))
-                )
-              }
+              savingKeys={savingReminderKeys}
+              onSave={handleSaveReminderSettings}
             />
 
             <section className="reminder-settings-group">
@@ -2836,11 +2951,8 @@ export default function HomePage() {
                     }))}
                     drafts={reminderDrafts}
                     onDraftChange={updateReminderDraft}
-                    onSave={(entityType, entityId) =>
-                      void handleSaveReminderSettings(entityType, entityId).catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
+                    savingKeys={savingReminderKeys}
+                    onSave={handleSaveReminderSettings}
                   />
                 </>
               ) : (
@@ -2895,12 +3007,138 @@ function BrandWord() {
   );
 }
 
+function CategoryReminderBulkSettings({
+  rows,
+  selectedIds,
+  draft,
+  isSaving,
+  onDraftChange,
+  onSelectionChange,
+  onSave
+}: {
+  rows: {
+    id: string;
+    title: string;
+    subtitle: string;
+    usageCycleDays: number | null;
+    reminderEnabled: boolean;
+  }[];
+  selectedIds: string[];
+  draft: ReminderDraft;
+  isSaving: boolean;
+  onDraftChange: (draft: ReminderDraft) => void;
+  onSelectionChange: (ids: string[]) => void;
+  onSave: () => void;
+}) {
+  const selectedIdSet = new Set(selectedIds);
+  const allSelected = rows.length > 0 && selectedIds.length === rows.length;
+
+  return (
+    <section className="reminder-settings-group">
+      <div className="reminder-group-header">
+        <div>
+          <h3>Категории</h3>
+          <p>Выберите категории и примените один цикл проверки.</p>
+        </div>
+        {rows.length ? (
+          <button
+            className="ghost-button"
+            type="button"
+            disabled={isSaving}
+            onClick={() => onSelectionChange(allSelected ? [] : rows.map((row) => row.id))}
+          >
+            {allSelected ? "Снять все" : "Выбрать все"}
+          </button>
+        ) : null}
+      </div>
+
+      {rows.length ? (
+        <>
+          <div className="reminder-bulk-controls">
+            <label className="reminder-toggle">
+              <input
+                aria-label="Включить напоминания для выбранных категорий"
+                checked={draft.reminderEnabled}
+                disabled={isSaving}
+                type="checkbox"
+                onChange={(event) =>
+                  onDraftChange({
+                    ...draft,
+                    reminderEnabled: event.target.checked
+                  })
+                }
+              />
+              <span>Напоминать</span>
+            </label>
+            <input
+              aria-label="Цикл проверки для выбранных категорий"
+              disabled={isSaving}
+              inputMode="numeric"
+              min="1"
+              placeholder="Дней"
+              type="number"
+              value={draft.usageCycleDays}
+              onChange={(event) =>
+                onDraftChange({
+                  ...draft,
+                  usageCycleDays: event.target.value
+                })
+              }
+            />
+            <button
+              type="button"
+              disabled={isSaving || selectedIds.length === 0}
+              onClick={onSave}
+            >
+              {isSaving ? "Сохраняем..." : `Сохранить выбранные (${selectedIds.length})`}
+            </button>
+          </div>
+
+          <div className="reminder-settings-list">
+            {rows.map((row) => {
+              const checked = selectedIdSet.has(row.id);
+
+              return (
+                <label className="reminder-settings-row reminder-category-row" key={row.id}>
+                  <input
+                    aria-label={`Выбрать категорию ${row.title}`}
+                    checked={checked}
+                    disabled={isSaving}
+                    type="checkbox"
+                    onChange={(event) =>
+                      onSelectionChange(
+                        event.target.checked
+                          ? [...selectedIds, row.id]
+                          : selectedIds.filter((id) => id !== row.id)
+                      )
+                    }
+                  />
+                  <div>
+                    <h4>{row.title}</h4>
+                    <p>
+                      {row.subtitle} · {row.reminderEnabled ? "включено" : "выключено"} ·{" "}
+                      {row.usageCycleDays ? `${row.usageCycleDays} дн.` : "цикл не задан"}
+                    </p>
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <p className="empty">Создайте категорию, чтобы настроить цикл проверки.</p>
+      )}
+    </section>
+  );
+}
+
 function ReminderSettingsGroup({
   title,
   emptyMessage,
   rows,
   drafts,
   onDraftChange,
+  savingKeys,
   onSave
 }: {
   title: string;
@@ -2913,7 +3151,8 @@ function ReminderSettingsGroup({
   }[];
   drafts: Record<string, ReminderDraft>;
   onDraftChange: (key: string, draft: ReminderDraft) => void;
-  onSave: (entityType: InAppReminder["entityType"], entityId: string) => void;
+  savingKeys: string[];
+  onSave: (entityType: InAppReminder["entityType"], entityId: string) => Promise<void>;
 }) {
   return (
     <section className="reminder-settings-group">
@@ -2926,6 +3165,7 @@ function ReminderSettingsGroup({
               usageCycleDays: "",
               reminderEnabled: true
             };
+            const isSaving = savingKeys.includes(key);
 
             return (
               <article className="reminder-settings-row" key={key}>
@@ -2937,6 +3177,7 @@ function ReminderSettingsGroup({
                   <input
                     aria-label={`Напоминания: ${row.title}`}
                     checked={draft.reminderEnabled}
+                    disabled={isSaving}
                     type="checkbox"
                     onChange={(event) =>
                       onDraftChange(key, {
@@ -2949,6 +3190,7 @@ function ReminderSettingsGroup({
                 </label>
                 <input
                   aria-label={`Цикл проверки: ${row.title}`}
+                  disabled={isSaving}
                   inputMode="numeric"
                   min="1"
                   placeholder="Дней"
@@ -2964,9 +3206,10 @@ function ReminderSettingsGroup({
                 <button
                   className="ghost-button"
                   type="button"
-                  onClick={() => onSave(row.entityType, row.id)}
+                  disabled={isSaving}
+                  onClick={() => void onSave(row.entityType, row.id)}
                 >
-                  Сохранить
+                  {isSaving ? "Сохраняем..." : "Сохранить"}
                 </button>
               </article>
             );
