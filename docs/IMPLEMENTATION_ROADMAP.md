@@ -772,9 +772,10 @@ Not implemented yet:
 
 - Full two-account E2E coverage for invite acceptance, shared item editing, and
   cross-account shopping-list visibility.
-- Member removal, role changes, and ownership transfer.
-- Privacy/export/deletion rules for shared workspaces; these are handled in
-  Slice 31.
+- Fine-grained role changes beyond the fixed owner/editor behavior.
+- Invite acceptance for emails that have not signed in and verified an account
+  yet; current invitations require an existing verified email user.
+- Privacy/export/deletion rules for shared workspaces are handled in Slice 31.
 
 ### Slice 31: Privacy, Export, And Deletion Hardening
 
@@ -818,6 +819,68 @@ Not implemented yet:
 - Full two-account browser E2E for ownership transfer followed by continued
   shared-list editing.
 - Fine-grained role management beyond the fixed owner/editor behavior.
+
+### Slice 32: Collaboration Beta Release Hardening
+
+Status: planned.
+
+Goal: make the implemented shared-list collaboration safe and understandable
+enough to show to real users as a beta feature, without pretending it is a full
+family-account system.
+
+Product scope:
+
+- Keep sharing at the workspace/list level. Individual `ItemGroup` sharing is
+  not part of this slice.
+- Keep fixed roles for now: `OWNER` manages access, `EDITOR` can work with the
+  shared list, and `VIEWER` remains API-supported/read-only if exposed later.
+- Treat collaboration as beta in copy and docs until two-account production
+  smoke is reliable.
+
+Backend:
+
+- Allow owners to create invitations for an email that is not yet an existing
+  verified user.
+- Preserve the security rule that invitation acceptance only succeeds after the
+  signed-in user has a verified email matching the invitation email.
+- Ensure accepting an invite for a newly registered email creates membership in
+  the invited workspace and selects that workspace in the webapp.
+- Keep invitation tokens hashed, single-use, expiring, revocable, and scoped to
+  the invited email.
+- Add or confirm API coverage for inviting a not-yet-registered email,
+  accepting after magic-link signup, duplicate invite/member behavior, revoked
+  invite rejection, and cross-user isolation.
+
+Webapp:
+
+- Make the Settings copy explicit that sharing grants access to the whole
+  active list/workspace, not an individual group.
+- Show pending invite status clearly, including that the recipient may need to
+  sign in with the invited email first.
+- After accepting an invitation, surface a success message and switch to the
+  invited workspace.
+- Keep loading/disabled states for invite, revoke, remove member, and ownership
+  transfer actions.
+- Add a small manual release checklist in docs for owner and invited-user flows.
+
+Tests:
+
+- API route tests for invites to non-existing users and acceptance after account
+  creation.
+- Browser E2E or documented manual smoke for two real accounts:
+  owner invites, invitee accepts, both see the workspace, editor changes an
+  item/status/shopping row, owner removes access, removed user loses access.
+- Ownership transfer smoke: owner transfers, new owner can manage members, old
+  owner remains editor.
+
+Release acceptance:
+
+- Production-like two-account smoke passes on deployed API/webapp.
+- No sensitive invite token, JWT, Telegram init data, or private item notes are
+  logged.
+- Export and account deletion behavior matches Slice 31 rules.
+- Documentation clearly marks collaboration as beta and lists the current
+  limits: whole-list sharing, fixed roles, no per-group sharing, no audit log.
 
 ## Slice 1 Baseline
 
