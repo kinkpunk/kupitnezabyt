@@ -38,6 +38,7 @@ declare global {
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const tokenStorageKey = "kupitnezabyt.token";
 const activeWorkspaceStorageKey = "kupitnezabyt.activeWorkspaceId";
+const pendingWorkspaceInvitationStorageKey = "kupitnezabyt.pendingWorkspaceInvitationToken";
 
 type TelegramThemeParams = {
   bg_color?: string;
@@ -62,9 +63,11 @@ export async function login(): Promise<string> {
   const oauthToken = searchParams.get("oauth_token");
   const oauthError = searchParams.get("oauth_error");
   const workspaceInvitationToken = searchParams.get("workspace_invite_token");
+  savePendingWorkspaceInvitation(workspaceInvitationToken);
 
   if (oauthToken) {
     window.localStorage.setItem(tokenStorageKey, oauthToken);
+    await acceptWorkspaceInvitationIfPresent(oauthToken, workspaceInvitationToken);
     window.history.replaceState({}, "", window.location.pathname);
     return oauthToken;
   }
@@ -122,6 +125,7 @@ export async function login(): Promise<string> {
 
 export function clearSavedToken(): void {
   window.localStorage.removeItem(tokenStorageKey);
+  clearPendingWorkspaceInvitation();
   clearActiveWorkspaceId();
 }
 
@@ -215,10 +219,26 @@ async function acceptWorkspaceInvitationIfPresent(
   token: string,
   invitationToken: string | null
 ): Promise<void> {
-  if (invitationToken) {
-    const response = await acceptWorkspaceInvitation(token, invitationToken);
+  const pendingInvitationToken = invitationToken ?? getPendingWorkspaceInvitation();
+  if (pendingInvitationToken) {
+    const response = await acceptWorkspaceInvitation(token, pendingInvitationToken);
     setActiveWorkspaceId(response.member.workspaceId);
+    clearPendingWorkspaceInvitation();
   }
+}
+
+function savePendingWorkspaceInvitation(invitationToken: string | null): void {
+  if (invitationToken) {
+    window.localStorage.setItem(pendingWorkspaceInvitationStorageKey, invitationToken);
+  }
+}
+
+function getPendingWorkspaceInvitation(): string | null {
+  return window.localStorage.getItem(pendingWorkspaceInvitationStorageKey);
+}
+
+function clearPendingWorkspaceInvitation(): void {
+  window.localStorage.removeItem(pendingWorkspaceInvitationStorageKey);
 }
 
 function prepareTelegramWebApp(): void {

@@ -186,6 +186,7 @@ export default function HomePage() {
   const [workspaceInviteEmail, setWorkspaceInviteEmail] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
   const [workspaceAction, setWorkspaceAction] = useState<WorkspaceAction | null>(null);
+  const [isLoadingWorkspaceAccess, setIsLoadingWorkspaceAccess] = useState(false);
   const [devInvitationLink, setDevInvitationLink] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
   const [recommendationSourceItemName, setRecommendationSourceItemName] = useState<string | null>(
@@ -493,6 +494,8 @@ export default function HomePage() {
     setActiveWorkspaceIdState(nextActiveWorkspace?.id ?? null);
     if (nextActiveWorkspace) {
       setActiveWorkspaceId(nextActiveWorkspace.id);
+    } else {
+      clearActiveWorkspaceId();
     }
 
     return nextWorkspaces;
@@ -514,9 +517,20 @@ export default function HomePage() {
       return;
     }
 
-    const response = await getWorkspaceInvitations(authToken, workspaceId);
-    setWorkspaceMembers(response.members);
-    setWorkspaceInvitations(response.invitations);
+    setIsLoadingWorkspaceAccess(true);
+    try {
+      const response = await getWorkspaceInvitations(authToken, workspaceId);
+      setWorkspaceMembers(response.members);
+      setWorkspaceInvitations(response.invitations);
+      setWorkspaceLoadFailed(false);
+    } catch (caughtError) {
+      setWorkspaceMembers([]);
+      setWorkspaceInvitations([]);
+      setWorkspaceLoadFailed(true);
+      throw caughtError;
+    } finally {
+      setIsLoadingWorkspaceAccess(false);
+    }
   }
 
   async function refreshArchivedData(authToken = token) {
@@ -1307,6 +1321,8 @@ export default function HomePage() {
     setDevInvitationLink(null);
     setActiveWorkspaceId(workspaceId);
     setActiveWorkspaceIdState(workspaceId);
+    setWorkspaceMembers([]);
+    setWorkspaceInvitations([]);
     clearWorkspaceScopedState();
     await refreshActiveData(token);
     await refreshActiveCheckSession(token);
@@ -2873,7 +2889,11 @@ export default function HomePage() {
                     <div>
                       <h3>Участники</h3>
                       <div className="workspace-list">
-                        {workspaceMembers.length ? (
+                        {isLoadingWorkspaceAccess ? (
+                          <p className="empty">Загружаем участников...</p>
+                        ) : workspaceLoadFailed ? (
+                          <p className="empty">Не удалось загрузить участников. Обновите доступ.</p>
+                        ) : workspaceMembers.length ? (
                           workspaceMembers.map((member) => {
                             const isCurrentOwner = member.user.id === activeWorkspace.ownerId;
 
@@ -2919,7 +2939,7 @@ export default function HomePage() {
                             );
                           })
                         ) : (
-                          <p className="empty">Участники загрузятся при открытии настроек.</p>
+                          <p className="empty">Участников пока нет.</p>
                         )}
                       </div>
                     </div>
@@ -2927,7 +2947,21 @@ export default function HomePage() {
                     <div>
                       <h3>Приглашения</h3>
                       <div className="workspace-list">
-                        {workspaceInvitations.length ? (
+                        {isLoadingWorkspaceAccess ? (
+                          <p className="empty">Загружаем приглашения...</p>
+                        ) : workspaceLoadFailed ? (
+                          <button
+                            className="ghost-button workspace-retry-button"
+                            type="button"
+                            onClick={() =>
+                              void refreshWorkspaceAccess(token, activeWorkspace.id).catch(
+                                (caughtError) => setError(formatError(caughtError))
+                              )
+                            }
+                          >
+                            Обновить доступ
+                          </button>
+                        ) : workspaceInvitations.length ? (
                           workspaceInvitations.map((invitation) => (
                             <article className="workspace-row" key={invitation.id}>
                               <div>
