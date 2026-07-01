@@ -172,14 +172,6 @@ select {
   width: 100%;
 }
 
-.workspace-share-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-}
-
 .eyebrow,
 .section-heading p,
 .item-card p,

@@ -255,7 +255,7 @@ export default function HomePage() {
   );
   const canManageActiveWorkspace = activeWorkspace?.role === "OWNER";
   const showWorkspaceSwitcher = workspaces.length > 1;
-  const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
+  const showShareEntryPoint = Boolean(token && canManageActiveWorkspace);
 
   const visibleItems = useMemo(
     () =>
@@ -1775,49 +1775,33 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header
-        className={
-          showWorkspaceSwitcher || showShareEntryPoint ? "topbar topbar-with-workspace" : "topbar"
-        }
-      >
+      <header className={showWorkspaceSwitcher ? "topbar topbar-with-workspace" : "topbar"}>
         <div className="brand-lockup">
           <img alt="" className="brand-logo" src="/logo.png" />
           <h1>
             <BrandWord />
           </h1>
         </div>
-        {activeWorkspace || showShareEntryPoint ? (
+        {activeWorkspace && showWorkspaceSwitcher ? (
           <div className="workspace-actions">
-            {activeWorkspace && showWorkspaceSwitcher ? (
-              <label className="workspace-switcher">
-                <span>Список</span>
-                <select
-                  aria-label="Активный список"
-                  value={activeWorkspace.id}
-                  onChange={(event) =>
-                    void handleSelectWorkspace(event.target.value).catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  {workspaces.map((workspace) => (
-                    <option key={workspace.id} value={workspace.id}>
-                      {workspace.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            {showShareEntryPoint ? (
-              <button
-                className="ghost-button workspace-share-button"
-                type="button"
-                onClick={() => setActiveTab("settings")}
+            <label className="workspace-switcher">
+              <span>Список</span>
+              <select
+                aria-label="Активный список"
+                value={activeWorkspace.id}
+                onChange={(event) =>
+                  void handleSelectWorkspace(event.target.value).catch((caughtError) =>
+                    setError(formatError(caughtError))
+                  )
+                }
               >
-                <Users aria-hidden="true" size={17} />
-                <span>Поделиться</span>
-              </button>
-            ) : null}
+                {workspaces.map((workspace) => (
+                  <option key={workspace.id} value={workspace.id}>
+                    {workspace.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         ) : null}
       </header>
@@ -2040,13 +2024,25 @@ export default function HomePage() {
               <h2>Категории</h2>
               <p>{categories.length ? `${categories.length} активных` : "Пока нет"}</p>
             </div>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => setShowCategoryForm((current) => !current)}
-            >
-              {showCategoryForm ? "Скрыть" : "Новая"}
-            </button>
+            <div className="icon-actions">
+              {showShareEntryPoint ? (
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setActiveTab("settings")}
+                >
+                  <Users aria-hidden="true" size={17} />
+                  <span>Поделиться списком</span>
+                </button>
+              ) : null}
+              <button
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowCategoryForm((current) => !current)}
+              >
+                {showCategoryForm ? "Скрыть" : "Новая"}
+              </button>
+            </div>
           </div>
 
           {showCategoryForm ? (
