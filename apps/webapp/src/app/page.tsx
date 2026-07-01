@@ -255,7 +255,7 @@ export default function HomePage() {
   );
   const canManageActiveWorkspace = activeWorkspace?.role === "OWNER";
   const showWorkspaceSwitcher = workspaces.length > 1;
-  const showShareEntryPoint = Boolean(token && canManageActiveWorkspace);
+  const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
 
   const visibleItems = useMemo(
     () =>
