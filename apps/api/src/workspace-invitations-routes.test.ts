@@ -311,6 +311,57 @@ describe("workspace invitation routes", () => {
     await app.close();
   });
 
+  it("keeps a created invitation when email delivery fails", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом",
+      ownerId: "owner-1"
+    });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "member-1",
+      email: "member@example.com",
+      emailVerifiedAt: new Date("2026-06-25T10:00:00.000Z")
+    });
+    mockPrisma.workspaceMember.findUnique.mockResolvedValue(null);
+    mockPrisma.workspaceInvitation.create.mockResolvedValue({
+      id: "invitation-1",
+      workspaceId: "workspace-1",
+      email: "member@example.com",
+      role: "EDITOR",
+      expiresAt: new Date("2026-07-02T10:00:00.000Z")
+    });
+    mockSendWorkspaceInvitationEmail.mockRejectedValue(new Error("EMAIL_SEND_FAILED"));
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "member@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      sent: false,
+      invitation: {
+        id: "invitation-1",
+        workspaceId: "workspace-1",
+        email: "member@example.com",
+        role: "EDITOR",
+        expiresAt: "2026-07-02T10:00:00.000Z"
+      }
+    });
+
+    await app.close();
+  });
+
   it("lists pending invitations and members for workspace owners", async () => {
     const { buildServer } = await import("./server.js");
     const { signToken } = await import("./auth.js");

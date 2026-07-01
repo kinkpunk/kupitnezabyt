@@ -1347,7 +1347,11 @@ export default function HomePage() {
         workspaceInviteEmail.trim()
       );
       setWorkspaceInviteEmail("");
-      setWorkspaceMessage(`Доступ к списку отправлен на ${response.invitation.email}.`);
+      setWorkspaceMessage(
+        response.sent
+          ? `Доступ к списку отправлен на ${response.invitation.email}.`
+          : `Приглашение для ${response.invitation.email} создано, но письмо не удалось отправить. Попробуйте отправить приглашение еще раз позже.`
+      );
       setDevInvitationLink(response.devInvitationLink ?? null);
       await refreshWorkspaceAccess(token, activeWorkspace.id);
     } finally {

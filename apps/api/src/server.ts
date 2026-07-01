@@ -852,8 +852,10 @@ export function buildServer() {
         };
       } catch (error) {
         request.log.error({ error }, "Failed to send workspace invitation email");
-        await sendError(reply, 503, "EMAIL_SEND_FAILED", "Unable to send invitation email.");
-        return;
+        return {
+          sent: false,
+          invitation
+        };
       }
     }
   );
