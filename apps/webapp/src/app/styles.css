@@ -316,7 +316,7 @@ select {
 
 .stack {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .onboarding-panel {
@@ -437,7 +437,7 @@ select {
 .home-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .home-summary > div {
@@ -446,23 +446,22 @@ select {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-strong);
-  padding: 12px;
-  box-shadow: var(--shadow);
+  padding: 10px 12px;
 }
 
 .home-summary strong {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1;
 }
 
 .home-summary span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .home-section {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .inline-form {
@@ -512,7 +511,7 @@ select {
 }
 
 .section-heading h2 {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .section-heading button {
@@ -521,7 +520,7 @@ select {
 
 .item-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .archive-section {
@@ -574,11 +573,11 @@ select {
 .item-card,
 .shopping-row {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-strong);
-  padding: 14px;
+  padding: 12px;
   box-shadow: var(--shadow);
 }
 
@@ -625,6 +624,13 @@ select {
   padding: 0 12px;
 }
 
+.primary-light-button {
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-strong);
+  padding: 0 12px;
+}
+
 .icon-button {
   display: inline-grid;
   width: 44px;
@@ -655,13 +661,21 @@ select {
 }
 
 .shopping-row h2 {
-  font-size: 18px;
+  font-size: 17px;
 }
 
-.shopping-meta {
+.shopping-meta,
+.reminder-meta,
+.metadata-text {
   margin-top: 4px;
+  color: var(--muted);
   font-size: 13px;
   font-weight: 600;
+}
+
+.metadata-text {
+  display: inline-block;
+  font-weight: 500;
 }
 
 .reminder-row {
@@ -670,7 +684,7 @@ select {
 
 .reminder-groups {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .reminder-group {
@@ -688,10 +702,11 @@ select {
 .reminder-group-heading h3 {
   margin: 0;
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .reminder-group-heading span {
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -702,7 +717,7 @@ select {
 }
 
 .reminder-actions button {
-  min-height: 38px;
+  min-height: 36px;
   padding: 0 10px;
   font-size: 13px;
 }
@@ -1002,12 +1017,12 @@ select {
 
 .urgent {
   color: var(--danger) !important;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .normal {
   color: var(--accent-strong) !important;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .empty {

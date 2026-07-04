@@ -139,6 +139,21 @@ function formatPositionCount(count: number): string {
   return `${count} позиций`;
 }
 
+function formatReminderCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return `${count} напоминание`;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} напоминания`;
+  }
+
+  return `${count} напоминаний`;
+}
+
 const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
   OWNER: "Владелец",
   EDITOR: "Редактор",
@@ -1001,7 +1016,7 @@ export default function HomePage() {
       <div className="reminder-actions">
         {reminder.entityType !== "ITEM" ? (
           <button
-            className="ghost-button"
+            className="primary-light-button"
             type="button"
             onClick={() =>
               void handleStartReminderCheck(reminder).catch((caughtError) =>
@@ -1022,10 +1037,10 @@ export default function HomePage() {
             )
           }
         >
-          {isActionPending(`reminder:snooze:${reminder.id}`) ? "Откладываем..." : "Позже"}
+          {isActionPending(`reminder:snooze:${reminder.id}`) ? "Откладываем..." : "Отложить"}
         </button>
         <button className="ghost-button" type="button" onClick={() => handleOpenReminder(reminder)}>
-          Открыть
+          Подробнее
         </button>
       </div>
     );
@@ -1037,12 +1052,12 @@ export default function HomePage() {
         {reminders.map((reminder) => (
           <article className="shopping-row reminder-row" key={reminder.id}>
             <div>
-              <p className={reminder.timing === "DUE" ? "urgent" : "normal"}>
+              <p className={reminder.timing === "DUE" ? "reminder-meta urgent" : "reminder-meta"}>
                 {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
                 {formatDate(reminder.nextCheckAt)}
               </p>
               <h2>{reminder.title}</h2>
-              <span>{reminderEntityLabels[reminder.entityType]}</span>
+              <span className="metadata-text">{reminderEntityLabels[reminder.entityType]}</span>
             </div>
             {renderReminderActions(reminder)}
           </article>
@@ -1951,9 +1966,9 @@ export default function HomePage() {
         <section className="stack">
           <div className="home-summary">
             <div>
-              <p className="eyebrow">Готовность</p>
+              <p className="eyebrow">Актуальность</p>
               <strong>{readiness === null ? "Нет данных" : `${readiness}%`}</strong>
-              <span>{items.length ? `${items.length} отслеживаемых` : "Добавьте первые товары"}</span>
+              <span>{items.length ? "товаров в норме" : "Добавьте первые товары"}</span>
             </div>
             <div>
               <p className="eyebrow">Покупки</p>
@@ -2042,7 +2057,7 @@ export default function HomePage() {
                   <section className="reminder-group" aria-label="Напоминания категорий">
                     <div className="reminder-group-heading">
                       <h3>Категории</h3>
-                      <span>{categoryReminders.length}</span>
+                      <span>{formatReminderCount(categoryReminders.length)}</span>
                     </div>
                     {renderReminderList(categoryReminders)}
                   </section>
@@ -2051,7 +2066,7 @@ export default function HomePage() {
                   <section className="reminder-group" aria-label="Напоминания наборов">
                     <div className="reminder-group-heading">
                       <h3>Наборы</h3>
-                      <span>{groupReminders.length}</span>
+                      <span>{formatReminderCount(groupReminders.length)}</span>
                     </div>
                     {renderReminderList(groupReminders)}
                   </section>
@@ -2060,7 +2075,7 @@ export default function HomePage() {
                   <section className="reminder-group" aria-label="Напоминания товаров">
                     <div className="reminder-group-heading">
                       <h3>Товары</h3>
-                      <span>{itemReminders.length}</span>
+                      <span>{formatReminderCount(itemReminders.length)}</span>
                     </div>
                     {renderReminderList(itemReminders)}
                   </section>
