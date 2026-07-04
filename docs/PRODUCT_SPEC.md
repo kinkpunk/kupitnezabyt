@@ -765,13 +765,16 @@ User {
   telegramUsername?: string
   language: string
   timezone: string
+  onboardingCompletedAt?: Date
   createdAt: Date
   updatedAt: Date
 }
 ```
 
 `email` уникален. `telegramUserId` уникален, если optional Telegram integration
-подключена к аккаунту.
+подключена к аккаунту. `onboardingCompletedAt` хранит факт завершения первого
+запуска на backend, чтобы пользователь не проходил onboarding повторно на новом
+устройстве или после нового входа.
 
 ### 11.1.1. MagicLinkToken
 

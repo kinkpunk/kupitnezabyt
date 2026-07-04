@@ -15,10 +15,11 @@ model User {
   telegramUserId   String?  @unique
   telegramUsername String?
   firstName        String?
-  language         String   @default("ru")
-  timezone         String   @default("Europe/Minsk")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  language                String    @default("ru")
+  timezone                String    @default("Europe/Minsk")
+  onboardingCompletedAt   DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   authAccounts             AuthAccount[]
   categories               Category[]

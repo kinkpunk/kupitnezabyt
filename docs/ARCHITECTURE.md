@@ -224,10 +224,10 @@ requests.
 
 ## Product Polish
 
-Slice 11 keeps onboarding state in the webapp `localStorage` instead of adding
-database fields. The onboarding flow can create starter categories and first
-items through the same authenticated API endpoints used by the main category
-screen.
+Onboarding completion is stored on `User.onboardingCompletedAt` and mirrored in
+the webapp `localStorage` for compatibility with older browser sessions. The
+onboarding flow can create starter categories and first items through the same
+authenticated API endpoints used by the main category screen.
 
 The webapp now opens on a home screen with readiness, active shopping count,
 urgent items, upcoming item checks, and quick category access. The main mobile

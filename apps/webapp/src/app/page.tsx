@@ -32,6 +32,7 @@ import {
   cancelCheckSession,
   clearActiveWorkspaceId,
   clearCompletedShoppingList,
+  completeOnboarding,
   completeCheckSession,
   completeShoppingListItem,
   createCategory,
@@ -52,6 +53,7 @@ import {
   getGroups,
   getInAppReminders,
   getItems,
+  getMe,
   getRecommendations,
   getShoppingList,
   getActiveWorkspaceId,
@@ -357,10 +359,25 @@ export default function HomePage() {
         }
 
         setToken(authToken);
-        await refreshWorkspaces(authToken);
-        await refreshActiveData(authToken);
+        const [userProfile, , activeData] = await Promise.all([
+          getMe(authToken),
+          refreshWorkspaces(authToken),
+          refreshActiveData(authToken)
+        ]);
         await refreshActiveCheckSession(authToken);
-        setShowOnboarding(window.localStorage.getItem(onboardingStorageKey) !== "true");
+        const hasCompletedOnboardingLocally =
+          window.localStorage.getItem(onboardingStorageKey) === "true";
+        const hasExistingProductData =
+          activeData.categories.length > 0 || activeData.items.length > 0;
+        const hasCompletedOnboarding =
+          Boolean(userProfile.onboardingCompletedAt) ||
+          hasCompletedOnboardingLocally ||
+          hasExistingProductData;
+
+        setShowOnboarding(!hasCompletedOnboarding);
+        if (hasCompletedOnboarding && !userProfile.onboardingCompletedAt) {
+          void completeOnboarding(authToken).catch(() => undefined);
+        }
       } catch (caughtError) {
         if (isMounted) {
           const message = formatError(caughtError);
@@ -445,7 +462,13 @@ export default function HomePage() {
 
   async function refreshActiveData(authToken = token) {
     if (!authToken) {
-      return;
+      return {
+        categories: [],
+        items: [],
+        shoppingList: [],
+        groups: [],
+        inAppReminders: []
+      };
     }
 
     const [
@@ -467,6 +490,14 @@ export default function HomePage() {
     setShoppingList(nextShoppingList);
     setGroups(nextGroups);
     setInAppReminders(nextInAppReminders);
+
+    return {
+      categories: nextCategories,
+      items: nextItems,
+      shoppingList: nextShoppingList,
+      groups: nextGroups,
+      inAppReminders: nextInAppReminders
+    };
   }
 
   async function refreshWorkspaces(authToken = token) {
@@ -1254,6 +1285,7 @@ export default function HomePage() {
       }
     }
 
+    await completeOnboarding(token);
     window.localStorage.setItem(onboardingStorageKey, "true");
     setShowOnboarding(false);
     setOnboardingStep(0);
@@ -1673,7 +1705,10 @@ export default function HomePage() {
                 <button
                   className="ghost-button"
                   type="button"
-                  onClick={() => setSelectedStarterCategories([])}
+                  onClick={() => {
+                    setSelectedStarterCategories([]);
+                    setOnboardingStep(2);
+                  }}
                 >
                   Пропустить
                 </button>

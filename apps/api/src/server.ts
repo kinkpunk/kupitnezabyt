@@ -1283,6 +1283,17 @@ export function buildServer() {
     });
   });
 
+  app.patch("/api/me/onboarding", async (request) => {
+    return prisma.user.update({
+      where: {
+        id: requireUserId(request.userId)
+      },
+      data: {
+        onboardingCompletedAt: new Date()
+      }
+    });
+  });
+
   app.delete("/api/me", async (request, reply) => {
     const userId = requireUserId(request.userId);
     if (!(await checkRateLimit(reply, sensitiveRateLimiter, `sensitive:delete-account:${userId}`))) {

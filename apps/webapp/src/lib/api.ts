@@ -13,6 +13,7 @@ import type {
   OAuthStartResponse,
   RecommendationSuggestion,
   ShoppingListEntry,
+  UserProfile,
   UserDataExport,
   WorkspaceInvitationAcceptResponse,
   WorkspaceInvitationCreateResponse,
@@ -139,6 +140,14 @@ export function startGoogleSignIn(): Promise<OAuthStartResponse> {
 
 export function startAppleSignIn(): Promise<OAuthStartResponse> {
   return post<OAuthStartResponse>("/api/auth/apple/start", undefined, {});
+}
+
+export function getMe(token: string): Promise<UserProfile> {
+  return get<UserProfile>("/api/me", token);
+}
+
+export function completeOnboarding(token: string): Promise<UserProfile> {
+  return patch<UserProfile>("/api/me/onboarding", token, {});
 }
 
 export function acceptWorkspaceInvitation(

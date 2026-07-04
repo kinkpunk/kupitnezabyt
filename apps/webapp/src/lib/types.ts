@@ -114,6 +114,21 @@ export type OAuthStartResponse = {
   authUrl: string;
 };
 
+export type UserProfile = {
+  id: string;
+  email: string | null;
+  emailVerifiedAt: string | null;
+  displayName: string | null;
+  telegramUserId: string | null;
+  telegramUsername: string | null;
+  firstName: string | null;
+  language: string;
+  timezone: string;
+  onboardingCompletedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type WorkspaceInvitationAcceptResponse = {
   accepted: boolean;
   member: {

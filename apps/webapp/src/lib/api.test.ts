@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, getActiveWorkspaceId, login } from "./api";
+import { ApiError, completeOnboarding, getActiveWorkspaceId, login } from "./api";
 
 function createLocalStorageMock() {
   const values = new Map<string, string>();
@@ -84,5 +84,30 @@ describe("webapp api auth", () => {
       "kupitnezabyt.pendingWorkspaceInvitationToken"
     );
     expect(history.replaceState).toHaveBeenCalledWith({}, "", "/");
+  });
+
+  it("marks onboarding completed on the API", async () => {
+    stubWindow("");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        id: "user-1",
+        onboardingCompletedAt: "2026-07-04T12:00:00.000Z"
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(completeOnboarding("session-token")).resolves.toEqual({
+      id: "user-1",
+      onboardingCompletedAt: "2026-07-04T12:00:00.000Z"
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3001/api/me/onboarding",
+      expect.objectContaining({
+        body: JSON.stringify({}),
+        method: "PATCH"
+      })
+    );
   });
 });
