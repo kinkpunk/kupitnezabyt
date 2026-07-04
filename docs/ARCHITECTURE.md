@@ -257,9 +257,9 @@ Mini App URL, network access to Telegram, and an always-on process.
 The web-first deployment target is free-friendly:
 
 - Vercel webapp.
-- Render free web API, accepting cold starts for MVP.
-- Neon/Postgres database.
-- No required Render background workers.
+- Northflank API service.
+- Northflank PostgreSQL addon.
+- No required always-on Telegram bot or reminder worker services.
 
 The final integration checklist lives in `docs/FINAL_INTEGRATION.md`. It
 verifies the implemented core MVP and highlights remaining `PRODUCT_SPEC` gaps.
