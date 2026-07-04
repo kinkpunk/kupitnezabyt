@@ -1070,10 +1070,10 @@ export default function HomePage() {
         {reminders.map((reminder) => (
           <article className="shopping-row reminder-row" key={reminder.id}>
             <div>
-              <p className={reminder.timing === "DUE" ? "reminder-meta urgent" : "reminder-meta"}>
+              <span className={reminder.timing === "DUE" ? "badge badge-urgent" : "badge badge-muted"}>
                 {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
                 {formatDate(reminder.nextCheckAt)}
-              </p>
+              </span>
               <h2>{reminder.title}</h2>
               <span className="metadata-text">{reminderEntityLabels[reminder.entityType]}</span>
             </div>
@@ -1953,7 +1953,7 @@ export default function HomePage() {
       >
         <input
           aria-label="Глобальный поиск"
-          placeholder="Найти товар, бренд, заметку или категорию"
+          placeholder="Найти товар или категорию"
           value={searchQuery}
           onChange={(event) => setSearchQuery(event.target.value)}
         />
@@ -2028,20 +2028,21 @@ export default function HomePage() {
               <div className="item-list">
                 {urgentItems.map((item) => {
                   const shoppingStatus = shoppingStatusLabels[item.status] ?? statusLabels[item.status];
-                  const metadata = item.category?.name
-                    ? `${item.category.name} · ${shoppingStatus}`
-                    : shoppingStatus;
 
                   return (
                     <article className="shopping-row" key={item.id}>
                       <div>
                         <h2>{item.name}</h2>
-                        <p className={item.status === "URGENT" ? "shopping-meta urgent" : "shopping-meta"}>
-                          {metadata}
-                        </p>
+                        <div className="shopping-meta-line">
+                          {item.category?.name ? (
+                            <span className="metadata-text">{item.category.name}</span>
+                          ) : null}
+                          <span className={item.status === "URGENT" ? "badge badge-urgent" : "badge badge-muted"}>
+                            {shoppingStatus}
+                          </span>
+                        </div>
                       </div>
                       <button
-                        className="ghost-button"
                         type="button"
                         disabled={isActionPending(`item:status:${item.id}`)}
                         onClick={() =>
@@ -2494,9 +2495,9 @@ export default function HomePage() {
                         </form>
                       ) : (
                         <div>
-                          <p className={entry.priority === "URGENT" ? "urgent" : "normal"}>
+                          <span className={entry.priority === "URGENT" ? "badge badge-urgent" : "badge badge-muted"}>
                             {entry.priority === "URGENT" ? "Срочно" : "Купить"}
-                          </p>
+                          </span>
                           <h2>{entry.title}</h2>
                           <span>{entry.itemId ? "Отслеживаемый товар" : "Разовая позиция"}</span>
                         </div>

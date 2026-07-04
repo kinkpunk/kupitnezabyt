@@ -1,32 +1,77 @@
 :root {
   color-scheme: light dark;
-  --background: #f6f7f5;
-  --surface: #ffffff;
-  --surface-strong: #ffffff;
-  --text: #171d1a;
-  --muted: #52605a;
-  --line: #d7ddd9;
-  --accent: #c94a5f;
-  --accent-strong: #9f3145;
+  --color-bg: #f7f8f6;
+  --color-surface: #ffffff;
+  --color-surface-strong: #ffffff;
+  --color-text: #171d1a;
+  --color-text-muted: #56615b;
+  --color-text-soft: #7a817c;
+  --color-border: #d9e0dc;
+  --color-border-strong: #c7d0cb;
+  --color-primary: #c94a61;
+  --color-primary-hover: #b63f55;
+  --color-primary-active: #a9364c;
+  --color-primary-soft: #f7dde3;
+  --color-primary-soft-hover: #f2cad3;
+  --color-brand-logo: #ef6f83;
+  --color-urgent: #a93449;
+  --color-urgent-bg: #f8e6ea;
+  --color-success: #2f6b4f;
+  --color-success-bg: #e4f2ea;
+  --color-warning: #8a5a00;
+  --color-warning-bg: #fff3d6;
+  --font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --line-height-tight: 1.1;
+  --line-height-base: 1.35;
+  --line-height-readable: 1.5;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --background: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-strong: var(--color-surface-strong);
+  --text: var(--color-text);
+  --muted: var(--color-text-muted);
+  --line: var(--color-border);
+  --accent: var(--color-primary);
+  --accent-strong: var(--color-primary-active);
   --accent-text: #ffffff;
-  --brand-accent: #ef7180;
-  --danger: #b3261e;
+  --brand-accent: var(--color-brand-logo);
+  --danger: var(--color-urgent);
   --shadow: 0 10px 30px rgba(20, 32, 28, 0.08);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #101412;
-    --surface: #171d1a;
-    --surface-strong: #202723;
-    --text: #f3f7f4;
-    --muted: #b7c2bc;
-    --line: #3a4640;
-    --accent: #ff9aa6;
-    --accent-strong: #ffc0c8;
+    --color-bg: #101412;
+    --color-surface: #171d1a;
+    --color-surface-strong: #202723;
+    --color-text: #f3f7f4;
+    --color-text-muted: #b7c2bc;
+    --color-text-soft: #8f9b95;
+    --color-border: #3a4640;
+    --color-border-strong: #56635d;
+    --color-primary: #ff9aa6;
+    --color-primary-hover: #ffc0c8;
+    --color-primary-active: #ffd5dc;
+    --color-primary-soft: #3d2229;
+    --color-primary-soft-hover: #4d2a32;
+    --color-brand-logo: #ff9aa6;
+    --color-urgent: #ffb4ab;
+    --color-urgent-bg: #3f2522;
+    --color-success: #9bd8b6;
+    --color-success-bg: #1f3529;
+    --color-warning: #f0c36a;
+    --color-warning-bg: #372a12;
     --accent-text: #321018;
-    --brand-accent: #ff9aa6;
-    --danger: #ffb4ab;
     --shadow: none;
   }
 }
@@ -40,8 +85,8 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--text);
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-family-base);
+  line-height: var(--line-height-base);
 }
 
 button,
@@ -52,12 +97,12 @@ select {
 
 button {
   min-height: 44px;
-  border: 0;
+  border: 1px solid var(--color-primary);
   border-radius: 8px;
-  background: var(--accent);
+  background: var(--color-primary);
   color: var(--accent-text);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 
 button:disabled {
@@ -65,9 +110,15 @@ button:disabled {
   opacity: 0.65;
 }
 
+button:not(:disabled):hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
 button:focus-visible,
-input:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
   outline-offset: 2px;
 }
 
@@ -113,11 +164,12 @@ select {
 .item-card h2,
 .shopping-row h2 {
   margin: 0;
-  line-height: 1.1;
+  line-height: var(--line-height-tight);
 }
 
 .topbar h1 {
-  font-size: 22px;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
 }
 
 .brand-lockup {
@@ -163,8 +215,8 @@ select {
 
 .workspace-switcher span {
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
   text-transform: uppercase;
 }
 
@@ -182,8 +234,8 @@ select {
 }
 
 .eyebrow {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   text-transform: uppercase;
 }
 
@@ -193,19 +245,19 @@ select {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 12px;
-  border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-urgent) 40%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  color: var(--danger);
+  background: var(--color-urgent-bg);
+  color: var(--color-urgent);
   padding: 12px;
 }
 
 .notice-close {
   flex: 0 0 auto;
   min-height: 34px;
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-urgent) 35%, transparent);
   background: transparent;
-  color: var(--danger);
+  color: var(--color-urgent);
   padding: 0 10px;
   font-size: 13px;
 }
@@ -220,7 +272,7 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--line));
   border-radius: 8px;
   background: var(--surface-strong);
   color: var(--text);
@@ -230,8 +282,8 @@ select {
 
 .toast-notice span {
   min-width: 0;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .toast-notice button {
@@ -244,6 +296,12 @@ select {
   font-size: 13px;
 }
 
+.toast-notice button:not(:disabled):hover,
+.ghost-button:not(:disabled):hover {
+  border-color: var(--color-border-strong);
+  background: var(--background);
+}
+
 .reminder-notice {
   position: sticky;
   top: 8px;
@@ -253,7 +311,7 @@ select {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
   border-radius: 8px;
   background: var(--surface-strong);
   box-shadow: var(--shadow);
@@ -286,7 +344,13 @@ select {
 .global-search input {
   min-height: 38px;
   padding: 0 10px;
-  font-size: 14px;
+  font-size: var(--font-size-md);
+}
+
+.global-search input::placeholder {
+  color: var(--color-text-soft);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-regular);
 }
 
 .global-search button {
@@ -297,7 +361,7 @@ select {
   min-width: 76px;
   min-height: 38px;
   padding: 0 10px;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .tabs {
@@ -330,8 +394,9 @@ select {
   gap: 2px;
   min-height: 40px;
   padding: 5px 8px;
-  font-size: 10px;
-  line-height: 1.1;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
 }
 
 .tabs button svg {
@@ -343,8 +408,22 @@ select {
 .tabs button.active,
 .category.active,
 .status-grid button.active {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+}
+
+.tabs button:not(:disabled):hover,
+.category:not(:disabled):hover,
+.status-grid button:not(:disabled):hover {
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+}
+
+.status-grid button.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: var(--accent-text);
 }
 
@@ -400,9 +479,9 @@ select {
   place-items: center;
   border-radius: 999px;
   background: var(--surface-strong);
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 900;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .auth-divider {
@@ -423,15 +502,15 @@ select {
 }
 
 .auth-success {
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--color-success) 35%, var(--line));
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: var(--color-success-bg);
   padding: 10px 12px;
 }
 
 .dev-magic-link {
-  color: var(--accent);
-  font-weight: 700;
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .choice-grid {
@@ -447,9 +526,9 @@ select {
 }
 
 .choice.active {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
 }
 
 .starter-items,
@@ -484,13 +563,15 @@ select {
 }
 
 .home-summary strong {
-  font-size: 22px;
-  line-height: 1;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
 .home-summary span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-regular);
 }
 
 .home-section {
@@ -510,7 +591,7 @@ select {
 }
 
 .item-create-form {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--color-primary);
   padding-left: 10px;
 }
 
@@ -531,10 +612,9 @@ select {
 }
 
 .category small {
-  color: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.75;
+  color: var(--muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .section-heading {
@@ -545,7 +625,8 @@ select {
 }
 
 .section-heading h2 {
-  font-size: 18px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
 }
 
 .section-heading button {
@@ -565,9 +646,9 @@ select {
 .recommendations {
   display: grid;
   gap: 10px;
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 28%, var(--line));
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface-strong));
+  background: color-mix(in srgb, var(--color-primary-soft) 45%, var(--surface-strong));
   padding: 14px;
 }
 
@@ -600,7 +681,7 @@ select {
 
 .recommendation-row span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .check-card,
@@ -630,9 +711,9 @@ select {
 
 .check-saving {
   margin: 0;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--line));
   border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  background: var(--color-primary-soft);
   color: var(--muted);
   padding: 10px 12px;
   font-size: 14px;
@@ -659,10 +740,16 @@ select {
 }
 
 .primary-light-button {
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  color: var(--accent-strong);
+  border: 1px solid var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
   padding: 0 12px;
+}
+
+.primary-light-button:not(:disabled):hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft-hover);
+  color: var(--color-primary-active);
 }
 
 .icon-button {
@@ -677,6 +764,12 @@ select {
   color: var(--danger);
 }
 
+.danger-button:not(:disabled):hover {
+  border-color: color-mix(in srgb, var(--color-urgent) 40%, var(--line));
+  background: var(--color-urgent-bg);
+  color: var(--color-urgent);
+}
+
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -686,7 +779,8 @@ select {
 .status-grid button {
   min-width: 0;
   padding: 0 6px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .shopping-row {
@@ -696,6 +790,7 @@ select {
 
 .shopping-row h2 {
   font-size: 17px;
+  font-weight: var(--font-weight-bold);
 }
 
 .shopping-meta,
@@ -703,13 +798,63 @@ select {
 .metadata-text {
   margin-top: 4px;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .metadata-text {
   display: inline-block;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
+}
+
+.shopping-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.25;
+}
+
+.badge-urgent {
+  background: var(--color-urgent-bg);
+  color: var(--color-urgent);
+}
+
+.badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-muted {
+  background: var(--background);
+  color: var(--muted);
+}
+
+.shopping-row .badge-urgent {
+  color: var(--color-urgent);
+}
+
+.shopping-row .badge-success {
+  color: var(--color-success);
+}
+
+.shopping-row .badge-muted {
+  color: var(--muted);
+}
+
+.shopping-row .metadata-text {
+  color: var(--muted);
 }
 
 .reminder-row {
@@ -736,12 +881,14 @@ select {
 .reminder-group-heading h3 {
   margin: 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .reminder-group-heading span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
 }
 
 .reminder-actions {
@@ -753,7 +900,7 @@ select {
 .reminder-actions button {
   min-height: 36px;
   padding: 0 10px;
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .shopping-row button,
@@ -786,7 +933,8 @@ select {
 .shopping-group h3 {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .shopping-actions {
@@ -831,19 +979,19 @@ select {
 .dev-link {
   margin: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .success-message {
-  color: var(--accent-strong);
-  font-weight: 700;
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
 }
 
 .workspace-warning {
   margin: 0;
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 700;
+  color: var(--color-urgent);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
 }
 
 .workspace-retry-button {
@@ -863,7 +1011,7 @@ select {
 .workspace-lists h3 {
   margin: 0 0 8px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .workspace-row {
@@ -883,7 +1031,7 @@ select {
 
 .workspace-row p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .workspace-row-actions {
@@ -919,7 +1067,7 @@ select {
 .reminder-settings-group h3 {
   margin: 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-size-sm);
 }
 
 .reminder-group-header {
@@ -931,7 +1079,7 @@ select {
 .reminder-group-header p {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .reminder-settings-list {
@@ -965,7 +1113,7 @@ select {
 
 .reminder-settings-row p {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .reminder-settings-row input[type="number"] {
@@ -978,7 +1126,7 @@ select {
   gap: 8px;
   min-height: 44px;
   color: var(--muted);
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
 }
 
 .reminder-toggle input {
@@ -1050,13 +1198,13 @@ select {
 }
 
 .urgent {
-  color: var(--danger) !important;
-  font-weight: 700;
+  color: var(--color-urgent) !important;
+  font-weight: var(--font-weight-semibold);
 }
 
 .normal {
-  color: var(--accent-strong) !important;
-  font-weight: 700;
+  color: var(--color-success) !important;
+  font-weight: var(--font-weight-semibold);
 }
 
 .empty {
