@@ -1492,6 +1492,14 @@ export default function HomePage() {
 
     setError(null);
     await deleteAccount(token);
+    resetClientSession({ clearOnboarding: true });
+  }
+
+  function handleSignOut() {
+    resetClientSession();
+  }
+
+  function resetClientSession(options: { clearOnboarding?: boolean } = {}) {
     clearSavedToken();
     setToken(null);
     setCategories([]);
@@ -1508,7 +1516,11 @@ export default function HomePage() {
     setWorkspaceMembers([]);
     setWorkspaceInvitations([]);
     setWorkspaceLoadFailed(false);
-    window.localStorage.removeItem(onboardingStorageKey);
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+    if (options.clearOnboarding) {
+      window.localStorage.removeItem(onboardingStorageKey);
+    }
     setActiveTab("home");
   }
 
@@ -3157,6 +3169,13 @@ export default function HomePage() {
               }
             >
               Скачать JSON
+            </button>
+            <button
+              className="ghost-button"
+              type="button"
+              onClick={handleSignOut}
+            >
+              Выйти
             </button>
             <button
               className="ghost-button danger-button"
