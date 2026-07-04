@@ -275,6 +275,7 @@ export default function HomePage() {
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
   const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -373,6 +374,15 @@ export default function HomePage() {
     [inAppReminders]
   );
   const hasReminderNotice = Boolean(reminderNoticeKey && dismissedReminderNoticeKey !== reminderNoticeKey);
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => setToastMessage(null), 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [toastMessage]);
 
   useEffect(() => {
     let isMounted = true;
@@ -698,6 +708,9 @@ export default function HomePage() {
       );
       await refreshActiveData(token);
       await refreshRecommendations(token, updatedItem);
+      if (status === "IN_STOCK" && item.status !== "IN_STOCK") {
+        showBoughtToast(item.name);
+      }
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -773,6 +786,7 @@ export default function HomePage() {
       if (completedEntry.item) {
         await refreshRecommendations(token, completedEntry.item);
       }
+      showBoughtToast(entry.title);
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -880,6 +894,10 @@ export default function HomePage() {
 
       return current.filter((currentKey) => currentKey !== key);
     });
+  }
+
+  function showBoughtToast(title: string) {
+    setToastMessage(`${title} отмечено купленным`);
   }
 
   function isActionPending(key: string): boolean {
@@ -1893,6 +1911,7 @@ export default function HomePage() {
       </header>
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
+      <ToastNotice message={toastMessage} onClose={() => setToastMessage(null)} />
       {hasReminderNotice ? (
         <div className="reminder-notice" role="status">
           <div>
@@ -3428,6 +3447,28 @@ function ErrorNotice({
         aria-label="Закрыть ошибку"
         onClick={onClose}
       >
+        Закрыть
+      </button>
+    </div>
+  );
+}
+
+function ToastNotice({
+  message,
+  onClose
+}: {
+  message: string | null;
+  onClose: () => void;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <div className="toast-notice" role="status">
+      <span>{message}</span>
+      {/* TODO: Add undo once purchase completion has a rollback path. */}
+      <button type="button" aria-label="Закрыть уведомление" onClick={onClose}>
         Закрыть
       </button>
     </div>
