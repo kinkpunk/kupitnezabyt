@@ -784,7 +784,7 @@ select {
 }
 
 .shopping-row {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: center;
 }
 
@@ -898,15 +898,24 @@ select {
 }
 
 .reminder-actions button {
+  width: max-content;
+  max-width: 100%;
   min-height: 36px;
   padding: 0 10px;
   font-size: var(--font-size-sm);
+  white-space: nowrap;
 }
 
 .shopping-row button,
 .shopping-actions button {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
   min-height: 38px;
   padding: 0 14px;
+  white-space: nowrap;
 }
 
 .shopping-row .icon-button,
@@ -1189,7 +1198,7 @@ select {
   }
 
   .reminder-row {
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+    grid-template-columns: minmax(0, 1fr) max-content;
   }
 
   .reminder-actions {
