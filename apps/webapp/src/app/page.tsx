@@ -119,6 +119,26 @@ const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
   ITEM: "Товар"
 };
 
+const shoppingStatusLabels: Partial<Record<ItemStatus, string>> = {
+  NEED_BUY: "нужно купить",
+  URGENT: "срочно"
+};
+
+function formatPositionCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return `${count} позиция`;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} позиции`;
+  }
+
+  return `${count} позиций`;
+}
+
 const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
   OWNER: "Владелец",
   EDITOR: "Редактор",
@@ -1938,7 +1958,7 @@ export default function HomePage() {
             <div>
               <p className="eyebrow">Покупки</p>
               <strong>{shoppingList.length}</strong>
-              <span>{shoppingList.length ? "активных позиций" : "список пуст"}</span>
+              <span>{shoppingList.length ? formatPositionCount(shoppingList.length) : "список пуст"}</span>
             </div>
           </div>
 
@@ -1966,34 +1986,41 @@ export default function HomePage() {
           <section className="home-section">
             <div className="section-heading">
               <div>
-                <h2>Срочно и купить</h2>
-                <p>{urgentItems.length ? `${urgentItems.length} поз.` : "Пока спокойно"}</p>
+                <h2>Купить сейчас</h2>
+                <p>{urgentItems.length ? formatPositionCount(urgentItems.length) : "Пока спокойно"}</p>
               </div>
             </div>
             {urgentItems.length ? (
               <div className="item-list">
-                {urgentItems.map((item) => (
-                  <article className="shopping-row" key={item.id}>
-                    <div>
-                      <p className={item.status === "URGENT" ? "urgent" : "normal"}>
-                        {statusLabels[item.status]}
-                      </p>
-                      <h2>{item.name}</h2>
-                    </div>
-                    <button
-                      className="ghost-button"
-                      type="button"
-                      disabled={isActionPending(`item:status:${item.id}`)}
-                      onClick={() =>
-                        void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
-                          setError(formatError(caughtError))
-                        )
-                      }
-                    >
-                      {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
-                    </button>
-                  </article>
-                ))}
+                {urgentItems.map((item) => {
+                  const shoppingStatus = shoppingStatusLabels[item.status] ?? statusLabels[item.status];
+                  const metadata = item.category?.name
+                    ? `${item.category.name} · ${shoppingStatus}`
+                    : shoppingStatus;
+
+                  return (
+                    <article className="shopping-row" key={item.id}>
+                      <div>
+                        <h2>{item.name}</h2>
+                        <p className={item.status === "URGENT" ? "shopping-meta urgent" : "shopping-meta"}>
+                          {metadata}
+                        </p>
+                      </div>
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        disabled={isActionPending(`item:status:${item.id}`)}
+                        onClick={() =>
+                          void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
+                            setError(formatError(caughtError))
+                          )
+                        }
+                      >
+                        {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
+                      </button>
+                    </article>
+                  );
+                })}
               </div>
             ) : (
               <p className="empty">Нет товаров, которые нужно купить прямо сейчас.</p>
