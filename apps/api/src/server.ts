@@ -2080,6 +2080,11 @@ export function buildServer() {
         }
       });
 
+      if (items.length === 0) {
+        await sendError(reply, 400, "EMPTY_CHECK_CATEGORY", "Category has no items to check.");
+        return;
+      }
+
       return prisma.checkSession.create({
         data: {
           userId,
@@ -2417,6 +2422,11 @@ export function buildServer() {
       const activeItems = group.items
         .map((groupItem) => groupItem.item)
         .filter((item) => item.archivedAt === null && item.status !== "PAUSED");
+
+      if (activeItems.length === 0) {
+        await sendError(reply, 400, "EMPTY_CHECK_GROUP", "Group has no items to check.");
+        return;
+      }
 
       return prisma.checkSession.create({
         data: {

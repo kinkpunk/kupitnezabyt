@@ -286,6 +286,10 @@ export default function HomePage() {
     () => groups.find((group) => group.id === selectedGroupId) ?? groups[0],
     [groups, selectedGroupId]
   );
+  const selectedGroupCheckItemCount =
+    selectedGroup?.items.filter(
+      (groupItem) => groupItem.item.archivedAt === null && groupItem.item.status !== "PAUSED"
+    ).length ?? 0;
 
   const activeWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0] ?? null,
@@ -1175,6 +1179,11 @@ export default function HomePage() {
     }
 
     setError(null);
+    if (selectedCategory.itemCount === 0) {
+      setError("В этой категории пока нечего проверять.");
+      return;
+    }
+
     const session = await startCategoryCheckSession(token, selectedCategory.id);
     setCheckSession(session);
     setActiveTab("check");
@@ -1244,6 +1253,11 @@ export default function HomePage() {
     }
 
     setError(null);
+    if (selectedGroupCheckItemCount === 0) {
+      setError("В этом наборе пока нечего проверять.");
+      return;
+    }
+
     const session = await startGroupCheckSession(token, selectedGroup.id);
     setCheckSession(session);
     setActiveTab("check");
@@ -2217,6 +2231,7 @@ export default function HomePage() {
                 <div className="icon-actions">
                   <button
                     className="ghost-button"
+                    disabled={selectedCategory.itemCount === 0}
                     type="button"
                     onClick={() =>
                       void handleStartCategoryCheck().catch((caughtError) =>
@@ -2594,6 +2609,7 @@ export default function HomePage() {
                 <div className="icon-actions">
                   <button
                     className="ghost-button"
+                    disabled={selectedGroupCheckItemCount === 0}
                     type="button"
                     onClick={() =>
                       void handleStartGroupCheck().catch((caughtError) =>
@@ -2728,7 +2744,7 @@ export default function HomePage() {
                   </option>
                 ))}
               </select>
-              <button type="submit" disabled={!selectedCategory}>
+              <button type="submit" disabled={!selectedCategory || selectedCategory.itemCount === 0}>
                 Начать
               </button>
             </form>
@@ -3404,6 +3420,8 @@ function getFriendlyErrorMessage(message: string): string {
     INVITATION_EMAIL_MISMATCH: "Это приглашение отправлено на другой email.",
     INVITEE_NOT_FOUND:
       "Пользователь с таким email пока не найден. Сейчас можно приглашать только тех, кто уже входил в сервис.",
+    EMPTY_CHECK_CATEGORY: "В этой категории пока нечего проверять.",
+    EMPTY_CHECK_GROUP: "В этом наборе пока нечего проверять.",
     MEMBER_NOT_FOUND: "Участник не найден. Обновите список и попробуйте еще раз.",
     WORKSPACE_NOT_FOUND: "Список не найден или доступ к нему уже закрыт.",
     OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER:

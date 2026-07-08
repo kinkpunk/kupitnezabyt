@@ -9,13 +9,16 @@ const mockPrisma = vi.hoisted(() => ({
   },
   item: {
     delete: vi.fn(),
-    findFirst: vi.fn()
+    findFirst: vi.fn(),
+    findMany: vi.fn()
   },
   checkSession: {
+    create: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn()
   },
   itemGroup: {
+    findFirst: vi.fn(),
     update: vi.fn()
   },
   shoppingListItem: {
@@ -609,6 +612,70 @@ describe("check session routes", () => {
         startedAt: "desc"
       }
     });
+
+    await app.close();
+  });
+
+  it("does not start a category check when the category has no active items", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      workspaceId: "workspace_user-1",
+      archivedAt: null
+    });
+    mockPrisma.item.findMany.mockResolvedValue([]);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/check/category/category-1/start",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: {
+        code: "EMPTY_CHECK_CATEGORY",
+        message: "Category has no items to check."
+      }
+    });
+    expect(mockPrisma.checkSession.create).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("does not start a group check when the group has no active items", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.itemGroup.findFirst.mockResolvedValue({
+      id: "group-1",
+      workspaceId: "workspace_user-1",
+      archivedAt: null,
+      items: []
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/check/group/group-1/start",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toEqual({
+      error: {
+        code: "EMPTY_CHECK_GROUP",
+        message: "Group has no items to check."
+      }
+    });
+    expect(mockPrisma.checkSession.create).not.toHaveBeenCalled();
 
     await app.close();
   });
