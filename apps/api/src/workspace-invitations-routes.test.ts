@@ -796,6 +796,160 @@ describe("workspace invitation routes", () => {
 
     await app.close();
   });
+
+  it("rejects invitation to an unknown email", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом",
+      ownerId: "owner-1"
+    });
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "unknown@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("INVITEE_NOT_FOUND");
+    expect(mockPrisma.workspaceInvitation.create).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("rejects invitation to an unverified email", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом",
+      ownerId: "owner-1"
+    });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "member-1",
+      email: "member@example.com",
+      emailVerifiedAt: null
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "member@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().error.code).toBe("INVITEE_NOT_FOUND");
+    expect(mockPrisma.workspaceInvitation.create).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("rejects invitation when user is already a member", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом",
+      ownerId: "owner-1"
+    });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "member-1",
+      email: "member@example.com",
+      emailVerifiedAt: new Date("2026-06-25T10:00:00.000Z")
+    });
+    mockPrisma.workspaceMember.findUnique.mockResolvedValue({
+      id: "membership-1"
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "member@example.com"
+      }
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().error.code).toBe("ALREADY_MEMBER");
+    expect(mockPrisma.workspaceInvitation.create).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("allows multiple pending invitations for the same email", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspace.findFirst.mockResolvedValue({
+      id: "workspace-1",
+      name: "Дом",
+      ownerId: "owner-1"
+    });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: "member-1",
+      email: "member@example.com",
+      emailVerifiedAt: new Date("2026-06-25T10:00:00.000Z")
+    });
+    mockPrisma.workspaceMember.findUnique.mockResolvedValue(null);
+    mockPrisma.workspaceInvitation.create.mockResolvedValue({
+      id: "invitation-1",
+      workspaceId: "workspace-1",
+      email: "member@example.com",
+      role: "EDITOR",
+      expiresAt: new Date("2026-07-02T10:00:00.000Z")
+    });
+
+    const firstResponse = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "member@example.com"
+      }
+    });
+
+    const secondResponse = await app.inject({
+      method: "POST",
+      url: "/api/workspaces/workspace-1/invitations",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "owner-1")}`
+      },
+      payload: {
+        email: "member@example.com"
+      }
+    });
+
+    expect(firstResponse.statusCode).toBe(200);
+    expect(secondResponse.statusCode).toBe(200);
+    expect(mockPrisma.workspaceInvitation.create).toHaveBeenCalledTimes(2);
+
+    await app.close();
+  });
 });
 
 function createToken(signToken: typeof import("./auth.js").signToken, userId: string): string {

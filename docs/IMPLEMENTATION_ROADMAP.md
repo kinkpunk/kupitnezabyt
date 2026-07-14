@@ -822,58 +822,68 @@ Not implemented yet:
 
 ### Slice 32: Collaboration Beta Release Hardening
 
-Status: planned.
+Status: implemented.
 
 Goal: make the implemented shared-list collaboration safe and understandable
 enough to show to real users as a beta feature, without pretending it is a full
 family-account system.
 
-Product scope:
+Implemented notes:
 
-- Keep sharing at the workspace/list level. Individual `ItemGroup` sharing is
+- Sharing remains at the workspace/list level. Individual `ItemGroup` sharing is
   not part of this slice.
-- Keep fixed roles for now: `OWNER` manages access, `EDITOR` can work with the
+- Fixed roles are preserved: `OWNER` manages access, `EDITOR` can work with the
   shared list, and `VIEWER` remains API-supported/read-only if exposed later.
-- Treat collaboration as beta in copy and docs until two-account production
-  smoke is reliable.
+- Backend still restricts invitations to existing verified email users and
+  rejects acceptance when the signed-in user's verified email does not match the
+  invitation email.
+- API route tests cover verified-user invites, non-owner rejection,
+  unknown/unverified email rejection, existing-member rejection, duplicate
+  pending invites, email mismatch on accept, revoke, member removal, ownership
+  transfer, and shared-workspace access isolation.
+- Webapp exposes "Поделиться списком" on the Categories tab and in Settings,
+  shows pending invitations with expiry, explains the whole-workspace beta
+  constraint, and disables action buttons while an invite/revoke/remove/transfer
+  is in flight.
+- Two-account browser E2E in `tests/e2e/workspace-collaboration.spec.ts` covers
+  owner invite, member accept, shared editing, member removal, and loss of
+  access.
+- Manual release checklist is added below.
 
-Backend:
+Not implemented yet:
 
-- Keep the current beta constraint: owners can invite only existing verified
-  email users.
-- Preserve the security rule that invitation acceptance only succeeds for the
-  signed-in user whose verified email matches the invitation email.
-- Ensure accepting an invite creates membership in the invited workspace and
-  selects that workspace in the webapp.
-- Keep invitation tokens hashed, single-use, expiring, revocable, and scoped to
-  the invited email.
-- Add or confirm API coverage for inviting an existing verified email,
-  duplicate invite/member behavior, revoked invite rejection, email mismatch,
-  and cross-user isolation.
+- In-app success toast after accepting an invitation (workspace switch already
+  happens automatically).
+- Automated browser E2E for ownership transfer.
 
-Webapp:
+Manual release checklist:
 
-- Add a visible "Поделиться" entry point for owners of the active list, not only
-  a settings section users have to discover.
-- Make the Settings copy explicit that sharing grants access to the whole
-  active list/workspace, not an individual group.
-- Show pending invite status clearly, including that the invited email must
-  already belong to a verified user in the service during beta.
-- After accepting an invitation, surface a success message and switch to the
-  invited workspace.
-- Keep loading/disabled states for invite, revoke, remove member, and ownership
-  transfer actions.
-- Add a small manual release checklist in docs for owner and invited-user flows.
+Owner flow:
 
-Tests:
+1. Create at least one category and one item in the active list.
+2. Open Settings → "Поделиться списком".
+3. Enter the verified email of an existing user and click "Поделиться".
+4. Confirm the invited email appears in the "Приглашения" list with an expiry
+   date.
+5. Copy the invitation link (dev link in local/staging, email link in
+   production) and send it to the invited user.
 
-- API route tests for invites to existing verified users and clear rejection of
-  unknown/unverified emails.
-- Browser E2E or documented manual smoke for two real accounts:
-  owner invites, invitee accepts, both see the workspace, editor changes an
-  item/status/shopping row, owner removes access, removed user loses access.
-- Ownership transfer smoke: owner transfers, new owner can manage members, old
-  owner remains editor.
+Invited-user flow:
+
+6. Open the invitation link while signed in (or sign in on the same device).
+7. Confirm the active workspace switches to the shared list and the owner's
+   categories/items are visible.
+8. As an editor, change an item status or complete a shopping row.
+
+Verification flow:
+
+9. Owner refreshes the app and sees the change made by the editor.
+10. Owner revokes a pending invitation — the invited email disappears from the
+    list and the link no longer works.
+11. Owner removes an existing member — the member no longer sees the shared
+    workspace on refresh.
+12. Owner transfers ownership to an existing member — the new owner can manage
+    members, the previous owner becomes an editor.
 
 Release acceptance:
 
