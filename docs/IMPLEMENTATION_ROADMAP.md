@@ -894,6 +894,34 @@ Release acceptance:
 - Documentation clearly marks collaboration as beta and lists the current
   limits: whole-list sharing, fixed roles, no per-group sharing, no audit log.
 
+## Post-MVP: Monolith Refactoring
+
+Status: planned.
+
+Goal: reduce the size and coupling of `apps/api/src/server.ts` and
+`apps/webapp/src/app/page.tsx` before adding new major features.
+
+Scope:
+
+- Split `server.ts` into domain route modules under `apps/api/src/routes/`
+  (auth, categories, items, shopping-list, reminders, groups, check-sessions,
+  workspaces, export, me).
+- Extract reusable UI components and custom hooks from `page.tsx`:
+  - view components per navigation tab (`HomeView`, `CategoriesView`,
+    `ShoppingView`, `CheckView`, `GroupsView`, `SettingsView`);
+  - feature components (`WorkspacePanel`, `OnboardingModal`, `ItemCard`,
+    `ShoppingList`, `CategoryForm`, `ItemForm`);
+  - hooks (`useAuth`, `useWorkspaces`, `useCategories`, `useItems`,
+    `useShoppingList`, `useWorkspaceAccess`).
+- Keep existing behavior and public API contract unchanged.
+- Preserve existing test coverage and update imports accordingly.
+
+Acceptance:
+
+- `pnpm typecheck`, `pnpm lint`, and `pnpm test` pass without regressions.
+- `pnpm test:e2e` passes.
+- No functional changes for end users.
+
 ## Slice 1 Baseline
 
 Historical baseline implemented in Slice 1:
