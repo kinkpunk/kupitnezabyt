@@ -14,8 +14,9 @@ The product is not a classic shopping list. It tracks personal recurring essenti
 - `apps/worker` - reminder scheduler
 - `packages/database` - Prisma schema and database utilities
 - `packages/shared` - shared types and business logic
-- `packages/ui` - reusable UI components
 - `docs` - product and technical documentation
+
+Reusable UI components are currently local to `apps/webapp`; `packages/ui` is intentionally not created until components are shared across multiple apps.
 
 ## Before starting
 
