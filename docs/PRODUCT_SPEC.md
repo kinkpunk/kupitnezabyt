@@ -248,7 +248,6 @@ name
 brand
 notes
 status
-importance
 usage_cycle_days
 last_checked_at
 last_bought_at
@@ -269,7 +268,7 @@ URGENT
 PAUSED
 ```
 
-Важность:
+Важность (post-MVP):
 
 ```text
 LOW
@@ -277,6 +276,10 @@ NORMAL
 HIGH
 CRITICAL
 ```
+
+Поле `importance` зарезервировано для будущей доработки. В текущем MVP
+приоритет товара определяется статусом (`NEED_BUY`, `URGENT`). Управление
+важностью в API и интерфейсе реализуется после релиза web-first MVP.
 
 Пользователь может:
 
@@ -820,7 +823,7 @@ Item {
   brand?: string
   notes?: string
   status: ItemStatus
-  importance: ItemImportance
+  importance?: ItemImportance  // зарезервировано для post-MVP
   usageCycleDays?: number
   lastCheckedAt?: Date
   lastBoughtAt?: Date

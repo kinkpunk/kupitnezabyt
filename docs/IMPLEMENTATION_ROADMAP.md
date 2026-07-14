@@ -1383,6 +1383,35 @@ Finalization work after Slice 13:
 - Implement Slices 14-16 for web-first release readiness.
 - Run Telegram smoke only if optional Telegram deployment is enabled.
 
+## Post-MVP: Item Importance
+
+Status: planned.
+
+Goal: implement user-controlled item importance (`LOW`, `NORMAL`, `HIGH`,
+`CRITICAL`) after the web-first MVP release.
+
+The `importance` field is already present in the Prisma schema and the
+`ItemImportance` enum exists in `docs/PRODUCT_SPEC.md`, but it is not exposed in
+the API or UI in the current MVP. Status-driven priority (`NEED_BUY`, `URGENT`)
+covers the core shopping-list and reminder flows.
+
+Scope:
+
+- Add `importance` to item create/update API contracts.
+- Add importance selection in the item form/card in the webapp.
+- Use importance for secondary sorting inside the shopping list and for visual
+  emphasis on critical items (medicines, hygiene, etc.).
+- Keep importance independent from `status`; it should refine priority within
+  the same status, not replace it.
+
+Tests:
+
+- API tests for create/update with importance.
+- Unit tests for shopping-list sorting that considers both status and
+  importance.
+- E2E coverage for changing item importance and seeing the effect in the
+  shopping list.
+
 ## Dependency Policy
 
 - Prefer simple explicit code before adding dependencies.
