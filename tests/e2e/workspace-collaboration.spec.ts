@@ -75,13 +75,13 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
 
   // Member changes the item status to IN_STOCK.
   const memberItem = memberPage.locator("article").filter({ hasText: itemName });
-  await memberItem.getByRole("button", { name: "Есть" }).click();
-  await expect(memberItem.getByText("Есть")).toBeVisible();
+  await memberItem.getByRole("combobox").selectOption("IN_STOCK");
+  await expect(memberItem.getByRole("combobox")).toHaveValue("IN_STOCK");
 
   // Owner refreshes and sees the change made by the member.
   await ownerPage.reload({ waitUntil: "domcontentloaded" });
   const ownerItem = ownerPage.locator("article").filter({ hasText: itemName });
-  await expect(ownerItem.getByText("Есть")).toBeVisible();
+  await expect(ownerItem.getByRole("combobox")).toHaveValue("IN_STOCK");
 
   // Owner removes the member from the workspace.
   await ownerNavigation.getByRole("button", { name: "Меню" }).click();

@@ -20,6 +20,8 @@
   --color-success-bg: #e4f2ea;
   --color-warning: #8a5a00;
   --color-warning-bg: #fff3d6;
+  --color-attention: #b04a17;
+  --color-attention-bg: #fdeadd;
   --font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   --font-size-xs: 12px;
@@ -71,6 +73,8 @@
     --color-success-bg: #1f3529;
     --color-warning: #f0c36a;
     --color-warning-bg: #372a12;
+    --color-attention: #ffb37a;
+    --color-attention-bg: #3a2417;
     --accent-text: #321018;
     --shadow: none;
   }
@@ -656,6 +660,11 @@ select {
   gap: 8px;
   overflow-x: auto;
   padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.category-row::-webkit-scrollbar {
+  display: none;
 }
 
 .category {
@@ -663,8 +672,18 @@ select {
   align-content: center;
   gap: 2px;
   flex: 0 0 auto;
-  padding: 6px 14px;
+  border-radius: 999px;
+  padding: 6px 16px;
   text-align: left;
+}
+
+.category-panel {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 14px;
 }
 
 .category small {
@@ -837,6 +856,35 @@ select {
   padding: 0 6px;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+}
+
+.status-select {
+  width: 100%;
+  font-weight: var(--font-weight-semibold);
+}
+
+.status-select[data-status="IN_STOCK"] {
+  border-color: color-mix(in srgb, var(--color-success) 45%, var(--line));
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.status-select[data-status="LOW"] {
+  border-color: color-mix(in srgb, var(--color-warning) 45%, var(--line));
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.status-select[data-status="NEED_BUY"] {
+  border-color: color-mix(in srgb, var(--color-attention) 45%, var(--line));
+  background: var(--color-attention-bg);
+  color: var(--color-attention);
+}
+
+.status-select[data-status="URGENT"] {
+  border-color: color-mix(in srgb, var(--color-urgent) 45%, var(--line));
+  background: var(--color-urgent-bg);
+  color: var(--color-urgent);
 }
 
 .shopping-row {

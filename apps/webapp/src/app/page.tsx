@@ -12,6 +12,7 @@ import {
   Mail,
   Menu,
   Pencil,
+  Plus,
   Search,
   Send,
   Settings,
@@ -2122,20 +2123,27 @@ export default function HomePage() {
             <div className="icon-actions">
               {showShareEntryPoint ? (
                 <button
-                  className="ghost-button"
+                  aria-label="Поделиться списком"
+                  className="ghost-button icon-button"
+                  title="Поделиться списком"
                   type="button"
                   onClick={() => setActiveTab("settings")}
                 >
-                  <Users aria-hidden="true" size={17} />
-                  <span>Поделиться списком</span>
+                  <Users aria-hidden="true" size={18} />
                 </button>
               ) : null}
               <button
-                className="ghost-button"
+                aria-label={showCategoryForm ? "Скрыть форму категории" : "Новая категория"}
+                className="ghost-button icon-button"
+                title={showCategoryForm ? "Скрыть" : "Новая категория"}
                 type="button"
                 onClick={() => setShowCategoryForm((current) => !current)}
               >
-                {showCategoryForm ? "Скрыть" : "Новая"}
+                {showCategoryForm ? (
+                  <X aria-hidden="true" size={18} />
+                ) : (
+                  <Plus aria-hidden="true" size={18} />
+                )}
               </button>
             </div>
           </div>
@@ -2187,7 +2195,7 @@ export default function HomePage() {
           </div>
 
           {selectedCategory ? (
-            <>
+            <section className="category-panel" aria-label={selectedCategory.name}>
               <div className="section-heading">
                 <div>
                   <h2>{selectedCategory.name}</h2>
@@ -2327,7 +2335,6 @@ export default function HomePage() {
                         <div className="item-card-header">
                           <div>
                             <h2>{item.name}</h2>
-                            <p>{statusLabels[item.status]}</p>
                           </div>
                           <div className="icon-actions">
                             <button
@@ -2358,30 +2365,34 @@ export default function HomePage() {
                           </div>
                         </div>
                       )}
-                      <div className="status-grid">
+                      <select
+                        aria-label={`Статус товара ${item.name}`}
+                        className="status-select"
+                        data-status={item.status}
+                        disabled={isActionPending(`item:status:${item.id}`)}
+                        value={item.status}
+                        onChange={(event) =>
+                          void handleSetStatus(item, event.target.value as ItemStatus).catch(
+                            (caughtError) => setError(formatError(caughtError))
+                          )
+                        }
+                      >
                         {statusOptions.map((status) => (
-                          <button
-                            className={item.status === status ? "active" : ""}
-                            key={status}
-                            type="button"
-                            disabled={isActionPending(`item:status:${item.id}`)}
-                            onClick={() =>
-                              void handleSetStatus(item, status).catch((caughtError) =>
-                                setError(formatError(caughtError))
-                              )
-                            }
-                          >
+                          <option key={status} value={status}>
                             {statusLabels[status]}
-                          </button>
+                          </option>
                         ))}
-                      </div>
+                        {item.status === "PAUSED" ? (
+                          <option value="PAUSED">{statusLabels.PAUSED}</option>
+                        ) : null}
+                      </select>
                     </article>
                   ))
                 ) : (
                   <p className="empty">Добавьте первый товар в эту категорию.</p>
                 )}
               </div>
-            </>
+            </section>
           ) : (
             <p className="empty">Создайте категорию, чтобы добавить первый товар.</p>
           )}

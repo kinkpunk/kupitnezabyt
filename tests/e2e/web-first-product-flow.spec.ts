@@ -44,7 +44,8 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
-  await expect(page.getByText("Купить").first()).toBeVisible();
+  const createdItem = page.locator("article").filter({ hasText: itemName });
+  await expect(createdItem.getByRole("combobox")).toHaveValue("NEED_BUY");
 
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
