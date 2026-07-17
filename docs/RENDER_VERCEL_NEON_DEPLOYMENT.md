@@ -303,6 +303,11 @@ NEXT_PUBLIC_API_BASE_URL=https://<render-api-host>
 After changing `NEXT_PUBLIC_API_BASE_URL`, redeploy the webapp because this value
 is embedded at build time.
 
+The webapp build fails fast when `NEXT_PUBLIC_API_BASE_URL` is missing or points
+to a local address in a Vercel build (see `apps/webapp/next.config.ts`), so a
+misconfigured deployment cannot ship silently. If a Vercel deploy fails with
+this error, add the variable for the affected environment and redeploy.
+
 ## Optional Telegram Setup
 
 In BotFather:
