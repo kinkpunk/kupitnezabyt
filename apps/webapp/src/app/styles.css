@@ -946,17 +946,21 @@ select {
   font-weight: var(--font-weight-bold);
 }
 
-.shopping-row-open {
+.shopping-row .shopping-row-open {
   display: grid;
+  width: auto;
   min-width: 0;
   min-height: 0;
   justify-items: start;
+  justify-content: start;
+  align-items: start;
   gap: 3px;
   border: 0;
   background: none;
   color: var(--text);
   padding: 0;
   text-align: left;
+  white-space: normal;
 }
 
 .shopping-row-open:not(:disabled):hover {
@@ -971,16 +975,38 @@ select {
 }
 
 .shopping-item-card {
-  grid-template-columns: 1fr;
-  align-items: stretch;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .shopping-item-card-action {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--accent-text);
+}
+
+.shopping-item-card-action:not(:disabled):hover {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+  color: var(--accent-text);
+}
+
+.shopping-item-card-action:disabled {
+  opacity: 1;
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+  cursor: progress;
+}
+
+/* Keep the label readable: ".shopping-row span" above forces muted gray. */
+.shopping-row .shopping-item-card-action span {
+  color: inherit;
 }
 
 .shopping-meta,
