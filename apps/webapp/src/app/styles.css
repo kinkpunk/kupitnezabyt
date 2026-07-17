@@ -973,24 +973,14 @@ select {
 .shopping-item-card {
   grid-template-columns: 1fr;
   align-items: stretch;
-  gap: 0;
+  gap: 10px;
 }
 
-.shopping-item-card-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) max-content;
+.shopping-item-card-action {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 10px;
-}
-
-.shopping-item-card-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding-top: 10px;
+  justify-content: center;
+  gap: 6px;
 }
 
 .shopping-meta,

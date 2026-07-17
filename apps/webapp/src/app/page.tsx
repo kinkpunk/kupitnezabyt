@@ -6,6 +6,7 @@ import {
   Archive,
   Bell,
   Boxes,
+  Check,
   Crown,
   Home,
   Mail,
@@ -119,11 +120,6 @@ const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
   CATEGORY: "Категория",
   GROUP: "Набор",
   ITEM: "Товар"
-};
-
-const shoppingStatusLabels: Partial<Record<ItemStatus, string>> = {
-  NEED_BUY: "нужно купить",
-  URGENT: "срочно"
 };
 
 function formatPositionCount(count: number): string {
@@ -2044,47 +2040,36 @@ export default function HomePage() {
             </div>
             {urgentItems.length ? (
               <div className="item-list">
-                {urgentItems.map((item) => {
-                  const shoppingStatus = shoppingStatusLabels[item.status] ?? statusLabels[item.status];
-
-                  return (
-                    <article className="shopping-row shopping-item-card" key={item.id}>
-                      <div className="shopping-item-card-head">
-                        <button
-                          aria-label={`Открыть ${item.name}`}
-                          className="shopping-row-open"
-                          type="button"
-                          onClick={() => handleSelectCategory(item.categoryId)}
-                        >
-                          <span className="shopping-row-title">{item.name}</span>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isActionPending(`item:status:${item.id}`)}
-                          onClick={() =>
-                            void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
-                              setError(formatError(caughtError))
-                            )
-                          }
-                        >
-                          {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
-                        </button>
-                      </div>
-                      <div className="shopping-item-card-body">
-                        {item.category?.name ? (
-                          <span className="metadata-text">{item.category.name}</span>
-                        ) : null}
-                        <span
-                          className={
-                            item.status === "URGENT" ? "badge badge-urgent" : "badge badge-muted"
-                          }
-                        >
-                          {shoppingStatus}
-                        </span>
-                      </div>
-                    </article>
-                  );
-                })}
+                {urgentItems.map((item) => (
+                  <article className="shopping-row shopping-item-card" key={item.id}>
+                    <button
+                      aria-label={`Открыть ${item.name}`}
+                      className="shopping-row-open"
+                      type="button"
+                      onClick={() => handleSelectCategory(item.categoryId)}
+                    >
+                      <span className="shopping-row-title">{item.name}</span>
+                      {item.category?.name ? (
+                        <span className="metadata-text">{item.category.name}</span>
+                      ) : null}
+                    </button>
+                    <button
+                      className="shopping-item-card-action"
+                      type="button"
+                      disabled={isActionPending(`item:status:${item.id}`)}
+                      onClick={() =>
+                        void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
+                    >
+                      <Check aria-hidden="true" size={18} />
+                      <span>
+                        {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
+                      </span>
+                    </button>
+                  </article>
+                ))}
               </div>
             ) : (
               <p className="empty">Нет товаров, которые нужно купить прямо сейчас.</p>
