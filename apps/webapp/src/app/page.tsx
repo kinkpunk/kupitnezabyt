@@ -1,6 +1,5 @@
 "use client";
 
-import { calculateReadiness } from "@kupitnezabyt/shared";
 import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import {
@@ -362,7 +361,10 @@ export default function HomePage() {
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
-  const readiness = useMemo(() => calculateReadiness(items), [items]);
+  const attentionItemsCount = useMemo(
+    () => items.filter((item) => item.status !== "IN_STOCK" && item.status !== "PAUSED").length,
+    [items]
+  );
 
   const urgentItems = useMemo(
     () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
@@ -1989,22 +1991,26 @@ export default function HomePage() {
         <section className="stack">
           <div className="home-summary">
             <button
-              className="home-tile home-tile-readiness"
+              className={
+                attentionItemsCount ? "home-tile home-tile-attention" : "home-tile home-tile-ok"
+              }
               type="button"
               onClick={() => handleSelectTab("items")}
             >
-              <span className="eyebrow">Актуальность</span>
-              <strong>{readiness === null ? "Нет данных" : `${readiness}%`}</strong>
-              <span>{items.length ? "товаров в норме" : "Добавьте первые товары"}</span>
-            </button>
-            <button
-              className="home-tile home-tile-shopping"
-              type="button"
-              onClick={() => handleSelectTab("shopping")}
-            >
-              <span className="eyebrow">Покупки</span>
-              <strong>{shoppingList.length}</strong>
-              <span>{shoppingList.length ? formatPositionCount(shoppingList.length) : "список пуст"}</span>
+              <span className="eyebrow">Запасы</span>
+              {attentionItemsCount ? (
+                <>
+                  <strong>{attentionItemsCount}</strong>
+                  <span>требуют внимания</span>
+                </>
+              ) : (
+                <>
+                  <strong>Все запасы в порядке</strong>
+                  <span>
+                    {items.length ? `${items.length} отслеживается` : "Добавьте первые товары"}
+                  </span>
+                </>
+              )}
             </button>
           </div>
 
@@ -2050,13 +2056,15 @@ export default function HomePage() {
                         onClick={() => handleSelectCategory(item.categoryId)}
                       >
                         <span className="shopping-row-title">{item.name}</span>
-                        <span className="shopping-meta-line">
-                          {item.category?.name ? (
-                            <span className="metadata-text">{item.category.name}</span>
-                          ) : null}
-                          <span className={item.status === "URGENT" ? "badge badge-urgent" : "badge badge-muted"}>
-                            {shoppingStatus}
-                          </span>
+                        {item.category?.name ? (
+                          <span className="metadata-text">{item.category.name}</span>
+                        ) : null}
+                        <span
+                          className={
+                            item.status === "URGENT" ? "badge badge-urgent" : "badge badge-muted"
+                          }
+                        >
+                          {shoppingStatus}
                         </span>
                       </button>
                       <button
