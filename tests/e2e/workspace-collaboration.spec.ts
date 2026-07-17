@@ -84,7 +84,11 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   await expect(ownerItem.getByText("Есть")).toBeVisible();
 
   // Owner removes the member from the workspace.
-  await ownerNavigation.getByRole("button", { name: "Настройки" }).click();
+  await ownerNavigation.getByRole("button", { name: "Меню" }).click();
+  await ownerPage
+    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("button", { name: "Настройки" })
+    .click();
   ownerPage.on("dialog", (dialog) => void dialog.accept());
   await ownerPage
     .getByRole("button", { name: `Удалить доступ для ${memberEmail}` })

@@ -5,11 +5,12 @@ import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
+  Bell,
   Boxes,
   Crown,
   Home,
-  ListChecks,
   Mail,
+  Menu,
   Pencil,
   Search,
   Send,
@@ -17,7 +18,8 @@ import {
   ShoppingCart,
   Tags,
   UserMinus,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -199,9 +201,11 @@ type ActiveTab =
 
 const navTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
   { id: "home", icon: Home, label: "Главная" },
-  { id: "items", icon: Tags, label: "Категории" },
+  { id: "items", icon: Tags, label: "Категории" }
+];
+
+const menuTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
   { id: "shopping", icon: ShoppingCart, label: "Покупки" },
-  { id: "check", icon: ListChecks, label: "Проверка" },
   { id: "groups", icon: Boxes, label: "Наборы" },
   { id: "settings", icon: Settings, label: "Настройки" },
   { id: "archive", icon: Archive, label: "Архив" }
@@ -273,9 +277,9 @@ export default function HomePage() {
   const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
   const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
-  const [dismissedReminderNoticeKey, setDismissedReminderNoticeKey] = useState<string | null>(null);
   const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showMenuSheet, setShowMenuSheet] = useState(false);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -373,11 +377,6 @@ export default function HomePage() {
     () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
     [inAppReminders]
   );
-  const reminderNoticeKey = useMemo(
-    () => inAppReminders.map((reminder) => `${reminder.id}:${reminder.nextCheckAt}`).join("|"),
-    [inAppReminders]
-  );
-  const hasReminderNotice = Boolean(reminderNoticeKey && dismissedReminderNoticeKey !== reminderNoticeKey);
 
   useEffect(() => {
     if (!toastMessage) {
@@ -1404,6 +1403,31 @@ export default function HomePage() {
     setActiveTab(tab);
   }
 
+  function handleSelectMenuTab(tab: ActiveTab) {
+    handleSelectTab(tab);
+    setShowMenuSheet(false);
+  }
+
+  function handleBellClick() {
+    setShowMenuSheet(false);
+    handleSelectTab("home");
+  }
+
+  useEffect(() => {
+    if (!showMenuSheet) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowMenuSheet(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showMenuSheet]);
+
   function handleSelectCategory(categoryId: string) {
     clearSearchSession();
     setSelectedCategoryId(categoryId);
@@ -1893,108 +1917,52 @@ export default function HomePage() {
 
   return (
     <main className="app-shell">
-      <header className={showWorkspaceSwitcher ? "topbar topbar-with-workspace" : "topbar"}>
+      <header className="topbar">
         <div className="brand-lockup">
           <img alt="" className="brand-logo" src="/logo.png" />
           <h1>
             <BrandWord />
           </h1>
         </div>
-        {activeWorkspace && showWorkspaceSwitcher ? (
-          <div className="workspace-actions">
-            <label className="workspace-switcher">
-              <span>Список</span>
-              <select
-                aria-label="Активный список"
-                value={activeWorkspace.id}
-                onChange={(event) =>
-                  void handleSelectWorkspace(event.target.value).catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                {workspaces.map((workspace) => (
-                  <option key={workspace.id} value={workspace.id}>
-                    {workspace.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        ) : null}
+        <form
+          className="global-search"
+          role="search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSearchItems().catch((caughtError) => setError(formatError(caughtError)));
+          }}
+        >
+          <input
+            aria-label="Глобальный поиск"
+            placeholder="Найти товар или категорию"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          <button type="submit" aria-label="Искать">
+            <Search aria-hidden="true" size={18} />
+          </button>
+        </form>
+        <button
+          aria-label={
+            inAppReminders.length
+              ? `Напоминания: ${inAppReminders.length} активных`
+              : "Напоминания: нет активных"
+          }
+          className="notification-bell"
+          type="button"
+          onClick={handleBellClick}
+        >
+          <Bell aria-hidden="true" size={20} />
+          {inAppReminders.length ? (
+            <span className="notification-badge">{inAppReminders.length}</span>
+          ) : null}
+        </button>
       </header>
 
       <ErrorNotice message={error} onClose={() => setError(null)} />
       <ToastNotice message={toastMessage} onClose={() => setToastMessage(null)} />
-      {hasReminderNotice ? (
-        <div className="reminder-notice" role="status">
-          <div>
-            <p className="eyebrow">Напоминания</p>
-            <strong>
-              {inAppReminders.length}{" "}
-              {inAppReminders.length === 1 ? "активное напоминание" : "активных напоминаний"}
-            </strong>
-          </div>
-          <div className="reminder-notice-actions">
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => {
-                setActiveTab("home");
-                setDismissedReminderNoticeKey(reminderNoticeKey);
-              }}
-            >
-              Открыть
-            </button>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => setDismissedReminderNoticeKey(reminderNoticeKey)}
-            >
-              Позже
-            </button>
-          </div>
-        </div>
-      ) : null}
 
-      <form
-        className="global-search"
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSearchItems().catch((caughtError) => setError(formatError(caughtError)));
-        }}
-      >
-        <input
-          aria-label="Глобальный поиск"
-          placeholder="Найти товар или категорию"
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-        />
-        <button type="submit" aria-label="Искать">
-          <Search aria-hidden="true" size={18} />
-          <span>Найти</span>
-        </button>
-      </form>
-
-      <nav className="tabs" aria-label="Основные разделы">
-        {navTabs.map((tab) => {
-          const Icon = tab.icon;
-
-          return (
-            <button
-              className={activeTab === tab.id ? "active" : ""}
-              key={tab.id}
-              type="button"
-              onClick={() => handleSelectTab(tab.id)}
-            >
-              <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
+      <div className="main-content">
       {activeTab === "home" ? (
         <section className="stack">
           <div className="home-summary">
@@ -3269,6 +3237,96 @@ export default function HomePage() {
           </div>
         </section>
       )}
+      </div>
+
+      <nav className="bottom-nav" aria-label="Основные разделы">
+        {navTabs.map((tab) => {
+          const Icon = tab.icon;
+
+          return (
+            <button
+              className={activeTab === tab.id ? "active" : ""}
+              key={tab.id}
+              type="button"
+              onClick={() => handleSelectTab(tab.id)}
+            >
+              <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
+        <button
+          aria-controls="menu-sheet"
+          aria-expanded={showMenuSheet}
+          className={
+            showMenuSheet || menuTabs.some((tab) => tab.id === activeTab) ? "active" : ""
+          }
+          type="button"
+          onClick={() => setShowMenuSheet((current) => !current)}
+        >
+          <Menu aria-hidden="true" size={18} strokeWidth={2.25} />
+          <span>Меню</span>
+        </button>
+      </nav>
+
+      {showMenuSheet ? (
+        <div className="menu-sheet-overlay" onClick={() => setShowMenuSheet(false)}>
+          <section
+            aria-label="Дополнительные разделы"
+            className="menu-sheet"
+            id="menu-sheet"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="menu-sheet-header">
+              <strong>Разделы</strong>
+              <button
+                aria-label="Закрыть меню"
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowMenuSheet(false)}
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </div>
+            {activeWorkspace && showWorkspaceSwitcher ? (
+              <label className="workspace-switcher">
+                <span>Список</span>
+                <select
+                  aria-label="Активный список"
+                  value={activeWorkspace.id}
+                  onChange={(event) =>
+                    void handleSelectWorkspace(event.target.value).catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            {menuTabs.map((tab) => {
+              const Icon = tab.icon;
+
+              return (
+                <button
+                  className={activeTab === tab.id ? "menu-item active" : "menu-item"}
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleSelectMenuTab(tab.id)}
+                >
+                  <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
