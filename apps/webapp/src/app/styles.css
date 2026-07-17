@@ -431,6 +431,12 @@ select {
   color: var(--color-primary-active);
 }
 
+.bottom-nav button:not(:disabled):hover {
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+}
+
 .menu-sheet-overlay {
   position: fixed;
   z-index: 40;
