@@ -2048,14 +2048,29 @@ export default function HomePage() {
                   const shoppingStatus = shoppingStatusLabels[item.status] ?? statusLabels[item.status];
 
                   return (
-                    <article className="shopping-row" key={item.id}>
-                      <button
-                        aria-label={`Открыть ${item.name}`}
-                        className="shopping-row-open"
-                        type="button"
-                        onClick={() => handleSelectCategory(item.categoryId)}
-                      >
-                        <span className="shopping-row-title">{item.name}</span>
+                    <article className="shopping-row shopping-item-card" key={item.id}>
+                      <div className="shopping-item-card-head">
+                        <button
+                          aria-label={`Открыть ${item.name}`}
+                          className="shopping-row-open"
+                          type="button"
+                          onClick={() => handleSelectCategory(item.categoryId)}
+                        >
+                          <span className="shopping-row-title">{item.name}</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isActionPending(`item:status:${item.id}`)}
+                          onClick={() =>
+                            void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
+                              setError(formatError(caughtError))
+                            )
+                          }
+                        >
+                          {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
+                        </button>
+                      </div>
+                      <div className="shopping-item-card-body">
                         {item.category?.name ? (
                           <span className="metadata-text">{item.category.name}</span>
                         ) : null}
@@ -2066,18 +2081,7 @@ export default function HomePage() {
                         >
                           {shoppingStatus}
                         </span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isActionPending(`item:status:${item.id}`)}
-                        onClick={() =>
-                          void handleSetStatus(item, "IN_STOCK").catch((caughtError) =>
-                            setError(formatError(caughtError))
-                          )
-                        }
-                      >
-                        {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
-                      </button>
+                      </div>
                     </article>
                   );
                 })}

@@ -970,6 +970,29 @@ select {
   line-height: var(--line-height-tight);
 }
 
+.shopping-item-card {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+  gap: 0;
+}
+
+.shopping-item-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 10px;
+}
+
+.shopping-item-card-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 10px;
+}
+
 .shopping-meta,
 .reminder-meta,
 .metadata-text {
