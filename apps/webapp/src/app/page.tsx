@@ -281,6 +281,8 @@ export default function HomePage() {
   const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showMenuSheet, setShowMenuSheet] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationsViewed, setNotificationsViewed] = useState(false);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -366,6 +368,7 @@ export default function HomePage() {
     () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
     [items]
   );
+  const notificationCount = shoppingList.length + inAppReminders.length;
   const itemReminders = useMemo(
     () => inAppReminders.filter((reminder) => reminder.entityType === "ITEM"),
     [inAppReminders]
@@ -1411,8 +1414,24 @@ export default function HomePage() {
 
   function handleBellClick() {
     setShowMenuSheet(false);
-    handleSelectTab("home");
+    setNotificationsViewed(true);
+    setShowNotifications((current) => !current);
   }
+
+  useEffect(() => {
+    if (!showNotifications) {
+      return;
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowNotifications(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showNotifications]);
 
   useEffect(() => {
     if (!showMenuSheet) {
@@ -1944,18 +1963,20 @@ export default function HomePage() {
           </button>
         </form>
         <button
+          aria-controls="notification-sheet"
+          aria-expanded={showNotifications}
           aria-label={
-            inAppReminders.length
-              ? `Напоминания: ${inAppReminders.length} активных`
-              : "Напоминания: нет активных"
+            notificationCount && !notificationsViewed
+              ? `Уведомлений: ${notificationCount}`
+              : "Уведомления: нет новых"
           }
           className="notification-bell"
           type="button"
           onClick={handleBellClick}
         >
           <Bell aria-hidden="true" size={20} />
-          {inAppReminders.length ? (
-            <span className="notification-badge">{inAppReminders.length}</span>
+          {!notificationsViewed && notificationCount ? (
+            <span className="notification-badge">{notificationCount}</span>
           ) : null}
         </button>
       </header>
@@ -1967,16 +1988,24 @@ export default function HomePage() {
       {activeTab === "home" ? (
         <section className="stack">
           <div className="home-summary">
-            <div>
-              <p className="eyebrow">Актуальность</p>
+            <button
+              className="home-tile home-tile-readiness"
+              type="button"
+              onClick={() => handleSelectTab("items")}
+            >
+              <span className="eyebrow">Актуальность</span>
               <strong>{readiness === null ? "Нет данных" : `${readiness}%`}</strong>
               <span>{items.length ? "товаров в норме" : "Добавьте первые товары"}</span>
-            </div>
-            <div>
-              <p className="eyebrow">Покупки</p>
+            </button>
+            <button
+              className="home-tile home-tile-shopping"
+              type="button"
+              onClick={() => handleSelectTab("shopping")}
+            >
+              <span className="eyebrow">Покупки</span>
               <strong>{shoppingList.length}</strong>
               <span>{shoppingList.length ? formatPositionCount(shoppingList.length) : "список пуст"}</span>
-            </div>
+            </button>
           </div>
 
           {checkSession?.status === "IN_PROGRESS" ? (
@@ -2014,17 +2043,22 @@ export default function HomePage() {
 
                   return (
                     <article className="shopping-row" key={item.id}>
-                      <div>
-                        <h2>{item.name}</h2>
-                        <div className="shopping-meta-line">
+                      <button
+                        aria-label={`Открыть ${item.name}`}
+                        className="shopping-row-open"
+                        type="button"
+                        onClick={() => handleSelectCategory(item.categoryId)}
+                      >
+                        <span className="shopping-row-title">{item.name}</span>
+                        <span className="shopping-meta-line">
                           {item.category?.name ? (
                             <span className="metadata-text">{item.category.name}</span>
                           ) : null}
                           <span className={item.status === "URGENT" ? "badge badge-urgent" : "badge badge-muted"}>
                             {shoppingStatus}
                           </span>
-                        </div>
-                      </div>
+                        </span>
+                      </button>
                       <button
                         type="button"
                         disabled={isActionPending(`item:status:${item.id}`)}
@@ -2087,30 +2121,6 @@ export default function HomePage() {
             ) : (
               <p className="empty">Добавьте циклы проверки, чтобы видеть ближайшие даты.</p>
             )}
-          </section>
-
-          <section className="home-section">
-            <div className="section-heading">
-              <div>
-                <h2>Категории</h2>
-                <p>{categories.length ? `${categories.length} активных` : "Пока нет"}</p>
-              </div>
-            </div>
-            <div className="category-row" aria-label="Быстрый доступ к категориям">
-              {categories.map((category) => (
-                <button
-                  className="category"
-                  key={category.id}
-                  type="button"
-                  onClick={() => handleSelectCategory(category.id)}
-                >
-                  <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
-                  <small>
-                    {categoryStatusLabels[category.aggregateStatus]} · {category.itemCount}
-                  </small>
-                </button>
-              ))}
-            </div>
           </section>
         </section>
       ) : activeTab === "items" ? (
@@ -3335,6 +3345,101 @@ export default function HomePage() {
                 </button>
               );
             })}
+          </section>
+        </div>
+      ) : null}
+
+      {showNotifications ? (
+        <div className="menu-sheet-overlay" onClick={() => setShowNotifications(false)}>
+          <section
+            aria-label="Уведомления"
+            className="menu-sheet notification-sheet"
+            id="notification-sheet"
+            role="dialog"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="menu-sheet-header">
+              <strong>Уведомления</strong>
+              <button
+                aria-label="Закрыть уведомления"
+                className="ghost-button"
+                type="button"
+                onClick={() => setShowNotifications(false)}
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </div>
+            {notificationCount ? (
+              <>
+                {shoppingList.length ? (
+                  <div className="notification-list" aria-label="Что купить">
+                    <p className="eyebrow">Купить</p>
+                    {shoppingList.map((entry) => (
+                      <button
+                        className="notification-row"
+                        key={entry.id}
+                        type="button"
+                        onClick={() => {
+                          setShowNotifications(false);
+                          if (entry.item) {
+                            handleSelectCategory(entry.item.categoryId);
+                          } else {
+                            handleSelectTab("shopping");
+                          }
+                        }}
+                      >
+                        <span className="notification-row-title">{entry.title}</span>
+                        <span className="shopping-meta-line">
+                          {entry.category?.name ? (
+                            <span className="metadata-text">{entry.category.name}</span>
+                          ) : null}
+                          <span
+                            className={
+                              entry.priority === "URGENT" ? "badge badge-urgent" : "badge badge-muted"
+                            }
+                          >
+                            {entry.priority === "URGENT" ? "Срочно" : "Купить"}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {inAppReminders.length ? (
+                  <div className="notification-list" aria-label="Что проверить">
+                    <p className="eyebrow">Проверить</p>
+                    {inAppReminders.map((reminder) => (
+                      <button
+                        className="notification-row"
+                        key={reminder.id}
+                        type="button"
+                        onClick={() => {
+                          setShowNotifications(false);
+                          handleOpenReminder(reminder);
+                        }}
+                      >
+                        <span className="notification-row-title">{reminder.title}</span>
+                        <span className="shopping-meta-line">
+                          <span
+                            className={
+                              reminder.timing === "DUE" ? "badge badge-urgent" : "badge badge-muted"
+                            }
+                          >
+                            {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
+                            {formatDate(reminder.nextCheckAt)}
+                          </span>
+                          <span className="metadata-text">
+                            {reminderEntityLabels[reminder.entityType]}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </>
+            ) : (
+              <p className="empty">Нет уведомлений.</p>
+            )}
           </section>
         </div>
       ) : null}

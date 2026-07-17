@@ -481,6 +481,38 @@ select {
   color: var(--color-primary-active);
 }
 
+.notification-list {
+  display: grid;
+  gap: 6px;
+}
+
+.notification-list .eyebrow {
+  margin: 0;
+}
+
+.notification-row {
+  display: grid;
+  gap: 4px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.notification-row:not(:disabled):hover {
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+}
+
+.notification-row-title {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
 .status-grid button.active {
   border-color: var(--color-primary);
   background: var(--color-primary);
@@ -610,25 +642,41 @@ select {
 .home-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
-.home-summary > div {
+.home-tile {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--surface-strong);
-  padding: 10px 12px;
+  box-shadow: var(--shadow);
+  color: var(--text);
+  padding: 14px 16px;
+  text-align: left;
 }
 
-.home-summary strong {
-  font-size: var(--font-size-xl);
+.home-tile:not(:disabled):hover {
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+}
+
+.home-tile strong {
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
 }
 
-.home-summary span {
+.home-tile-readiness strong {
+  color: var(--color-success);
+}
+
+.home-tile-shopping strong {
+  color: var(--color-primary);
+}
+
+.home-tile span {
   color: var(--muted);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-regular);
@@ -895,6 +943,29 @@ select {
 .shopping-row h2 {
   font-size: 17px;
   font-weight: var(--font-weight-bold);
+}
+
+.shopping-row-open {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  gap: 4px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  padding: 0;
+  text-align: left;
+}
+
+.shopping-row-open:not(:disabled):hover {
+  background: none;
+  color: var(--color-primary-active);
+}
+
+.shopping-row-title {
+  font-size: 17px;
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
 }
 
 .shopping-meta,
