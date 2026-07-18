@@ -11,12 +11,14 @@ import {
   Home,
   Mail,
   Menu,
+  Moon,
   Pencil,
   Plus,
   Search,
   Send,
   Settings,
   ShoppingCart,
+  Sun,
   Tags,
   UserMinus,
   Users,
@@ -159,6 +161,7 @@ const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
 };
 
 const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
+const themeStorageKey = "kupitnezabyt.theme";
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
 const reminderSnoozeDays = 3;
@@ -278,6 +281,14 @@ export default function HomePage() {
   const [showMenuSheet, setShowMenuSheet] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsViewed, setNotificationsViewed] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light" | null>(() => {
+    if (typeof document === "undefined") {
+      return null;
+    }
+
+    const savedTheme = document.documentElement.getAttribute("data-theme");
+    return savedTheme === "dark" || savedTheme === "light" ? savedTheme : null;
+  });
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -388,6 +399,15 @@ export default function HomePage() {
     const timeoutId = window.setTimeout(() => setToastMessage(null), 4000);
     return () => window.clearTimeout(timeoutId);
   }, [toastMessage]);
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem(themeStorageKey);
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const nextTheme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : prefersDark ? "dark" : "light";
+
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1416,6 +1436,13 @@ export default function HomePage() {
     setShowNotifications((current) => !current);
   }
 
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    window.localStorage.setItem(themeStorageKey, nextTheme);
+  }
+
   useEffect(() => {
     if (!showNotifications) {
       return;
@@ -1960,6 +1987,18 @@ export default function HomePage() {
             <Search aria-hidden="true" size={18} />
           </button>
         </form>
+        <button
+          aria-label={theme === "dark" ? "Включить светлую тему" : "Включить темную тему"}
+          className="notification-bell"
+          type="button"
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? (
+            <Sun aria-hidden="true" size={20} />
+          ) : (
+            <Moon aria-hidden="true" size={20} />
+          )}
+        </button>
         <button
           aria-controls="notification-sheet"
           aria-expanded={showNotifications}
