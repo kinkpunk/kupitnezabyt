@@ -445,7 +445,7 @@ export default function HomePage() {
       row.removeEventListener("scroll", updateOverflow);
       resizeObserver.disconnect();
     };
-  }, [categories, selectedCategory?.id]);
+  }, [activeTab, categories, selectedCategory?.id]);
 
   useEffect(() => {
     let isMounted = true;
