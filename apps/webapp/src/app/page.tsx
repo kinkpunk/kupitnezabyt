@@ -2220,11 +2220,14 @@ export default function HomePage() {
             </form>
           ) : null}
 
-          <div className="category-row" aria-label="Категории">
+          <div className="category-row" aria-label="Категории" role="tablist">
             {categories.map((category) => (
               <button
+                aria-controls="category-panel"
+                aria-selected={selectedCategory?.id === category.id}
                 className={selectedCategory?.id === category.id ? "category active" : "category"}
                 key={category.id}
+                role="tab"
                 type="button"
                 onClick={() => {
                   clearSearchSession();
@@ -2241,40 +2244,36 @@ export default function HomePage() {
           </div>
 
           {selectedCategory ? (
-            <section className="category-panel" aria-label={selectedCategory.name}>
-              <div className="section-heading">
-                <div>
-                  <h2>{selectedCategory.name}</h2>
-                  <p>
-                    {categoryStatusLabels[selectedCategory.aggregateStatus]} ·{" "}
-                    {selectedCategory.itemCount} поз.
-                  </p>
-                </div>
-                <div className="icon-actions">
-                  <button
-                    className="ghost-button"
-                    disabled={selectedCategory.itemCount === 0}
-                    type="button"
-                    onClick={() =>
-                      void handleStartCategoryCheck().catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
-                  >
-                    Проверить
-                  </button>
-                  <button
-                    className="ghost-button danger-button"
-                    type="button"
-                    onClick={() =>
-                      void handleArchiveSelectedCategory().catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
-                  >
-                    Архив
-                  </button>
-                </div>
+            <section
+              aria-label={selectedCategory.name}
+              className="category-panel"
+              id="category-panel"
+              role="tabpanel"
+            >
+              <div className="category-panel-actions">
+                <button
+                  className="ghost-button"
+                  disabled={selectedCategory.itemCount === 0}
+                  type="button"
+                  onClick={() =>
+                    void handleStartCategoryCheck().catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  Проверить
+                </button>
+                <button
+                  className="ghost-button danger-button"
+                  type="button"
+                  onClick={() =>
+                    void handleArchiveSelectedCategory().catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    )
+                  }
+                >
+                  Архив
+                </button>
               </div>
 
               <form
@@ -2286,7 +2285,7 @@ export default function HomePage() {
               >
                 <input
                   aria-label="Название товара"
-                  placeholder={`Товар: ${selectedCategory.name}`}
+                  placeholder="Новый товар"
                   value={itemName}
                   disabled={isActionPending("item:create")}
                   onChange={(event) => setItemName(event.target.value)}

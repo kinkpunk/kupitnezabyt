@@ -39,7 +39,7 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await page.getByRole("button", { name: "Новая" }).click();
   await page.getByLabel("Название категории").fill(categoryName);
   await page.getByRole("button", { name: "Создать" }).click();
-  await expect(page.getByRole("heading", { name: categoryName })).toBeVisible();
+  await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");

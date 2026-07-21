@@ -29,7 +29,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   await ownerPage.getByRole("button", { name: "Новая" }).click();
   await ownerPage.getByLabel("Название категории").fill(categoryName);
   await ownerPage.getByRole("button", { name: "Создать" }).click();
-  await expect(ownerPage.getByRole("heading", { name: categoryName })).toBeVisible();
+  await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await ownerPage.getByLabel("Название товара").fill(itemName);
   await ownerPage.getByLabel("Название товара").press("Enter");
@@ -70,7 +70,9 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   await memberPage.goto(memberEntryUrl.toString(), { waitUntil: "domcontentloaded" });
 
   // Member should land in the shared workspace and see the owner's data.
-  await expect(memberPage.getByRole("heading", { name: categoryName })).toBeVisible();
+  const memberNavigation = memberPage.getByRole("navigation", { name: "Основные разделы" });
+  await memberNavigation.getByRole("button", { name: "Категории" }).click();
+  await expect(memberPage.getByRole("tab", { name: categoryName })).toBeVisible();
   await expect(memberPage.getByRole("heading", { name: itemName })).toBeVisible();
 
   // Member changes the item status to IN_STOCK.
@@ -97,7 +99,8 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
 
   // Member refreshes and loses access to the shared workspace.
   await memberPage.reload({ waitUntil: "domcontentloaded" });
-  await expect(memberPage.getByRole("heading", { name: categoryName })).toHaveCount(0);
+  await memberNavigation.getByRole("button", { name: "Категории" }).click();
+  await expect(memberPage.getByRole("tab", { name: categoryName })).toHaveCount(0);
   await expect(memberPage.getByRole("heading", { name: itemName })).toHaveCount(0);
 
   // Cleanup.

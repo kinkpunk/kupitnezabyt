@@ -413,14 +413,40 @@ select {
   color: var(--text);
 }
 
-.category.active,
+.category {
+  position: relative;
+  border-color: transparent;
+  background: transparent;
+}
+
+.category.active {
+  z-index: 1;
+  border-color: var(--line);
+  border-bottom-color: var(--surface);
+  background: var(--surface);
+}
+
+.category.active > span {
+  color: var(--color-primary-active);
+  font-weight: var(--font-weight-bold);
+}
+
+.category:not(:disabled):hover {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.category.active:not(:disabled):hover {
+  border-bottom-color: var(--surface);
+}
+
 .status-grid button.active {
   border-color: var(--color-primary);
   background: var(--color-primary-soft);
   color: var(--color-primary-active);
 }
 
-.category:not(:disabled):hover,
 .status-grid button:not(:disabled):hover {
   border-color: var(--color-primary-soft-hover);
   background: var(--color-primary-soft);
@@ -739,9 +765,10 @@ select {
 
 .category-row {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  margin-bottom: -1px;
+  padding: 0 8px;
   scrollbar-width: none;
 }
 
@@ -754,8 +781,8 @@ select {
   align-content: center;
   gap: 2px;
   flex: 0 0 auto;
-  border-radius: 999px;
-  padding: 6px 16px;
+  border-radius: 12px 12px 0 0;
+  padding: 6px 14px;
   text-align: left;
 }
 
@@ -766,6 +793,12 @@ select {
   border-radius: 12px;
   background: var(--surface);
   padding: 14px;
+}
+
+.category-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .category small {
