@@ -25,7 +25,7 @@ import {
   X
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ApiError,
@@ -289,6 +289,8 @@ export default function HomePage() {
     const savedTheme = document.documentElement.getAttribute("data-theme");
     return savedTheme === "dark" || savedTheme === "light" ? savedTheme : null;
   });
+  const categoryRowRef = useRef<HTMLDivElement | null>(null);
+  const [categoryRowOverflow, setCategoryRowOverflow] = useState({ left: false, right: false });
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -390,6 +392,13 @@ export default function HomePage() {
     () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
     [inAppReminders]
   );
+  const categoryRowClassName = [
+    "category-row",
+    categoryRowOverflow.left ? "fade-left" : null,
+    categoryRowOverflow.right ? "fade-right" : null
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   useEffect(() => {
     if (!toastMessage) {
@@ -408,6 +417,35 @@ export default function HomePage() {
     setTheme(nextTheme);
     document.documentElement.setAttribute("data-theme", nextTheme);
   }, []);
+
+  useEffect(() => {
+    const row = categoryRowRef.current;
+    if (!row) {
+      setCategoryRowOverflow({ left: false, right: false });
+      return;
+    }
+
+    function updateOverflow() {
+      if (!row) {
+        return;
+      }
+
+      setCategoryRowOverflow({
+        left: row.scrollLeft > 1,
+        right: row.scrollLeft + row.clientWidth < row.scrollWidth - 1
+      });
+    }
+
+    updateOverflow();
+    row.addEventListener("scroll", updateOverflow, { passive: true });
+    const resizeObserver = new ResizeObserver(updateOverflow);
+    resizeObserver.observe(row);
+
+    return () => {
+      row.removeEventListener("scroll", updateOverflow);
+      resizeObserver.disconnect();
+    };
+  }, [categories, selectedCategory?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -2220,7 +2258,12 @@ export default function HomePage() {
             </form>
           ) : null}
 
-          <div className="category-row" aria-label="Категории" role="tablist">
+          <div
+            aria-label="Категории"
+            className={categoryRowClassName}
+            ref={categoryRowRef}
+            role="tablist"
+          >
             {categories.map((category) => (
               <button
                 aria-controls="category-panel"

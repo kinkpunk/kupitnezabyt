@@ -767,13 +767,41 @@ select {
   display: flex;
   gap: 4px;
   overflow-x: auto;
-  margin-bottom: -1px;
+  /* Компенсирует gap 12px родительского .stack и перекрывает границу панели на 1px */
+  margin-bottom: -13px;
   padding: 0 8px;
   scrollbar-width: none;
 }
 
 .category-row::-webkit-scrollbar {
   display: none;
+}
+
+.category-row.fade-left {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 32px);
+  mask-image: linear-gradient(to right, transparent, black 32px);
+}
+
+.category-row.fade-right {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent);
+}
+
+.category-row.fade-left.fade-right {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 32px,
+    black calc(100% - 32px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 32px,
+    black calc(100% - 32px),
+    transparent
+  );
 }
 
 .category {
