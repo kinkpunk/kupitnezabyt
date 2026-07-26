@@ -19,6 +19,7 @@ import {
   Settings,
   ShoppingCart,
   Sun,
+  SunMoon,
   Tags,
   UserMinus,
   Users,
@@ -162,6 +163,14 @@ const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
 
 const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 const themeStorageKey = "kupitnezabyt.theme";
+
+type ThemeMode = "dark" | "light" | "system";
+
+const themeModeLabels: Record<ThemeMode, string> = {
+  system: "Тема: как на устройстве",
+  light: "Тема: светлая",
+  dark: "Тема: тёмная"
+};
 const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
 const reminderSnoozeDays = 3;
@@ -281,14 +290,18 @@ export default function HomePage() {
   const [showMenuSheet, setShowMenuSheet] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notificationsViewed, setNotificationsViewed] = useState(false);
-  const [theme, setTheme] = useState<"dark" | "light" | null>(() => {
+  const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof document === "undefined") {
-      return null;
+      return "system";
     }
 
     const savedTheme = document.documentElement.getAttribute("data-theme");
-    return savedTheme === "dark" || savedTheme === "light" ? savedTheme : null;
+    return savedTheme === "dark" || savedTheme === "light" ? savedTheme : "system";
   });
+  const [systemPrefersDark, setSystemPrefersDark] = useState(
+    () =>
+      typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
   const categoryRowRef = useRef<HTMLDivElement | null>(null);
   const [categoryRowOverflow, setCategoryRowOverflow] = useState({ left: false, right: false });
 
@@ -399,6 +412,10 @@ export default function HomePage() {
   ]
     .filter(Boolean)
     .join(" ");
+  const themeButtonLabel =
+    theme === "system"
+      ? `Тема: как на устройстве (сейчас ${systemPrefersDark ? "тёмная" : "светлая"})`
+      : themeModeLabels[theme];
 
   useEffect(() => {
     if (!toastMessage) {
@@ -410,13 +427,26 @@ export default function HomePage() {
   }, [toastMessage]);
 
   useEffect(() => {
-    const savedTheme = window.localStorage.getItem(themeStorageKey);
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const nextTheme = savedTheme === "dark" || savedTheme === "light" ? savedTheme : prefersDark ? "dark" : "light";
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
-    setTheme(nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
+    function handleSystemThemeChange(event: MediaQueryListEvent) {
+      setSystemPrefersDark(event.matches);
+    }
+
+    mediaQuery.addEventListener("change", handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
   }, []);
+
+  useEffect(() => {
+    if (theme === "system") {
+      document.documentElement.removeAttribute("data-theme");
+      window.localStorage.removeItem(themeStorageKey);
+      return;
+    }
+
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem(themeStorageKey, theme);
+  }, [theme]);
 
   useEffect(() => {
     const row = categoryRowRef.current;
@@ -1475,10 +1505,9 @@ export default function HomePage() {
   }
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark";
-    setTheme(nextTheme);
-    document.documentElement.setAttribute("data-theme", nextTheme);
-    window.localStorage.setItem(themeStorageKey, nextTheme);
+    setTheme((current) =>
+      current === "system" ? "light" : current === "light" ? "dark" : "system"
+    );
   }
 
   useEffect(() => {
@@ -2026,15 +2055,18 @@ export default function HomePage() {
           </button>
         </form>
         <button
-          aria-label={theme === "dark" ? "Включить светлую тему" : "Включить темную тему"}
+          aria-label={themeButtonLabel}
           className="notification-bell"
+          title={themeButtonLabel}
           type="button"
           onClick={toggleTheme}
         >
-          {theme === "dark" ? (
-            <Sun aria-hidden="true" size={20} />
-          ) : (
+          {theme === "system" ? (
+            <SunMoon aria-hidden="true" size={20} />
+          ) : theme === "dark" ? (
             <Moon aria-hidden="true" size={20} />
+          ) : (
+            <Sun aria-hidden="true" size={20} />
           )}
         </button>
         <button
