@@ -21,6 +21,7 @@ import {
   Sun,
   SunMoon,
   Tags,
+  TriangleAlert,
   UserMinus,
   Users,
   X
@@ -114,9 +115,16 @@ const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
 
 const categoryStatusLabels: Record<CategoryStatus, string> = {
   OK: "OK",
-  ATTENTION: "Внимание",
+  ATTENTION: "Мало",
   NEED_BUY: "Купить",
   URGENT: "Срочно"
+};
+
+const categoryTriggerItemStatus: Record<CategoryStatus, ItemStatus | null> = {
+  OK: null,
+  ATTENTION: "LOW",
+  NEED_BUY: "NEED_BUY",
+  URGENT: "URGENT"
 };
 
 const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
@@ -995,6 +1003,18 @@ export default function HomePage() {
 
   function isActionPending(key: string): boolean {
     return pendingActionKeys.includes(key);
+  }
+
+  function formatCategoryTabMeta(category: Category): string {
+    const triggerStatus = categoryTriggerItemStatus[category.aggregateStatus];
+    if (!triggerStatus) {
+      return `${categoryStatusLabels[category.aggregateStatus]} · ${category.itemCount}`;
+    }
+
+    const statusItemCount = items.filter(
+      (item) => item.categoryId === category.id && item.status === triggerStatus
+    ).length;
+    return `${categoryStatusLabels[category.aggregateStatus]} · ${statusItemCount} из ${category.itemCount}`;
   }
 
   async function handleSaveReminderSettingsGroup(
@@ -2299,6 +2319,7 @@ export default function HomePage() {
             {categories.map((category) => (
               <button
                 aria-controls="category-panel"
+                aria-label={`${category.name}: ${formatCategoryTabMeta(category)}`}
                 aria-selected={selectedCategory?.id === category.id}
                 className={selectedCategory?.id === category.id ? "category active" : "category"}
                 key={category.id}
@@ -2311,9 +2332,14 @@ export default function HomePage() {
                 }}
               >
                 <span>{category.icon ? `${category.icon} ` : ""}{category.name}</span>
-                <small>
-                  {categoryStatusLabels[category.aggregateStatus]} · {category.itemCount}
-                </small>
+                {categoryTriggerItemStatus[category.aggregateStatus] ? (
+                  <TriangleAlert
+                    aria-hidden="true"
+                    className="category-warning"
+                    data-status={categoryTriggerItemStatus[category.aggregateStatus]}
+                    size={14}
+                  />
+                ) : null}
               </button>
             ))}
           </div>
@@ -2326,29 +2352,32 @@ export default function HomePage() {
               role="tabpanel"
             >
               <div className="category-panel-actions">
-                <button
-                  className="ghost-button"
-                  disabled={selectedCategory.itemCount === 0}
-                  type="button"
-                  onClick={() =>
-                    void handleStartCategoryCheck().catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  Проверить
-                </button>
-                <button
-                  className="ghost-button danger-button"
-                  type="button"
-                  onClick={() =>
-                    void handleArchiveSelectedCategory().catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  Архив
-                </button>
+                <p className="category-panel-meta">{formatCategoryTabMeta(selectedCategory)}</p>
+                <div className="category-panel-buttons">
+                  <button
+                    className="ghost-button"
+                    disabled={selectedCategory.itemCount === 0}
+                    type="button"
+                    onClick={() =>
+                      void handleStartCategoryCheck().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Проверить
+                  </button>
+                  <button
+                    className="ghost-button danger-button"
+                    type="button"
+                    onClick={() =>
+                      void handleArchiveSelectedCategory().catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Архив
+                  </button>
+                </div>
               </div>
 
               <form

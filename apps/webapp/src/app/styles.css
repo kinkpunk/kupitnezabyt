@@ -805,13 +805,30 @@ select {
 }
 
 .category {
-  display: grid;
-  align-content: center;
-  gap: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   flex: 0 0 auto;
   border-radius: 12px 12px 0 0;
   padding: 6px 14px;
   text-align: left;
+}
+
+.category-warning {
+  flex: 0 0 auto;
+}
+
+.category-warning[data-status="LOW"] {
+  color: var(--color-warning);
+}
+
+.category-warning[data-status="NEED_BUY"] {
+  color: var(--color-attention);
+}
+
+.category-warning[data-status="URGENT"] {
+  color: var(--color-urgent);
 }
 
 .category-panel {
@@ -825,14 +842,23 @@ select {
 
 .category-panel-actions {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.category small {
+.category-panel-meta {
+  margin: 0;
   color: var(--muted);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.category-panel-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
 }
 
 .section-heading {
