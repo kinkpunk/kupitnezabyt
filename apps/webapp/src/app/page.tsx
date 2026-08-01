@@ -3559,16 +3559,16 @@ export default function HomePage() {
                       >
                         <span className="notification-row-title">{reminder.title}</span>
                         <span className="shopping-meta-line">
+                          <span className="metadata-text">
+                            {reminderEntityLabels[reminder.entityType]} ·{" "}
+                            {formatDate(reminder.nextCheckAt)}
+                          </span>
                           <span
                             className={
                               reminder.timing === "DUE" ? "badge badge-urgent" : "badge badge-muted"
                             }
                           >
-                            {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
-                            {formatDate(reminder.nextCheckAt)}
-                          </span>
-                          <span className="metadata-text">
-                            {reminderEntityLabels[reminder.entityType]}
+                            {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"}
                           </span>
                         </span>
                       </button>
