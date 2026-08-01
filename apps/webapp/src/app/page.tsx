@@ -113,6 +113,14 @@ const statusLabels: Record<ItemStatus, string> = {
 
 const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
 
+const itemStatusBadgeClasses: Record<ItemStatus, string> = {
+  IN_STOCK: "badge badge-success",
+  LOW: "badge badge-warning",
+  NEED_BUY: "badge badge-attention",
+  URGENT: "badge badge-urgent",
+  PAUSED: "badge badge-muted"
+};
+
 const categoryStatusLabels: Record<CategoryStatus, string> = {
   OK: "OK",
   ATTENTION: "Мало",
@@ -2936,9 +2944,13 @@ export default function HomePage() {
               searchResults.map((item) => (
                 <article className="shopping-row" key={item.id}>
                   <div>
-                    <p>{item.category?.name ?? "Без категории"}</p>
                     <h2>{item.name}</h2>
-                    <span>{statusLabels[item.status]}</span>
+                    <span className="shopping-meta-line">
+                      <span className="metadata-text">{item.category?.name ?? "Без категории"}</span>
+                      <span className={itemStatusBadgeClasses[item.status]}>
+                        {statusLabels[item.status]}
+                      </span>
+                    </span>
                   </div>
                   <button
                     className="ghost-button"
@@ -2949,7 +2961,7 @@ export default function HomePage() {
                       setActiveTab("items");
                     }}
                   >
-                    Открыть
+                    Подробнее
                   </button>
                 </article>
               ))

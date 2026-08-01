@@ -1183,6 +1183,16 @@ select {
   color: var(--muted);
 }
 
+.badge-warning {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.badge-attention {
+  background: var(--color-attention-bg);
+  color: var(--color-attention);
+}
+
 .shopping-row .badge-urgent {
   color: var(--color-urgent);
 }
