@@ -540,6 +540,12 @@ select {
   color: var(--color-primary-active);
 }
 
+.menu-item:not(:disabled):hover {
+  border-color: var(--color-primary-soft-hover);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-active);
+}
+
 .notification-list {
   display: grid;
   gap: 6px;
