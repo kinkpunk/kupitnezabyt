@@ -74,6 +74,16 @@ Verify body:
 updates the user for that email, and returns the same bearer token/session shape
 as other auth exchanges.
 
+`GET /api/auth/providers` reports which OAuth providers are configured on the
+API, so the webapp can hide sign-in buttons that would fail:
+
+```json
+{
+  "google": true,
+  "apple": false
+}
+```
+
 `POST /api/auth/google/start` returns:
 
 ```json
@@ -89,9 +99,10 @@ user, and redirects to the webapp with a short callback result. The webapp store
 the returned bearer token in the same client-side session slot used by magic
 links.
 
-Production note: Google sign-in is enabled for the deployed MVP through Google
-Auth Platform in testing mode. Only Google accounts added as test users can use
-the OAuth flow until the app is published or verified.
+Production note: Google sign-in is the primary working auth method for the
+deployed MVP — real users sign in through it. If the Google Auth Platform
+publishing status is still `Testing`, only Google accounts added as test users
+can complete the OAuth flow until the app is published or verified.
 
 `POST /api/auth/apple/start` returns:
 

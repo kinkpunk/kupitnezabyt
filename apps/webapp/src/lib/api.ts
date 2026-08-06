@@ -1,6 +1,7 @@
 import type { ItemStatus } from "@kupitnezabyt/shared";
 
 import type {
+  AuthProvidersResponse,
   AuthResponse,
   Category,
   CheckSession,
@@ -132,6 +133,10 @@ export function clearSavedToken(): void {
 
 export function requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
   return post<MagicLinkRequestResponse>("/api/auth/email/request", undefined, { email });
+}
+
+export function getAuthProviders(): Promise<AuthProvidersResponse> {
+  return get<AuthProvidersResponse>("/api/auth/providers", undefined);
 }
 
 export function startGoogleSignIn(): Promise<OAuthStartResponse> {
@@ -558,7 +563,7 @@ export function deleteAccount(token: string): Promise<DeleteResponse> {
   return del<DeleteResponse>("/api/me", token);
 }
 
-async function get<TResponse>(path: string, token: string): Promise<TResponse> {
+async function get<TResponse>(path: string, token: string | undefined): Promise<TResponse> {
   return request<TResponse>(path, {
     method: "GET",
     token,

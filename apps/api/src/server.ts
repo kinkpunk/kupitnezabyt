@@ -524,6 +524,11 @@ export function buildServer() {
     };
   });
 
+  app.get("/api/auth/providers", async () => ({
+    google: isGoogleAuthConfigured(config),
+    apple: isAppleAuthConfigured(config)
+  }));
+
   app.post("/api/auth/google/start", async (request, reply) => {
     if (!(await checkRateLimit(reply, authRateLimiter, `auth:google:${request.ip}`))) {
       return;

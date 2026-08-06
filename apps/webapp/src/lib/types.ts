@@ -114,6 +114,11 @@ export type OAuthStartResponse = {
   authUrl: string;
 };
 
+export type AuthProvidersResponse = {
+  google: boolean;
+  apple: boolean;
+};
+
 export type UserProfile = {
   id: string;
   email: string | null;

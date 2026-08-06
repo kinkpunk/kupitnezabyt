@@ -320,9 +320,10 @@ scripts README нужно обновить в той же задаче.
 | `TELEGRAM_BOT_USERNAME` | Username Telegram-бота | Только optional Telegram integration |
 | `TELEGRAM_WEBAPP_URL` | Публичный URL Mini App | Только optional Telegram integration |
 
-Google sign-in is production-enabled for the web-first MVP. While the Google
-Auth Platform publishing status is `Testing`, each tester's Google account must
-be added to Test users before they can complete OAuth.
+Google sign-in — основной рабочий способ входа в production: реальные
+пользователи авторизуются через него. Если в Google Auth Platform publishing
+status всё ещё `Testing`, Google-аккаунт каждого нового тестера нужно
+предварительно добавить в Test users, иначе он не сможет пройти OAuth.
 
 Для deployed окружений используйте `corepack pnpm smoke:deployment` с
 `DEPLOYED_API_BASE_URL` и `DEPLOYED_WEBAPP_URL`, затем проходите ручной
@@ -344,9 +345,9 @@ Backend является источником истины для переход
 
 ## Web Auth And Optional Telegram
 
-Целевой production MVP использует browser auth: email magic link как базовый
-способ входа, Google sign-in как проверенный production provider и Apple
-sign-in как реализованный provider flow, готовый к provider setup/smoke.
+Целевой production MVP использует browser auth: Google sign-in как основной
+способ входа, email magic link как доступный, но не приоритетный fallback и
+Apple sign-in как реализованный provider flow, готовый к provider setup/smoke.
 Backend обязан создавать пользователя и bearer/browser session только после
 проверенного auth exchange: одноразового magic link токена, OAuth state/code
 callback или другого явно включенного provider boundary. Идентификатор

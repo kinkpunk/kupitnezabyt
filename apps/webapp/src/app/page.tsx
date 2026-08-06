@@ -64,6 +64,7 @@ import {
   getRecommendations,
   getShoppingList,
   getActiveWorkspaceId,
+  getAuthProviders,
   getWorkspaceInvitations,
   getWorkspaces,
   hideSimilarRecommendations,
@@ -91,6 +92,7 @@ import {
   updateShoppingListItem
 } from "../lib/api";
 import type {
+  AuthProvidersResponse,
   Category,
   CheckSession,
   InAppReminder,
@@ -297,6 +299,7 @@ export default function HomePage() {
   const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
+  const [authProviders, setAuthProviders] = useState<AuthProvidersResponse | null>(null);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
   const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
   const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
@@ -492,6 +495,22 @@ export default function HomePage() {
       resizeObserver.disconnect();
     };
   }, [activeTab, categories, selectedCategory?.id]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getAuthProviders()
+      .then((providers) => {
+        if (isMounted) {
+          setAuthProviders(providers);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1826,32 +1845,36 @@ export default function HomePage() {
             </div>
             <p>Войдите один раз, чтобы ваши товары, проверки и покупки были под рукой.</p>
           </div>
-          <button
-            className="provider-button"
-            type="button"
-            disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
-            onClick={() =>
-              void handleStartGoogleSignIn().catch((caughtError) =>
-                setError(formatError(caughtError))
-              )
-            }
-          >
-            <span aria-hidden="true">G</span>
-            {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
-          </button>
-          <button
-            className="provider-button apple-button"
-            type="button"
-            disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
-            onClick={() =>
-              void handleStartAppleSignIn().catch((caughtError) =>
-                setError(formatError(caughtError))
-              )
-            }
-          >
-            <span aria-hidden="true"></span>
-            {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
-          </button>
+          {authProviders?.google !== false && (
+            <button
+              className="provider-button"
+              type="button"
+              disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
+              onClick={() =>
+                void handleStartGoogleSignIn().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              <span aria-hidden="true">G</span>
+              {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
+            </button>
+          )}
+          {authProviders?.apple !== false && (
+            <button
+              className="provider-button apple-button"
+              type="button"
+              disabled={isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink}
+              onClick={() =>
+                void handleStartAppleSignIn().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                )
+              }
+            >
+              <span aria-hidden="true"></span>
+              {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
+            </button>
+          )}
           <div className="auth-divider">
             <span />
             <p className="eyebrow">или email</p>

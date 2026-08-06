@@ -226,6 +226,33 @@ Set the same value in `APPLE_REDIRECT_URI`.
 Keep the old Render callback URLs until the Northflank smoke has passed and the
 cutover is complete.
 
+### Apple Sign-In Enablement Checklist
+
+The application code is complete: `POST /api/auth/apple/start` and
+`POST /api/auth/apple/callback` are implemented and tested, and the webapp
+shows the "Войти через Apple" button only when `GET /api/auth/providers`
+reports `apple: true`. Enabling the provider is an operational task:
+
+1. Prerequisite: an Apple Developer Program membership (paid) with access to
+   Certificates, Identifiers & Profiles.
+2. In the Apple Developer account, enable the Sign in with Apple capability
+   for the app identifier.
+3. Create (or reuse) a Services ID, set it as `APPLE_CLIENT_ID`, and register
+   the exact return URL `https://<northflank-api-host>/api/auth/apple/callback`
+   on it.
+4. Create a Sign in with Apple key, download the `.p8` file once, and store
+   its Key ID as `APPLE_KEY_ID`.
+5. Set `APPLE_TEAM_ID` (Apple Developer Team ID), `APPLE_PRIVATE_KEY` (the
+   `.p8` PEM contents; multiline values are normalized by the API), and
+   `APPLE_REDIRECT_URI` on the Northflank API service.
+6. Redeploy/restart the API so the new env vars take effect.
+7. Smoke: `GET /api/auth/providers` returns `"apple": true`; the webapp login
+   screen shows "Войти через Apple"; completing the flow lands back in an
+   authenticated session (`GET /api/me` succeeds).
+
+Until step 7 passes, the login screen simply hides the Apple button, so
+shipping these changes before the provider setup is safe.
+
 ## Smoke Checklist
 
 First run the automated deployment smoke from the repository root:
