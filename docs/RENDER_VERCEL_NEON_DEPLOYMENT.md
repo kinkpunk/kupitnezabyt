@@ -114,7 +114,7 @@ NODE_ENV=production
 DEV_AUTH_ENABLED=false
 DATABASE_URL=<neon-pooled-connection-url>
 JWT_SECRET=<strong-random-secret>
-APP_BASE_URL=https://<vercel-webapp-host>
+APP_BASE_URL=https://kupitnezabyt-webapp.vercel.app
 API_PORT=3001
 LOG_LEVEL=info
 EMAIL_FROM=noreply@<verified-email-domain>
@@ -123,13 +123,13 @@ MAGIC_LINK_TOKEN_TTL_MINUTES=15
 # Optional Google sign-in:
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_REDIRECT_URI=https://<render-api-host>/api/auth/google/callback
+GOOGLE_REDIRECT_URI=https://kupitnezabyt-api.onrender.com/api/auth/google/callback
 # Optional Apple sign-in:
 APPLE_CLIENT_ID=
 APPLE_TEAM_ID=
 APPLE_KEY_ID=
 APPLE_PRIVATE_KEY=
-APPLE_REDIRECT_URI=https://<render-api-host>/api/auth/apple/callback
+APPLE_REDIRECT_URI=https://kupitnezabyt-api.onrender.com/api/auth/apple/callback
 # Optional Telegram integration only:
 TELEGRAM_BOT_TOKEN=
 ```
@@ -207,7 +207,7 @@ Environment variables:
 NODE_ENV=production
 DATABASE_URL=
 TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBAPP_URL=https://<vercel-webapp-host>
+TELEGRAM_WEBAPP_URL=https://kupitnezabyt-webapp.vercel.app
 ```
 
 The bot currently uses Telegram polling, so no public webhook endpoint is
@@ -242,7 +242,7 @@ Environment variables:
 NODE_ENV=production
 DATABASE_URL=
 TELEGRAM_BOT_TOKEN=
-TELEGRAM_WEBAPP_URL=https://<vercel-webapp-host>
+TELEGRAM_WEBAPP_URL=https://kupitnezabyt-webapp.vercel.app
 WORKER_POLL_INTERVAL_MS=300000
 REMINDER_BATCH_SIZE=25
 REMINDER_MAX_ATTEMPTS=5
@@ -297,7 +297,7 @@ Output directory: apps/webapp/.next
 Environment variables:
 
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://<render-api-host>
+NEXT_PUBLIC_API_BASE_URL=https://kupitnezabyt-api.onrender.com
 ```
 
 After changing `NEXT_PUBLIC_API_BASE_URL`, redeploy the webapp because this value
@@ -324,8 +324,8 @@ that opens `TELEGRAM_WEBAPP_URL`.
 First run the automated deployment smoke from the repository root:
 
 ```bash
-DEPLOYED_API_BASE_URL=https://<render-api-host> \
-DEPLOYED_WEBAPP_URL=https://<vercel-webapp-host> \
+DEPLOYED_API_BASE_URL=https://kupitnezabyt-api.onrender.com \
+DEPLOYED_WEBAPP_URL=https://kupitnezabyt-webapp.vercel.app \
 corepack pnpm smoke:deployment
 ```
 

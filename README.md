@@ -325,9 +325,14 @@ Google sign-in — основной рабочий способ входа в pr
 status всё ещё `Testing`, Google-аккаунт каждого нового тестера нужно
 предварительно добавить в Test users, иначе он не сможет пройти OAuth.
 
+Текущий production: webapp — https://kupitnezabyt-webapp.vercel.app,
+API — https://kupitnezabyt-api.onrender.com (Render + Vercel + Neon,
+см. `docs/RENDER_VERCEL_NEON_DEPLOYMENT.md`). Smoke пройден 2026-07-21:
+API health/detailed OK, `db: true`, webapp отвечает HTML.
+
 Для deployed окружений используйте `corepack pnpm smoke:deployment` с
 `DEPLOYED_API_BASE_URL` и `DEPLOYED_WEBAPP_URL`, затем проходите ручной
-auth/product smoke из `docs/NORTHFLANK_VERCEL_DEPLOYMENT.md`.
+auth/product smoke из `docs/RENDER_VERCEL_NEON_DEPLOYMENT.md`.
 
 ## Ключевая бизнес-логика
 
