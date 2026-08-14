@@ -115,6 +115,150 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   }
 });
 
+test("ownership transfer makes the invited member the workspace owner", async ({
+  browser,
+  request
+}) => {
+  test.setTimeout(120_000);
+
+  const runId = Date.now().toString(36);
+  const ownerEmail = `e2e-transfer-owner-${runId}@example.com`;
+  const memberEmail = `e2e-transfer-member-${runId}@example.com`;
+  const categoryName = `E2E Передача ${runId}`;
+
+  await waitForApiHealth(request);
+
+  // Owner signs in via email magic link and creates a category.
+  const ownerContext = await browser.newContext();
+  const ownerPage = await ownerContext.newPage();
+  const ownerToken = await signInWithEmail(ownerPage, request, ownerEmail);
+  await finishOnboardingIfNeeded(ownerPage);
+
+  const ownerNavigation = ownerPage.getByRole("navigation", { name: "Основные разделы" });
+  await ownerNavigation.getByRole("button", { name: "Категории" }).click();
+  await ownerPage.getByRole("button", { name: "Новая" }).click();
+  await ownerPage.getByLabel("Название категории").fill(categoryName);
+  await ownerPage.getByRole("button", { name: "Создать" }).click();
+  await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
+
+  // Owner invites the member via API and captures the dev invitation link.
+  const ownerWorkspace = await getOwnerWorkspace(request, ownerToken);
+  const inviteResponse = await request.post(
+    `${apiBaseUrl}/api/workspaces/${ownerWorkspace.id}/invitations`,
+    {
+      headers: {
+        authorization: `Bearer ${ownerToken}`
+      },
+      data: {
+        email: memberEmail
+      }
+    }
+  );
+  expect(inviteResponse.status()).toBe(200);
+  const inviteBody = (await inviteResponse.json()) as {
+    devInvitationLink?: string;
+  };
+  const devInvitationLink = inviteBody.devInvitationLink;
+  expect(devInvitationLink).toBeDefined();
+
+  // Member signs in and accepts the invitation in one navigation.
+  const memberContext = await browser.newContext();
+  const memberPage = await memberContext.newPage();
+  const memberMagicLink = await requestMagicLink(request, memberEmail);
+  const memberMagicToken = extractQueryParam(memberMagicLink, "magic_token");
+  const invitationToken = extractQueryParam(devInvitationLink ?? "", "workspace_invite_token");
+
+  const memberEntryUrl = new URL(webBaseUrl);
+  memberEntryUrl.searchParams.set("magic_token", memberMagicToken);
+  memberEntryUrl.searchParams.set("workspace_invite_token", invitationToken);
+
+  await memberPage.goto(memberEntryUrl.toString(), { waitUntil: "domcontentloaded" });
+  await finishOnboardingIfNeeded(memberPage);
+  const memberToken = await memberPage.evaluate(() =>
+    window.localStorage.getItem("kupitnezabyt.token")
+  );
+  if (!memberToken) {
+    throw new Error("Member token was not saved after invitation acceptance");
+  }
+
+  // Owner transfers ownership to the member from Settings.
+  await ownerNavigation.getByRole("button", { name: "Меню" }).click();
+  await ownerPage
+    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("button", { name: "Настройки" })
+    .click();
+  ownerPage.on("dialog", (dialog) => void dialog.accept());
+  await ownerPage.getByRole("button", { name: "Передать" }).click();
+  await expect(ownerPage.getByText(/теперь владелец списка/)).toBeVisible();
+
+  // The previous owner immediately loses the owner-only member management UI.
+  await expect(ownerPage.getByLabel("Email участника")).toHaveCount(0);
+  await expect(ownerPage.getByRole("button", { name: "Передать" })).toHaveCount(0);
+
+  // Roles are switched on the API as well.
+  const ownerWorkspacesResponse = await request.get(`${apiBaseUrl}/api/workspaces`, {
+    headers: { authorization: `Bearer ${ownerToken}` }
+  });
+  const ownerWorkspaces = (await ownerWorkspacesResponse.json()) as Array<{
+    id: string;
+    role: string;
+  }>;
+  expect(ownerWorkspaces.find((workspace) => workspace.id === ownerWorkspace.id)?.role).toBe(
+    "EDITOR"
+  );
+
+  const memberWorkspacesResponse = await request.get(`${apiBaseUrl}/api/workspaces`, {
+    headers: { authorization: `Bearer ${memberToken}` }
+  });
+  const memberWorkspaces = (await memberWorkspacesResponse.json()) as Array<{
+    id: string;
+    role: string;
+  }>;
+  expect(memberWorkspaces.find((workspace) => workspace.id === ownerWorkspace.id)?.role).toBe(
+    "OWNER"
+  );
+
+  // The new owner sees member management for the shared workspace.
+  await memberPage.reload({ waitUntil: "domcontentloaded" });
+  const memberNavigation = memberPage.getByRole("navigation", { name: "Основные разделы" });
+  await memberNavigation.getByRole("button", { name: "Меню" }).click();
+  await memberPage
+    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("button", { name: "Настройки" })
+    .click();
+  await expect(memberPage.getByLabel("Email участника")).toBeVisible();
+  await expect(memberPage.getByText("Владелец").first()).toBeVisible();
+
+  // Cleanup: the new owner removes the previous owner, then both accounts are
+  // deleted (account deletion is blocked while a shared workspace has members).
+  const membersResponse = await request.get(
+    `${apiBaseUrl}/api/workspaces/${ownerWorkspace.id}/invitations`,
+    {
+      headers: { authorization: `Bearer ${memberToken}` }
+    }
+  );
+  expect(membersResponse.status()).toBe(200);
+  const membersBody = (await membersResponse.json()) as {
+    members: Array<{ id: string; user: { email: string | null } }>;
+  };
+  const previousOwnerMember = membersBody.members.find(
+    (member) => member.user.email === ownerEmail
+  );
+  expect(previousOwnerMember).toBeDefined();
+  const removeResponse = await request.delete(
+    `${apiBaseUrl}/api/workspaces/${ownerWorkspace.id}/members/${previousOwnerMember?.id}`,
+    {
+      headers: { authorization: `Bearer ${memberToken}` }
+    }
+  );
+  expect(removeResponse.status()).toBe(200);
+
+  await ownerContext.close();
+  await memberContext.close();
+  await cleanupUser(request, ownerToken);
+  await cleanupUser(request, memberToken);
+});
+
 async function requestMagicLink(request: APIRequestContext, email: string): Promise<string> {
   const response = await request.post(`${apiBaseUrl}/api/auth/email/request`, {
     data: { email }

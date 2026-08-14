@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, completeOnboarding, getActiveWorkspaceId, login } from "./api";
+import { ApiError, completeOnboarding, consumeInvitationAcceptedToast, getActiveWorkspaceId, login } from "./api";
 
 function createLocalStorageMock() {
   const values = new Map<string, string>();
@@ -84,6 +84,8 @@ describe("webapp api auth", () => {
       "kupitnezabyt.pendingWorkspaceInvitationToken"
     );
     expect(history.replaceState).toHaveBeenCalledWith({}, "", "/");
+    expect(consumeInvitationAcceptedToast()).toBe(true);
+    expect(consumeInvitationAcceptedToast()).toBe(false);
   });
 
   it("marks onboarding completed on the API", async () => {

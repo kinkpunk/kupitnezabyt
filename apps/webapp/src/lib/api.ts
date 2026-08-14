@@ -41,6 +41,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:300
 const tokenStorageKey = "kupitnezabyt.token";
 const activeWorkspaceStorageKey = "kupitnezabyt.activeWorkspaceId";
 const pendingWorkspaceInvitationStorageKey = "kupitnezabyt.pendingWorkspaceInvitationToken";
+const invitationAcceptedStorageKey = "kupitnezabyt.invitationAccepted";
 
 type TelegramThemeParams = {
   bg_color?: string;
@@ -238,7 +239,17 @@ async function acceptWorkspaceInvitationIfPresent(
     const response = await acceptWorkspaceInvitation(token, pendingInvitationToken);
     setActiveWorkspaceId(response.member.workspaceId);
     clearPendingWorkspaceInvitation();
+    window.localStorage.setItem(invitationAcceptedStorageKey, "true");
   }
+}
+
+export function consumeInvitationAcceptedToast(): boolean {
+  const accepted = window.localStorage.getItem(invitationAcceptedStorageKey) === "true";
+  if (accepted) {
+    window.localStorage.removeItem(invitationAcceptedStorageKey);
+  }
+
+  return accepted;
 }
 
 function savePendingWorkspaceInvitation(invitationToken: string | null): void {

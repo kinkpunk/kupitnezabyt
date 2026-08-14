@@ -42,6 +42,7 @@ import {
   completeOnboarding,
   completeCheckSession,
   completeShoppingListItem,
+  consumeInvitationAcceptedToast,
   createCategory,
   createGroup,
   createItem,
@@ -90,8 +91,7 @@ import {
   createWorkspaceInvitation,
   transferWorkspaceOwnership,
   updateShoppingListItem
-} from "../lib/api";
-import type {
+} from "../lib/api";import type {
   AuthProvidersResponse,
   Category,
   CheckSession,
@@ -545,6 +545,10 @@ export default function HomePage() {
         const authToken = await login();
         if (!isMounted) {
           return;
+        }
+
+        if (consumeInvitationAcceptedToast()) {
+          setToastMessage("Приглашение принято — вы переключены на общий список.");
         }
 
         setToken(authToken);

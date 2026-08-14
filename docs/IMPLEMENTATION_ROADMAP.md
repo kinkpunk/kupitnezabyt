@@ -846,15 +846,12 @@ Implemented notes:
   constraint, and disables action buttons while an invite/revoke/remove/transfer
   is in flight.
 - Two-account browser E2E in `tests/e2e/workspace-collaboration.spec.ts` covers
-  owner invite, member accept, shared editing, member removal, and loss of
-  access.
+  owner invite, member accept, shared editing, member removal, loss of access,
+  and ownership transfer (the new owner gains member management, the previous
+  owner becomes an editor).
+- The webapp shows an in-app success toast after accepting an invitation; the
+  workspace switch already happened automatically.
 - Manual release checklist is added below.
-
-Not implemented yet:
-
-- In-app success toast after accepting an invitation (workspace switch already
-  happens automatically).
-- Automated browser E2E for ownership transfer.
 
 Manual release checklist:
 
