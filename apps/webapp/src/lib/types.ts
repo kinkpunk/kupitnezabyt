@@ -1,4 +1,4 @@
-import type { CategoryStatus, ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
+import type { CategoryStatus, ItemImportance, ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 
 export type Category = {
   id: string;
@@ -21,6 +21,7 @@ export type Item = {
   brand: string | null;
   notes: string | null;
   status: ItemStatus;
+  importance: ItemImportance;
   usageCycleDays: number | null;
   reminderEnabled: boolean;
   lastCheckedAt: string | null;

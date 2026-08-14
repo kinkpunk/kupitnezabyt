@@ -10,6 +10,7 @@ const mockPrisma = vi.hoisted(() => ({
   },
   item: {
     create: vi.fn(),
+    findFirst: vi.fn(),
     findMany: vi.fn()
   },
   itemGroup: {
@@ -28,10 +29,12 @@ const mockPrisma = vi.hoisted(() => ({
 
 const mockTx = vi.hoisted(() => ({
   item: {
-    create: vi.fn()
+    create: vi.fn(),
+    update: vi.fn()
   },
   shoppingListItem: {
-    create: vi.fn()
+    create: vi.fn(),
+    updateMany: vi.fn()
   }
 }));
 const mockUpsertItemCheckReminder = vi.hoisted(() => vi.fn());
@@ -249,6 +252,7 @@ describe("workspace access routes", () => {
         status: "NEED_BUY",
         brand: null,
         notes: null,
+        importance: "NORMAL",
         usageCycleDays: null,
         nextCheckAt: null
       }
@@ -312,6 +316,7 @@ describe("workspace access routes", () => {
         status: "IN_STOCK",
         brand: null,
         notes: null,
+        importance: "NORMAL",
         usageCycleDays: 14,
         nextCheckAt: expect.any(Date)
       }
@@ -334,6 +339,157 @@ describe("workspace access routes", () => {
     expect(scheduledFor ? scheduledFor.getTime() - Date.now() : 0).toBeLessThan(
       15 * 24 * 60 * 60 * 1000
     );
+
+    await app.close();
+  });
+
+  it("creates an item with the provided importance", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      workspaceId: "workspace-shared",
+      archivedAt: null
+    });
+    mockTx.item.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: "item-1",
+        ...data
+      })
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        categoryId: "category-1",
+        name: "Ибупрофен",
+        importance: "CRITICAL"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.item.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        name: "Ибупрофен",
+        importance: "CRITICAL"
+      })
+    });
+
+    await app.close();
+  });
+
+  it("rejects invalid item importance on create", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      workspaceId: "workspace-shared",
+      archivedAt: null
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        categoryId: "category-1",
+        name: "Кофе",
+        importance: "TOP"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("INVALID_IMPORTANCE");
+    expect(mockTx.item.create).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("updates item importance and rejects invalid values", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.item.findFirst.mockResolvedValue({
+      id: "item-1",
+      workspaceId: "workspace-shared",
+      categoryId: "category-1",
+      name: "Кофе",
+      brand: null,
+      notes: null,
+      status: "IN_STOCK",
+      importance: "NORMAL",
+      usageCycleDays: null,
+      nextCheckAt: null,
+      reminderEnabled: true,
+      archivedAt: null
+    });
+    mockTx.item.update.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: "item-1",
+        ...data
+      })
+    );
+    mockTx.shoppingListItem.updateMany.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/api/items/item-1",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        importance: "HIGH"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.item.update).toHaveBeenCalledWith({
+      where: { id: "item-1" },
+      data: expect.objectContaining({
+        importance: "HIGH"
+      })
+    });
+
+    const invalidResponse = await app.inject({
+      method: "PATCH",
+      url: "/api/items/item-1",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        importance: "MAX"
+      }
+    });
+
+    expect(invalidResponse.statusCode).toBe(400);
+    expect(invalidResponse.json().error.code).toBe("INVALID_IMPORTANCE");
 
     await app.close();
   });

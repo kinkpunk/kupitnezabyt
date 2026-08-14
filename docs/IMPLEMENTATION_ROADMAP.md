@@ -1423,32 +1423,26 @@ Finalization work after Slice 13:
 
 ## Post-MVP: Item Importance
 
-Status: planned.
+Status: implemented core (2026-07-21); shopping-list sorting deferred.
 
 Goal: implement user-controlled item importance (`LOW`, `NORMAL`, `HIGH`,
 `CRITICAL`) after the web-first MVP release.
 
-The `importance` field is already present in the Prisma schema and the
-`ItemImportance` enum exists in `docs/PRODUCT_SPEC.md`, but it is not exposed in
-the API or UI in the current MVP. Status-driven priority (`NEED_BUY`, `URGENT`)
-covers the core shopping-list and reminder flows.
+Implemented notes:
 
-Scope:
+- `POST /api/items` and `PATCH /api/items/:id` accept `importance` with
+  validation (`400 INVALID_IMPORTANCE`); the default remains `NORMAL`.
+- Shared package exports `isItemImportance` alongside `isItemStatus`.
+- The webapp item edit form offers an importance select, and item cards show
+  a badge for non-`NORMAL` importance.
+- Importance is a stored attribute: it does not affect status transitions,
+  shopping list ordering, or reminder scheduling (status-driven priority
+  `NEED_BUY`/`URGENT` still covers those flows).
 
-- Add `importance` to item create/update API contracts.
-- Add importance selection in the item form/card in the webapp.
-- Use importance for secondary sorting inside the shopping list and for visual
-  emphasis on critical items (medicines, hygiene, etc.).
-- Keep importance independent from `status`; it should refine priority within
-  the same status, not replace it.
+Deferred:
 
-Tests:
-
-- API tests for create/update with importance.
-- Unit tests for shopping-list sorting that considers both status and
-  importance.
-- E2E coverage for changing item importance and seeing the effect in the
-  shopping list.
+- Secondary shopping-list sorting by importance and its unit/E2E coverage.
+- E2E coverage for changing item importance in the browser.
 
 ## Dependency Policy
 

@@ -1,4 +1,4 @@
-import type { ItemStatus } from "@kupitnezabyt/shared";
+import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
 
 import type {
   AuthProvidersResponse,
@@ -353,6 +353,7 @@ export function updateItem(
     categoryId?: string;
     brand?: string | null;
     notes?: string | null;
+    importance?: ItemImportance;
     usageCycleDays?: number | null;
     nextCheckAt?: string | null;
     reminderEnabled?: boolean;

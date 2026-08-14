@@ -9,11 +9,13 @@ import {
   getShoppingSyncAction,
   getRuleBasedRecommendations,
   HIDE_SIMILAR_RECOMMENDATION_ITEM,
+  isItemImportance,
   isItemStatus,
   normalizeName,
   normalizeSearchQuery,
   createUserDataExport,
-  parseRecommendationId
+  parseRecommendationId,
+  type ItemImportance
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
 import type { FastifyReply, FastifyRequest } from "fastify";
@@ -75,6 +77,7 @@ type CreateItemBody = {
   name?: unknown;
   brand?: unknown;
   notes?: unknown;
+  importance?: unknown;
   usageCycleDays?: unknown;
 };
 
@@ -83,6 +86,7 @@ type UpdateItemBody = {
   name?: unknown;
   brand?: unknown;
   notes?: unknown;
+  importance?: unknown;
   usageCycleDays?: unknown;
   nextCheckAt?: unknown;
   reminderEnabled?: unknown;
@@ -2568,6 +2572,12 @@ export function buildServer() {
     }
 
     const usageCycleDays = readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null;
+    const importance = readOptionalItemImportance(request.body?.importance);
+    if (importance === null) {
+      await sendError(reply, 400, "INVALID_IMPORTANCE", "Item importance is invalid.");
+      return;
+    }
+
     const initialStatus = usageCycleDays ? "IN_STOCK" : "NEED_BUY";
     const now = new Date();
 
@@ -2581,6 +2591,7 @@ export function buildServer() {
           status: initialStatus,
           brand: readOptionalString(request.body?.brand) ?? null,
           notes: readOptionalString(request.body?.notes) ?? null,
+          importance: importance ?? "NORMAL",
           usageCycleDays,
           nextCheckAt: calculateNextCheckAt(initialStatus, now, usageCycleDays)
         }
@@ -2971,6 +2982,15 @@ export function buildServer() {
       const notes = hasOwnProperty(body, "notes")
         ? readOptionalString(body.notes) ?? null
         : item.notes;
+      let importance = item.importance;
+      if (hasOwnProperty(body, "importance")) {
+        const parsedImportance = readOptionalItemImportance(body.importance);
+        if (!parsedImportance) {
+          await sendError(reply, 400, "INVALID_IMPORTANCE", "Item importance is invalid.");
+          return;
+        }
+        importance = parsedImportance;
+      }
       const hasNextCheckAt = hasOwnProperty(body, "nextCheckAt");
       const nextCheckAtResult = hasNextCheckAt ? readNullableDate(body.nextCheckAt) : null;
       if (nextCheckAtResult?.invalid) {
@@ -2999,6 +3019,7 @@ export function buildServer() {
             categoryId: nextCategoryId,
             brand,
             notes,
+            importance,
             usageCycleDays,
             nextCheckAt,
             reminderEnabled
@@ -4199,6 +4220,14 @@ function readShoppingPriority(value: unknown): "NORMAL" | "URGENT" | null {
   }
 
   return value === "NORMAL" || value === "URGENT" ? value : null;
+}
+
+function readOptionalItemImportance(value: unknown): ItemImportance | null | undefined {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return typeof value === "string" && isItemImportance(value) ? value : null;
 }
 
 function hasOwnProperty<TObject extends object, TKey extends PropertyKey>(

@@ -268,7 +268,7 @@ URGENT
 PAUSED
 ```
 
-Важность (post-MVP):
+Важность:
 
 ```text
 LOW
@@ -277,9 +277,13 @@ HIGH
 CRITICAL
 ```
 
-Поле `importance` зарезервировано для будущей доработки. В текущем MVP
-приоритет товара определяется статусом (`NEED_BUY`, `URGENT`). Управление
-важностью в API и интерфейсе реализуется после релиза web-first MVP.
+Поле `importance` реализовано (2026-07-21): значение по умолчанию `NORMAL`,
+управляется через API (`POST`/`PATCH /api/items`, код ошибки
+`INVALID_IMPORTANCE`) и через интерфейс (выбор важности при редактировании
+товара, бейдж на карточке для значений выше/ниже обычной). Важность — это
+хранимый атрибут: она не влияет на переходы статусов, порядок в списке
+покупок и расписание напоминаний. Приоритет товара по-прежнему определяется
+статусом (`NEED_BUY`, `URGENT`).
 
 Пользователь может:
 
@@ -823,7 +827,7 @@ Item {
   brand?: string
   notes?: string
   status: ItemStatus
-  importance?: ItemImportance  // зарезервировано для post-MVP
+  importance?: ItemImportance  // хранимый атрибут, не влияет на логику статусов
   usageCycleDays?: number
   lastCheckedAt?: Date
   lastBoughtAt?: Date

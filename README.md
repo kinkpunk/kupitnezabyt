@@ -47,6 +47,9 @@ bot остаются optional integration/future work, потому что по�
 - home/settings UI для in-app reminders реализован;
 - настройка `usageCycleDays`, `nextCheckAt` и `reminderEnabled` в UI
   реализована для товаров, категорий и наборов;
+- управление важностью товара (`importance`: `LOW`/`NORMAL`/`HIGH`/`CRITICAL`)
+  реализовано в API и UI; важность — хранимый атрибут и не влияет на логику
+  статусов и списка покупок;
 - continued browser smoke на deployed HTTPS URL без Telegram credentials;
 - collaboration beta можно показывать пользователям после отдельного
   двухаккаунтного smoke-теста: приглашение, принятие, переключение списка,
@@ -63,8 +66,6 @@ bot остаются optional integration/future work, потому что по�
 
 - изменение порядка товаров, если для него позже появится отдельный UX и поле
   порядка в модели;
-- управление важностью товара (`importance`: `LOW`/`NORMAL`/`HIGH`/`CRITICAL`);
-  поле есть в схеме, но не управляется в API/UI и отложено на post-MVP;
 - расширенное e2e/DB-backed покрытие для всех вспомогательных сценариев;
 - расширенное двухаккаунтное e2e-покрытие collaboration beta и понятный UX для
   приглашения пользователей, которые уже входили в сервис;

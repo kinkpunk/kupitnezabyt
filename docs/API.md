@@ -322,9 +322,23 @@ Create body:
   "name": "Ибупрофен",
   "brand": "optional",
   "notes": "optional",
+  "importance": "NORMAL",
   "usageCycleDays": 30
 }
 ```
+
+Supported importance values (optional, defaults to `NORMAL`; invalid values
+return `400 INVALID_IMPORTANCE`):
+
+```text
+LOW
+NORMAL
+HIGH
+CRITICAL
+```
+
+Importance is a stored attribute only: it does not change status transitions,
+shopping list ordering, or reminder scheduling.
 
 Status body:
 
@@ -372,6 +386,7 @@ Update body:
   "categoryId": "...",
   "brand": "optional",
   "notes": "optional",
+  "importance": "HIGH",
   "usageCycleDays": 30,
   "nextCheckAt": "2026-06-28T12:00:00.000Z",
   "reminderEnabled": true

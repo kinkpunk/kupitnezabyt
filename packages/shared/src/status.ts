@@ -1,4 +1,4 @@
-import type { CategoryStatus, ItemStatus, ShoppingSyncAction } from "./types.js";
+import type { CategoryStatus, ItemImportance, ItemStatus, ShoppingSyncAction } from "./types.js";
 
 const millisecondsInDay = 24 * 60 * 60 * 1000;
 
@@ -10,6 +10,10 @@ export function isItemStatus(value: string): value is ItemStatus {
     value === "URGENT" ||
     value === "PAUSED"
   );
+}
+
+export function isItemImportance(value: string): value is ItemImportance {
+  return value === "LOW" || value === "NORMAL" || value === "HIGH" || value === "CRITICAL";
 }
 
 export function calculateNextCheckAt(

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
+import type { ItemImportance, ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
@@ -121,6 +121,21 @@ const itemStatusBadgeClasses: Record<ItemStatus, string> = {
   NEED_BUY: "badge badge-attention",
   URGENT: "badge badge-urgent",
   PAUSED: "badge badge-muted"
+};
+
+const importanceLabels: Record<ItemImportance, string> = {
+  LOW: "Низкая важность",
+  NORMAL: "Обычная важность",
+  HIGH: "Высокая важность",
+  CRITICAL: "Критическая важность"
+};
+
+const importanceOptions: ItemImportance[] = ["LOW", "NORMAL", "HIGH", "CRITICAL"];
+
+const importanceBadgeClasses: Record<Exclude<ItemImportance, "NORMAL">, string> = {
+  LOW: "badge badge-muted",
+  HIGH: "badge badge-warning",
+  CRITICAL: "badge badge-urgent"
 };
 
 const categoryStatusLabels: Record<CategoryStatus, string> = {
@@ -283,6 +298,7 @@ export default function HomePage() {
   const [groupItemId, setGroupItemId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
+  const [editingItemImportance, setEditingItemImportance] = useState<ItemImportance>("NORMAL");
   const [manualShoppingTitle, setManualShoppingTitle] = useState("");
   const [manualShoppingCategoryId, setManualShoppingCategoryId] = useState("");
   const [manualShoppingPriority, setManualShoppingPriority] = useState<ShoppingPriority>("NORMAL");
@@ -976,13 +992,15 @@ export default function HomePage() {
 
     setError(null);
     const updatedItem = await updateItem(token, item.id, {
-      name: editingItemName.trim()
+      name: editingItemName.trim(),
+      importance: editingItemImportance
     });
     setItems((current) =>
       current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
     );
     setEditingItemId(null);
     setEditingItemName("");
+    setEditingItemImportance("NORMAL");
     await refreshActiveData(token);
   }
 
@@ -2509,12 +2527,30 @@ export default function HomePage() {
                             value={editingItemName}
                             onChange={(event) => setEditingItemName(event.target.value)}
                           />
+                          <select
+                            aria-label={`Важность товара ${item.name}`}
+                            value={editingItemImportance}
+                            onChange={(event) =>
+                              setEditingItemImportance(event.target.value as ItemImportance)
+                            }
+                          >
+                            {importanceOptions.map((importance) => (
+                              <option key={importance} value={importance}>
+                                {importanceLabels[importance]}
+                              </option>
+                            ))}
+                          </select>
                           <button type="submit">Сохранить</button>
                         </form>
                       ) : (
                         <div className="item-card-header">
                           <div>
                             <h2>{item.name}</h2>
+                            {item.importance !== "NORMAL" ? (
+                              <span className={importanceBadgeClasses[item.importance]}>
+                                {importanceLabels[item.importance]}
+                              </span>
+                            ) : null}
                           </div>
                           <div className="icon-actions">
                             <button
@@ -2525,6 +2561,7 @@ export default function HomePage() {
                               onClick={() => {
                                 setEditingItemId(item.id);
                                 setEditingItemName(item.name);
+                                setEditingItemImportance(item.importance);
                               }}
                             >
                               <Pencil aria-hidden="true" size={18} />

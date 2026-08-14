@@ -552,6 +552,7 @@ describe("archive routes", () => {
         status: "NEED_BUY",
         brand: null,
         notes: null,
+        importance: "NORMAL",
         usageCycleDays: null,
         nextCheckAt: null
       }
