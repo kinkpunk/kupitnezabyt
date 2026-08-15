@@ -1,13 +1,13 @@
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
 const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3001}`;
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
-test("browser user can complete the core web-first stock flow", async ({ page, request }) => {
+test("browser user can complete the core web-first stock flow", async ({ page, request }, testInfo: TestInfo) => {
   test.setTimeout(90_000);
 
-  const runId = Date.now().toString(36);
+  const runId = `${Date.now().toString(36)}-${testInfo.workerIndex}`;
   const devUserId = `e2e-${runId}`;
   const categoryName = `E2E Категория ${runId}`;
   const itemName = `E2E Товар ${runId}`;
@@ -30,7 +30,10 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
-  await expect(page.getByRole("heading", { name: /kupitnezabyt/i })).toBeVisible();
+  // Home intentionally has no product-name heading; its stock summary and
+  // navigation establish that an authenticated app shell has loaded.
+  await expect(page.getByRole("heading", { name: "Купить сейчас" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Основные разделы" })).toBeVisible();
   await expect(page.getByText("Web app")).toHaveCount(0);
 
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
@@ -102,7 +105,12 @@ async function waitForApiHealth(request: APIRequestContext): Promise<void> {
 
 async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   const startButton = page.getByRole("button", { name: "Начать" });
-  if (!(await startButton.isVisible({ timeout: 10_000 }).catch(() => false))) {
+  // locator.isVisible() does not wait, so use waitFor to survive cold dev compiles.
+  const isOnboardingVisible = await startButton
+    .waitFor({ state: "visible", timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!isOnboardingVisible) {
     return;
   }
 

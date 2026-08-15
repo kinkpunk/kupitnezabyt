@@ -8,6 +8,7 @@ const shouldRunDbIntegration =
 describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
   let app: FastifyInstance;
   let prisma: PrismaClient;
+  let ensurePersonalWorkspace: typeof import("@kupitnezabyt/database").ensurePersonalWorkspace;
   let signToken: typeof import("./auth.js").signToken;
   const createdUserIds = new Set<string>();
 
@@ -18,6 +19,7 @@ describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
     const authModule = await import("./auth.js");
 
     prisma = databaseModule.prisma;
+    ensurePersonalWorkspace = databaseModule.ensurePersonalWorkspace;
     app = serverModule.buildServer();
     signToken = authModule.signToken;
   });
@@ -64,6 +66,14 @@ describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
     ]);
     createdUserIds.add(owner.id);
     createdUserIds.add(otherUser.id);
+
+    // Direct DB seeding bypasses the auth flow, which normally guarantees the
+    // personal workspace; replicate that invariant explicitly.
+    await Promise.all(
+      [owner, otherUser].map((user) =>
+        ensurePersonalWorkspace(prisma, { userId: user.id, name: user.email })
+      )
+    );
 
     const ownerToken = createToken(owner.id);
     const otherToken = createToken(otherUser.id);

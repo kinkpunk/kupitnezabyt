@@ -56,10 +56,7 @@ describe("workspace helpers", () => {
           userId: "user-1"
         }
       },
-      update: {
-        role: "OWNER",
-        joinedAt: now
-      },
+      update: {},
       create: {
         id: "workspace_member_user-1",
         workspaceId: "workspace_user-1",

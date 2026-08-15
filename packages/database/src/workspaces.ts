@@ -41,10 +41,7 @@ export async function ensurePersonalWorkspace(
         userId: input.userId
       }
     },
-    update: {
-      role: "OWNER",
-      joinedAt: now
-    },
+    update: {},
     create: {
       id: getPersonalWorkspaceMemberId(input.userId),
       workspaceId,

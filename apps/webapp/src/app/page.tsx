@@ -268,6 +268,7 @@ export default function HomePage() {
   const [workspaceInviteEmail, setWorkspaceInviteEmail] = useState("");
   const [workspaceMessage, setWorkspaceMessage] = useState<string | null>(null);
   const [workspaceAction, setWorkspaceAction] = useState<WorkspaceAction | null>(null);
+  const [transferredAwayWorkspaceId, setTransferredAwayWorkspaceId] = useState<string | null>(null);
   const [isLoadingWorkspaceAccess, setIsLoadingWorkspaceAccess] = useState(false);
   const [devInvitationLink, setDevInvitationLink] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationSuggestion[]>([]);
@@ -358,7 +359,8 @@ export default function HomePage() {
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0] ?? null,
     [activeWorkspaceId, workspaces]
   );
-  const canManageActiveWorkspace = activeWorkspace?.role === "OWNER";
+  const canManageActiveWorkspace =
+    activeWorkspace?.role === "OWNER" && activeWorkspace.id !== transferredAwayWorkspaceId;
   const showWorkspaceSwitcher = workspaces.length > 1;
   const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
 
@@ -552,11 +554,11 @@ export default function HomePage() {
         }
 
         setToken(authToken);
-        const [userProfile, , activeData] = await Promise.all([
-          getMe(authToken),
-          refreshWorkspaces(authToken),
-          refreshActiveData(authToken)
-        ]);
+        // Resolve the active workspace before loading its scoped data. An
+        // invitation can change it during login, so parallel bootstrap would
+        // intermittently load the previous personal workspace instead.
+        const [userProfile] = await Promise.all([getMe(authToken), refreshWorkspaces(authToken)]);
+        const activeData = await refreshActiveData(authToken);
         await refreshActiveCheckSession(authToken);
         const hasCompletedOnboardingLocally =
           window.localStorage.getItem(onboardingStorageKey) === "true";
@@ -733,6 +735,7 @@ export default function HomePage() {
     setError(null);
     setWorkspaceMessage(null);
     setDevInvitationLink(null);
+    setTransferredAwayWorkspaceId(null);
     await refreshWorkspaces(token);
   }
 
@@ -1722,8 +1725,25 @@ export default function HomePage() {
     setDevInvitationLink(null);
     setWorkspaceAction("transfer");
     try {
-      await transferWorkspaceOwnership(token, activeWorkspace.id, member.id);
+      const transfer = await transferWorkspaceOwnership(token, activeWorkspace.id, member.id);
       setWorkspaceMessage(`${memberName} теперь владелец списка "${activeWorkspace.name}".`);
+      // Reflect the caller's demotion immediately. Waiting solely for a
+      // follow-up workspace fetch leaves owner-only controls visible while the
+      // old member list is still rendered.
+      setWorkspaces((current) =>
+        current.map((workspace) =>
+          workspace.id === transfer.workspaceId
+            ? {
+                ...workspace,
+                ownerId: transfer.ownerId,
+                role: "EDITOR"
+              }
+            : workspace
+        )
+      );
+      setWorkspaceMembers([]);
+      setWorkspaceInvitations([]);
+      setTransferredAwayWorkspaceId(transfer.workspaceId);
       await refreshWorkspaces(token);
       await refreshActiveData(token);
     } finally {
@@ -3176,6 +3196,8 @@ export default function HomePage() {
                 <Users aria-hidden="true" size={22} />
               </div>
 
+              {workspaceMessage ? <p className="success-message">{workspaceMessage}</p> : null}
+
               {canManageActiveWorkspace ? (
                 <>
                   <form
@@ -3206,8 +3228,6 @@ export default function HomePage() {
                       </span>
                     </button>
                   </form>
-
-                  {workspaceMessage ? <p className="success-message">{workspaceMessage}</p> : null}
                   {devInvitationLink ? (
                     <p className="dev-link">
                       Dev-ссылка: <span>{devInvitationLink}</span>

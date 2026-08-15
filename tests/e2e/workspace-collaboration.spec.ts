@@ -1,14 +1,14 @@
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
 const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://127.0.0.1:${process.env.E2E_API_PORT ?? 3001}`;
-const webBaseUrl = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${process.env.E2E_WEB_PORT ?? 3000}`;
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
+const webBaseUrl = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_WEB_PORT ?? 3000}`;
 
-test("two accounts can share and edit a workspace", async ({ browser, request }) => {
+test("two accounts can share and edit a workspace", async ({ browser, request }, testInfo: TestInfo) => {
   test.setTimeout(120_000);
 
-  const runId = Date.now().toString(36);
+  const runId = `${Date.now().toString(36)}-${testInfo.workerIndex}`;
   const ownerEmail = `e2e-owner-${runId}@example.com`;
   const memberEmail = `e2e-member-${runId}@example.com`;
   const categoryName = `E2E Категория ${runId}`;
@@ -35,6 +35,9 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   await ownerPage.getByLabel("Название товара").press("Enter");
   await expect(ownerPage.getByRole("heading", { name: itemName })).toBeVisible();
   await expect(ownerPage.getByText("Купить").first()).toBeVisible();
+
+  // The invitee must already be a verified user before the invitation is sent.
+  await createVerifiedUser(request, memberEmail);
 
   // Owner invites the member via API and captures the dev invitation link.
   const ownerWorkspace = await getOwnerWorkspace(request, ownerToken);
@@ -68,12 +71,16 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
   memberEntryUrl.searchParams.set("workspace_invite_token", invitationToken);
 
   await memberPage.goto(memberEntryUrl.toString(), { waitUntil: "domcontentloaded" });
+  await finishOnboardingIfNeeded(memberPage);
 
   // Member should land in the shared workspace and see the owner's data.
   const memberNavigation = memberPage.getByRole("navigation", { name: "Основные разделы" });
   await memberNavigation.getByRole("button", { name: "Категории" }).click();
   await expect(memberPage.getByRole("tab", { name: categoryName })).toBeVisible();
-  await expect(memberPage.getByRole("heading", { name: itemName })).toBeVisible();
+  await memberPage.getByRole("tab", { name: categoryName }).click();
+  await expect(memberPage.getByRole("heading", { name: itemName })).toBeVisible({
+    timeout: 15_000
+  });
 
   // Member changes the item status to IN_STOCK.
   const memberItem = memberPage.locator("article").filter({ hasText: itemName });
@@ -82,6 +89,8 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
 
   // Owner refreshes and sees the change made by the member.
   await ownerPage.reload({ waitUntil: "domcontentloaded" });
+  await ownerNavigation.getByRole("button", { name: "Категории" }).click();
+  await ownerPage.getByRole("tab", { name: categoryName }).click();
   const ownerItem = ownerPage.locator("article").filter({ hasText: itemName });
   await expect(ownerItem.getByRole("combobox")).toHaveValue("IN_STOCK");
 
@@ -118,10 +127,10 @@ test("two accounts can share and edit a workspace", async ({ browser, request })
 test("ownership transfer makes the invited member the workspace owner", async ({
   browser,
   request
-}) => {
+}, testInfo: TestInfo) => {
   test.setTimeout(120_000);
 
-  const runId = Date.now().toString(36);
+  const runId = `${Date.now().toString(36)}-${testInfo.workerIndex}`;
   const ownerEmail = `e2e-transfer-owner-${runId}@example.com`;
   const memberEmail = `e2e-transfer-member-${runId}@example.com`;
   const categoryName = `E2E Передача ${runId}`;
@@ -140,6 +149,9 @@ test("ownership transfer makes the invited member the workspace owner", async ({
   await ownerPage.getByLabel("Название категории").fill(categoryName);
   await ownerPage.getByRole("button", { name: "Создать" }).click();
   await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
+
+  // The invitee must already be a verified user before the invitation is sent.
+  await createVerifiedUser(request, memberEmail);
 
   // Owner invites the member via API and captures the dev invitation link.
   const ownerWorkspace = await getOwnerWorkspace(request, ownerToken);
@@ -174,6 +186,9 @@ test("ownership transfer makes the invited member the workspace owner", async ({
 
   await memberPage.goto(memberEntryUrl.toString(), { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(memberPage);
+  await expect
+    .poll(() => memberPage.evaluate(() => window.localStorage.getItem("kupitnezabyt.token")))
+    .not.toBeNull();
   const memberToken = await memberPage.evaluate(() =>
     window.localStorage.getItem("kupitnezabyt.token")
   );
@@ -268,6 +283,17 @@ async function requestMagicLink(request: APIRequestContext, email: string): Prom
   return body.devMagicLink;
 }
 
+// Invitations require an existing verified user, so the invitee must complete
+// an email sign-in on the API before the owner can invite them.
+async function createVerifiedUser(request: APIRequestContext, email: string): Promise<void> {
+  const magicLink = await requestMagicLink(request, email);
+  const magicToken = extractQueryParam(magicLink, "magic_token");
+  const verifyResponse = await request.post(`${apiBaseUrl}/api/auth/email/verify`, {
+    data: { token: magicToken }
+  });
+  expect(verifyResponse.status()).toBe(200);
+}
+
 function extractQueryParam(url: string, name: string): string {
   const parsedUrl = new URL(url);
   const value = parsedUrl.searchParams.get(name);
@@ -349,7 +375,12 @@ async function waitForApiHealth(request: APIRequestContext): Promise<void> {
 
 async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   const startButton = page.getByRole("button", { name: "Начать" });
-  if (!(await startButton.isVisible({ timeout: 10_000 }).catch(() => false))) {
+  // locator.isVisible() does not wait, so use waitFor to survive cold dev compiles.
+  const isOnboardingVisible = await startButton
+    .waitFor({ state: "visible", timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!isOnboardingVisible) {
     return;
   }
 
