@@ -291,6 +291,21 @@ test:integration` запускает DB-backed API сценарии с
 `RUN_DB_INTEGRATION_TESTS=1`; обычный `pnpm test` остается быстрым и не требует
 живой базы.
 
+Для E2E webapp, API и Playwright по умолчанию используют один origin-набор:
+`E2E_BASE_URL=http://localhost:3000`,
+`NEXT_PUBLIC_API_BASE_URL=http://localhost:3001` и `E2E_API_PORT=3001`.
+
+Обе DB-команды начинаются с preflight `scripts/check-local-db.mjs`: если
+PostgreSQL недоступен по `DATABASE_URL` (по умолчанию `localhost:5432`), команда
+сразу завершается с инструкцией, а не падает внутри тестов или по таймауту.
+Поднять базу локально можно так:
+
+```bash
+docker compose up -d postgres
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kupitnezabyt \
+  corepack pnpm db:deploy
+```
+
 Команды в этом разделе должны соответствовать `package.json`. При изменении
 scripts README нужно обновить в той же задаче.
 

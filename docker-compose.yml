@@ -27,6 +27,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "corepack enable &&
+      corepack pnpm config set store-dir /root/.local/share/pnpm/store &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm db:generate &&
       corepack pnpm --filter @kupitnezabyt/api dev"
@@ -39,6 +40,7 @@ services:
       APP_BASE_URL: http://localhost:3000
       NODE_ENV: development
       DEV_AUTH_ENABLED: "true"
+      NPM_CONFIG_STORE_DIR: /root/.local/share/pnpm/store
     ports:
       - "3001:3001"
     volumes:
@@ -61,6 +63,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "corepack enable &&
+      corepack pnpm config set store-dir /root/.local/share/pnpm/store &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm --filter @kupitnezabyt/webapp dev"
     env_file:
@@ -69,6 +72,7 @@ services:
       NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
       TELEGRAM_WEBAPP_URL: http://localhost:3000
       NODE_ENV: development
+      NPM_CONFIG_STORE_DIR: /root/.local/share/pnpm/store
     ports:
       - "3000:3000"
     volumes:
@@ -88,6 +92,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "corepack enable &&
+      corepack pnpm config set store-dir /root/.local/share/pnpm/store &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm db:generate &&
       corepack pnpm --filter @kupitnezabyt/bot dev"
@@ -97,6 +102,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
       TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-http://localhost:3000}
       NODE_ENV: development
+      NPM_CONFIG_STORE_DIR: /root/.local/share/pnpm/store
     volumes:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store
@@ -115,6 +121,7 @@ services:
     working_dir: /workspace
     command: >
       sh -lc "corepack enable &&
+      corepack pnpm config set store-dir /root/.local/share/pnpm/store &&
       corepack pnpm install --frozen-lockfile &&
       corepack pnpm db:generate &&
       corepack pnpm --filter @kupitnezabyt/worker dev"
@@ -124,6 +131,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
       TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-http://localhost:3000}
       NODE_ENV: development
+      NPM_CONFIG_STORE_DIR: /root/.local/share/pnpm/store
     volumes:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store

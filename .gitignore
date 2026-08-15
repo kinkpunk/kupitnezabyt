@@ -22,6 +22,9 @@ prisma/dev.db
 # docker
 docker-data/
 
+# package manager cache
+.pnpm-store/
+
 # editor
 .vscode/
 .idea/

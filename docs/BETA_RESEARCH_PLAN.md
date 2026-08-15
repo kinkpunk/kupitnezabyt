@@ -34,14 +34,14 @@
 | ~~B1~~ | ~~Вывести `importance` товара в API и UI~~ — **выполнено 2026-07-21**: `POST`/`PATCH /api/items` принимают `importance` с валидацией (`INVALID_IMPORTANCE`), webapp позволяет выбрать важность при редактировании и показывает бейдж для нестандартных значений | — | — |
 | B2 | Item reorder: добавить `sortOrder` у Item и сортировку в UI | README gaps | M |
 | B3 | Дописать Telegram-флоу или осознанно убрать из спеки: внешние напоминания, команды бота `/shopping`, `/check`, `/settings`, привязка Telegram-аккаунта | PRODUCT_SPEC §4.3, Roadmap (optional integration) | L |
-| ~~B4~~ | ~~Хвосты Slice 32~~ — **выполнено 2026-08-15**: toast после принятия приглашения (флаг в localStorage + `ToastNotice` в boot) и E2E передачи владения (`tests/e2e/workspace-collaboration.spec.ts`, второй сценарий). E2E локально не прогнан — нет Docker/PostgreSQL, тест написан по существующему паттерну и требует прогона в окружении с БД | — | — |
+| ~~B4~~ | ~~Хвосты Slice 32~~ — **выполнено 2026-08-15**: toast после принятия приглашения (флаг в localStorage + `ToastNotice` в boot), последовательная загрузка active workspace до scoped data, E2E передачи владения (`tests/e2e/workspace-collaboration.spec.ts`, второй сценарий) и фикс `ensurePersonalWorkspace`, который не сбрасывает роль существующего участника на `OWNER` при вызове `GET /api/workspaces` после transfer ownership | — | — |
 
 ### 1.2 Качество и покрытие
 
 | # | Задача | Источник | Оценка |
 |---|--------|----------|--------|
-| B5 | Расширить E2E/DB-backed покрытие вторичных флоу: группы, чек-сессии, варианты поиска, экспорт | FINAL_INTEGRATION Known Gaps | M |
-| B6 | Стабилизировать E2E-preflight: DB-команды падают без живого PostgreSQL (`pnpm test:e2e` → 503 `db: false`) | FINAL_INTEGRATION | S |
+| ~~B5~~ | ~~Расширить E2E/DB-backed покрытие вторичных флоу~~ — **выполнено 2026-08-15**: Playwright покрывает группы/group check, category check session, успешный и пустой поиск, archive/restore и JSON export | — | — |
+| ~~B6~~ | ~~Стабилизировать E2E-preflight~~ — **выполнено 2026-08-15**: `scripts/check-local-db.mjs` проверяет доступность PostgreSQL по `DATABASE_URL` за ~секунду и выводит инструкцию (`docker compose up -d postgres` + `pnpm db:deploy`); подключён как preflight в `test:e2e` и `test:integration` | — | — |
 | B7 | Optional Telegram integration smoke | Roadmap | S |
 
 ### 1.3 Технический долг
@@ -69,9 +69,8 @@ Magic link: реализация полностью готова и покрыт
 приоритетный** способ входа — основной канал авторизации — Google OAuth,
 развитие magic link не требуется.
 
-Приоритет предлагается такой: B10 (разблокировка беты, внешняя часть) → B6
-(маленькая, снимает трение при локальном запуске) → B5, B2 → B8, B3 по решению
-о судьбе Telegram-интеграции.
+Приоритет предлагается такой: B10 (разблокировка беты, внешняя часть) → B5, B2
+→ B8, B3 по решению о судьбе Telegram-интеграции.
 
 ---
 

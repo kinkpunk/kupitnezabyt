@@ -14,7 +14,14 @@ Infrastructure:
 
 ```bash
 docker compose up -d postgres redis
+
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kupitnezabyt \
+  corepack pnpm db:deploy
 ```
+
+`db:deploy` does not load a git-tracked `.env`: Prisma needs `DATABASE_URL` in
+the command environment (or an untracked local `.env`). Do not add credentials
+to the repository.
 
 Webapp and API:
 
@@ -50,6 +57,15 @@ Telegram APIs, and an always-on process.
 
 These checks should be treated as release-readiness checks for the implemented
 core MVP, not as acceptance of the full product spec.
+
+Run E2E with the matching browser/Docker origins:
+
+```bash
+E2E_BASE_URL=http://localhost:3000 \
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001 \
+E2E_API_PORT=3001 \
+  corepack pnpm test:e2e
+```
 
 ## Product Smoke Checklist
 

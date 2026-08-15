@@ -2,13 +2,14 @@ import { defineConfig, devices } from "@playwright/test";
 
 const webPort = Number(process.env.E2E_WEB_PORT ?? 3000);
 const apiPort = Number(process.env.E2E_API_PORT ?? 3001);
-const baseURL = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${webPort}`;
+const baseURL = process.env.E2E_BASE_URL ?? `http://localhost:${webPort}`;
 const databaseUrl =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/kupitnezabyt";
 
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
+  workers: 1,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
@@ -28,7 +29,7 @@ export default defineConfig({
       DEV_AUTH_ENABLED: "true",
       JWT_SECRET: process.env.JWT_SECRET ?? "e2e-secret",
       NEXT_PUBLIC_API_BASE_URL:
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://127.0.0.1:${apiPort}`,
+        process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${apiPort}`,
       NODE_ENV: "development"
     }
   },
