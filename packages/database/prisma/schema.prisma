@@ -180,6 +180,7 @@ model Item {
   lastBoughtAt    DateTime?
   nextCheckAt     DateTime?
   reminderEnabled Boolean        @default(true)
+  sortOrder       Int            @default(0)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   archivedAt      DateTime?
@@ -196,6 +197,7 @@ model Item {
   @@index([userId, status])
   @@index([userId, nextCheckAt])
   @@index([workspaceId, categoryId, archivedAt])
+  @@index([workspaceId, categoryId, sortOrder])
   @@index([workspaceId, status])
   @@index([workspaceId, nextCheckAt])
 }

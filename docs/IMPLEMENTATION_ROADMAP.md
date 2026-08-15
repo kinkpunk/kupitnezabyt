@@ -499,10 +499,10 @@ Implemented notes:
   `409` and must be archived before deletion.
 - Added `POST /api/categories/reorder` to persist active category `sortOrder`
   for the authenticated user.
+- Added `sortOrder` to `Item` and `POST /api/items/reorder` to persist item
+  ordering within a category; creation now assigns `max(sortOrder) + 1` in the
+  target category and check sessions follow the persisted order.
 - Preserved archive/restore as the primary safer workflow.
-- Item reorder was intentionally left out because `Item` has no `sortOrder`
-  field; current item ordering remains creation-date based until a UX/data-model
-  change requires it.
 
 ### Slice 25: Recommendation Hide Similar
 

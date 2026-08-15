@@ -159,6 +159,11 @@ type ReorderCategoriesBody = {
   categoryIds?: unknown;
 };
 
+type ReorderItemsBody = {
+  categoryId?: unknown;
+  itemIds?: unknown;
+};
+
 type WorkspaceAccess = {
   role: "OWNER" | "EDITOR" | "VIEWER";
   workspaceId: string;
@@ -1432,9 +1437,7 @@ export function buildServer() {
         where: {
           userId
         },
-        orderBy: {
-          createdAt: "asc"
-        }
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
       }),
       prisma.shoppingListItem.findMany({
         where: {
@@ -1728,9 +1731,7 @@ export function buildServer() {
           where: {
             archivedAt: null
           },
-          orderBy: {
-            createdAt: "asc"
-          }
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
         }
       }
     });
@@ -2084,9 +2085,7 @@ export function buildServer() {
             not: "PAUSED"
           }
         },
-        orderBy: {
-          createdAt: "asc"
-        }
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
       });
 
       if (items.length === 0) {
@@ -2472,9 +2471,7 @@ export function buildServer() {
       include: {
         category: true
       },
-      orderBy: {
-        createdAt: "asc"
-      }
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
     });
   });
 
@@ -2582,6 +2579,18 @@ export function buildServer() {
     const now = new Date();
 
     return prisma.$transaction(async (tx) => {
+      const maxSortOrder = await tx.item.aggregate({
+        where: {
+          workspaceId: workspaceAccess.workspaceId,
+          categoryId,
+          archivedAt: null
+        },
+        _max: {
+          sortOrder: true
+        }
+      });
+      const nextSortOrder = (maxSortOrder._max.sortOrder ?? -1) + 1;
+
       const item = await tx.item.create({
         data: {
           userId,
@@ -2593,6 +2602,7 @@ export function buildServer() {
           notes: readOptionalString(request.body?.notes) ?? null,
           importance: importance ?? "NORMAL",
           usageCycleDays,
+          sortOrder: nextSortOrder,
           nextCheckAt: calculateNextCheckAt(initialStatus, now, usageCycleDays)
         }
       });
@@ -2620,6 +2630,97 @@ export function buildServer() {
       }
 
       return item;
+    });
+  });
+
+  app.post<{ Body: ReorderItemsBody }>("/api/items/reorder", async (request, reply) => {
+    const categoryId = readRequiredString(request.body?.categoryId);
+    if (!categoryId) {
+      await sendError(reply, 400, "CATEGORY_ID_REQUIRED", "Category id is required.");
+      return;
+    }
+
+    const itemIds = readStringArray(request.body?.itemIds);
+    if (!itemIds || itemIds.length === 0) {
+      await sendError(reply, 400, "ITEM_IDS_REQUIRED", "Item ids are required.");
+      return;
+    }
+
+    if (new Set(itemIds).size !== itemIds.length) {
+      await sendError(reply, 400, "DUPLICATE_ITEM_IDS", "Item ids must be unique.");
+      return;
+    }
+
+    const userId = requireUserId(request.userId);
+    const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+    if (!workspaceAccess) {
+      await sendError(reply, 404, "WORKSPACE_NOT_FOUND", "Workspace was not found.");
+      return;
+    }
+    if (!canWriteWorkspace(workspaceAccess)) {
+      await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+      return;
+    }
+
+    const category = await prisma.category.findFirst({
+      where: {
+        id: categoryId,
+        workspaceId: workspaceAccess.workspaceId,
+        archivedAt: null
+      }
+    });
+    if (!category) {
+      await sendError(reply, 404, "CATEGORY_NOT_FOUND", "Category was not found.");
+      return;
+    }
+
+    const items = await prisma.item.findMany({
+      where: {
+        workspaceId: workspaceAccess.workspaceId,
+        categoryId,
+        archivedAt: null
+      },
+      select: {
+        id: true
+      }
+    });
+    const ownedItemIds = new Set(items.map((item) => item.id));
+
+    if (itemIds.some((itemId) => !ownedItemIds.has(itemId))) {
+      await sendError(reply, 404, "ITEM_NOT_FOUND", "Item was not found.");
+      return;
+    }
+
+    if (items.length !== itemIds.length) {
+      await sendError(reply, 400, "ITEM_ORDER_INCOMPLETE", "Item ids must include every active item in the category.");
+      return;
+    }
+
+    await prisma.$transaction((tx) =>
+      Promise.all(
+        itemIds.map((itemId, index) =>
+          tx.item.update({
+            where: {
+              id: itemId
+            },
+            data: {
+              sortOrder: index
+            }
+          })
+        )
+      )
+    );
+
+    return prisma.item.findMany({
+      where: {
+        workspaceId: workspaceAccess.workspaceId,
+        categoryId,
+        archivedAt: null
+      },
+      include: {
+        category: true
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
     });
   });
 
@@ -2973,6 +3074,7 @@ export function buildServer() {
       }
 
       const nextCategoryId = categoryId ?? item.categoryId;
+      const isCategoryChanged = nextCategoryId !== item.categoryId;
       const usageCycleDays = hasOwnProperty(body, "usageCycleDays")
         ? readOptionalPositiveInteger(body.usageCycleDays) ?? null
         : item.usageCycleDays;
@@ -3010,6 +3112,21 @@ export function buildServer() {
             : calculateConfiguredNextCheckAt(now, usageCycleDays)
           : item.nextCheckAt;
       return prisma.$transaction(async (tx) => {
+        let nextSortOrder = item.sortOrder;
+        if (isCategoryChanged) {
+          const maxSortOrder = await tx.item.aggregate({
+            where: {
+              workspaceId: workspaceAccess.workspaceId,
+              categoryId: nextCategoryId,
+              archivedAt: null
+            },
+            _max: {
+              sortOrder: true
+            }
+          });
+          nextSortOrder = (maxSortOrder._max.sortOrder ?? -1) + 1;
+        }
+
         const updatedItem = await tx.item.update({
           where: {
             id: item.id
@@ -3021,6 +3138,7 @@ export function buildServer() {
             notes,
             importance,
             usageCycleDays,
+            sortOrder: nextSortOrder,
             nextCheckAt,
             reminderEnabled
           }

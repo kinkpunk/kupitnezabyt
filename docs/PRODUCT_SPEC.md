@@ -829,6 +829,7 @@ Item {
   status: ItemStatus
   importance?: ItemImportance  // хранимый атрибут, не влияет на логику статусов
   usageCycleDays?: number
+  sortOrder: number
   lastCheckedAt?: Date
   lastBoughtAt?: Date
   nextCheckAt?: Date

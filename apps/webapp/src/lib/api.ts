@@ -373,6 +373,14 @@ export function updateItem(
   return patch<Item>(`/api/items/${itemId}`, token, input);
 }
 
+export function reorderItems(
+  token: string,
+  categoryId: string,
+  itemIds: string[]
+): Promise<Item[]> {
+  return post<Item[]>("/api/items/reorder", token, { categoryId, itemIds });
+}
+
 export function getInAppReminders(token: string): Promise<InAppReminder[]> {
   return get<InAppReminder[]>("/api/reminders/in-app", token);
 }

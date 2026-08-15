@@ -24,6 +24,7 @@ export type Item = {
   importance: ItemImportance;
   usageCycleDays: number | null;
   reminderEnabled: boolean;
+  sortOrder: number;
   lastCheckedAt: string | null;
   lastBoughtAt: string | null;
   nextCheckAt: string | null;

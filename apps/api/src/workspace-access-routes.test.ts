@@ -29,6 +29,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 const mockTx = vi.hoisted(() => ({
   item: {
+    aggregate: vi.fn(),
     create: vi.fn(),
     update: vi.fn()
   },
@@ -54,6 +55,7 @@ describe("workspace access routes", () => {
     vi.clearAllMocks();
     process.env.JWT_SECRET = "test-secret";
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.item.aggregate.mockResolvedValue({ _max: { sortOrder: null } });
   });
 
   it("lists categories from an active shared workspace for members", async () => {
@@ -254,6 +256,7 @@ describe("workspace access routes", () => {
         notes: null,
         importance: "NORMAL",
         usageCycleDays: null,
+        sortOrder: 0,
         nextCheckAt: null
       }
     });
@@ -318,6 +321,7 @@ describe("workspace access routes", () => {
         notes: null,
         importance: "NORMAL",
         usageCycleDays: 14,
+        sortOrder: 0,
         nextCheckAt: expect.any(Date)
       }
     });

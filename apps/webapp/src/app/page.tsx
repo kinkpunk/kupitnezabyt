@@ -4,6 +4,8 @@ import type { ItemImportance, ItemStatus, ShoppingPriority } from "@kupitnezabyt
 import type { CategoryStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
+  ArrowDown,
+  ArrowUp,
   Bell,
   Boxes,
   Check,
@@ -73,6 +75,7 @@ import {
   removeGroupItem,
   requestMagicLink,
   removeWorkspaceMember,
+  reorderItems,
   revokeWorkspaceInvitation,
   restoreCategory,
   restoreItem,
@@ -361,6 +364,8 @@ export default function HomePage() {
   );
   const canManageActiveWorkspace =
     activeWorkspace?.role === "OWNER" && activeWorkspace.id !== transferredAwayWorkspaceId;
+  const canWriteActiveWorkspace =
+    activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "EDITOR";
   const showWorkspaceSwitcher = workspaces.length > 1;
   const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
 
@@ -862,6 +867,42 @@ export default function HomePage() {
       if (status === "IN_STOCK" && item.status !== "IN_STOCK") {
         showBoughtToast(item.name);
       }
+    } finally {
+      setPendingAction(actionKey, false);
+    }
+  }
+
+  async function handleMoveItem(item: Item, direction: "up" | "down") {
+    if (!token || !selectedCategory) {
+      return;
+    }
+
+    const categoryItems = visibleItems;
+    const index = categoryItems.findIndex((currentItem) => currentItem.id === item.id);
+    if (index === -1) {
+      return;
+    }
+
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= categoryItems.length) {
+      return;
+    }
+
+    const actionKey = `item:reorder:${item.id}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+
+      const reorderedItems = [...categoryItems];
+      const [movedItem] = reorderedItems.splice(index, 1);
+      if (!movedItem) {
+        return;
+      }
+      reorderedItems.splice(targetIndex, 0, movedItem);
+      const itemIds = reorderedItems.map((currentItem) => currentItem.id);
+
+      await reorderItems(token, selectedCategory.id, itemIds);
+      await refreshActiveData(token);
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -2534,7 +2575,7 @@ export default function HomePage() {
 
               <div className="item-list">
                 {visibleItems.length ? (
-                  visibleItems.map((item) => (
+                  visibleItems.map((item, index) => (
                     <article className="item-card" key={item.id}>
                       {editingItemId === item.id ? (
                         <form
@@ -2577,6 +2618,43 @@ export default function HomePage() {
                             ) : null}
                           </div>
                           <div className="icon-actions">
+                            {canWriteActiveWorkspace && visibleItems.length > 1 ? (
+                              <>
+                                <button
+                                  aria-label={`Переместить товар ${item.name} выше`}
+                                  className="ghost-button icon-button reorder-button"
+                                  title="Переместить выше"
+                                  type="button"
+                                  disabled={
+                                    index === 0 || isActionPending(`item:reorder:${item.id}`)
+                                  }
+                                  onClick={() =>
+                                    void handleMoveItem(item, "up").catch((caughtError) =>
+                                      setError(formatError(caughtError))
+                                    )
+                                  }
+                                >
+                                  <ArrowUp aria-hidden="true" size={18} />
+                                </button>
+                                <button
+                                  aria-label={`Переместить товар ${item.name} ниже`}
+                                  className="ghost-button icon-button reorder-button"
+                                  title="Переместить ниже"
+                                  type="button"
+                                  disabled={
+                                    index === visibleItems.length - 1 ||
+                                    isActionPending(`item:reorder:${item.id}`)
+                                  }
+                                  onClick={() =>
+                                    void handleMoveItem(item, "down").catch((caughtError) =>
+                                      setError(formatError(caughtError))
+                                    )
+                                  }
+                                >
+                                  <ArrowDown aria-hidden="true" size={18} />
+                                </button>
+                              </>
+                            ) : null}
                             <button
                               aria-label={`Изменить товар ${item.name}`}
                               className="ghost-button icon-button"

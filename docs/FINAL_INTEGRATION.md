@@ -139,8 +139,6 @@ Requires real Telegram credentials and deployed bot/worker services:
   database through `DATABASE_URL`.
 - Telegram end-to-end checks are optional and require external credentials,
   deployed bot/worker services, and a public HTTPS URL.
-- Item reorder is not implemented because current item ordering is creation-date
-  based and the data model has no item `sortOrder` field.
 - Telegram account linking can be added later as optional integration.
 
 ## Previous Local Verification

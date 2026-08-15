@@ -108,9 +108,7 @@ describe("privacy export routes", () => {
       where: {
         userId: "user-1"
       },
-      orderBy: {
-        createdAt: "asc"
-      }
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
     });
     expect(mockPrisma.workspaceMember.findMany).toHaveBeenCalledWith({
       where: {

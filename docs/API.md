@@ -305,6 +305,7 @@ GET /api/items
 GET /api/items?archived=true
 GET /api/items/search?q=...
 POST /api/items
+POST /api/items/reorder
 GET /api/items/:id
 PATCH /api/items/:id
 POST /api/items/:id/status
@@ -364,6 +365,20 @@ list entry is created, updated, or completed according to product rules.
 Search matches active, non-archived items by item `name`, `brand`, `notes`, and
 category name. Results are scoped to the authenticated user and limited to 50
 items.
+
+Reorder body:
+
+```json
+{
+  "categoryId": "...",
+  "itemIds": ["item-2", "item-1"]
+}
+```
+
+`POST /api/items/reorder` updates the `sortOrder` of every active item in the
+category. The payload must include every active item id exactly once. Unknown,
+archived, duplicate, incomplete, or cross-workspace ids are rejected. `VIEWER`
+members receive `403 WORKSPACE_WRITE_FORBIDDEN`.
 
 Snooze body:
 

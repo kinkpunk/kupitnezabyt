@@ -1010,6 +1010,15 @@ select {
   place-items: center;
 }
 
+.reorder-button {
+  color: var(--muted);
+}
+
+.reorder-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .danger-button {
   color: var(--danger);
 }

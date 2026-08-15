@@ -33,6 +33,7 @@ const mockTx = vi.hoisted(() => ({
     update: vi.fn()
   },
   item: {
+    aggregate: vi.fn(),
     create: vi.fn(),
     findMany: vi.fn(),
     update: vi.fn(),
@@ -520,6 +521,7 @@ describe("archive routes", () => {
       archivedAt: null
     });
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockTx.item.aggregate.mockResolvedValue({ _max: { sortOrder: null } });
     mockTx.item.create.mockResolvedValue({
       id: "item-1",
       userId: "user-1",
@@ -554,6 +556,7 @@ describe("archive routes", () => {
         notes: null,
         importance: "NORMAL",
         usageCycleDays: null,
+        sortOrder: 0,
         nextCheckAt: null
       }
     });
