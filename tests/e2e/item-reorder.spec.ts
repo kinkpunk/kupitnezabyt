@@ -39,10 +39,12 @@ test("browser user can reorder items within a category", async ({ page, request 
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: firstItemName })).toBeVisible();
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(secondItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: secondItemName })).toBeVisible();

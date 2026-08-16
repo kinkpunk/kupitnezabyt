@@ -10,6 +10,7 @@ import {
   Boxes,
   Check,
   Crown,
+  GripVertical,
   Home,
   Mail,
   Menu,
@@ -20,6 +21,7 @@ import {
   Send,
   Settings,
   ShoppingCart,
+  Signal,
   Sun,
   SunMoon,
   Tags,
@@ -303,6 +305,7 @@ export default function HomePage() {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
+  const [showItemForm, setShowItemForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -846,6 +849,7 @@ export default function HomePage() {
         name: itemName.trim()
       });
       setItemName("");
+      setShowItemForm(false);
       setItems((current) => [...current, item]);
       await refreshActiveData(token);
       await refreshRecommendations(token, item);
@@ -2486,6 +2490,19 @@ export default function HomePage() {
                 <p className="category-panel-meta">{formatCategoryTabMeta(selectedCategory)}</p>
                 <div className="category-panel-buttons">
                   <button
+                    aria-label={showItemForm ? "Скрыть форму товара" : "Новый товар"}
+                    className="ghost-button icon-button"
+                    title={showItemForm ? "Скрыть" : "Новый товар"}
+                    type="button"
+                    onClick={() => setShowItemForm((current) => !current)}
+                  >
+                    {showItemForm ? (
+                      <X aria-hidden="true" size={18} />
+                    ) : (
+                      <Plus aria-hidden="true" size={18} />
+                    )}
+                  </button>
+                  <button
                     className="ghost-button"
                     disabled={selectedCategory.itemCount === 0}
                     type="button"
@@ -2511,24 +2528,26 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <form
-                className="inline-form item-create-form"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void handleCreateItem().catch((caughtError) => setError(formatError(caughtError)));
-                }}
-              >
-                <input
-                  aria-label="Название товара"
-                  placeholder="Новый товар"
-                  value={itemName}
-                  disabled={isActionPending("item:create")}
-                  onChange={(event) => setItemName(event.target.value)}
-                />
-                <button type="submit" disabled={isActionPending("item:create") || !itemName.trim()}>
-                  {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
-                </button>
-              </form>
+              {showItemForm ? (
+                <form
+                  className="inline-form item-create-form"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void handleCreateItem().catch((caughtError) => setError(formatError(caughtError)));
+                  }}
+                >
+                  <input
+                    aria-label="Название товара"
+                    placeholder="Новый товар"
+                    value={itemName}
+                    disabled={isActionPending("item:create")}
+                    onChange={(event) => setItemName(event.target.value)}
+                  />
+                  <button type="submit" disabled={isActionPending("item:create") || !itemName.trim()}>
+                    {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
+                  </button>
+                </form>
+              ) : null}
 
               {selectedCategory.itemCount > 0 ? (
                 <div
@@ -2538,25 +2557,31 @@ export default function HomePage() {
                 >
                   <button
                     type="button"
+                    aria-label="Мой порядок"
                     className={categorySortMode === "manual" ? "active" : undefined}
+                    title="Мой порядок"
                     onClick={() =>
                       void handleCategorySortModeChange("manual").catch((caughtError) =>
                         setError(formatError(caughtError))
                       )
                     }
                   >
-                    Мой порядок
+                    <GripVertical aria-hidden="true" size={18} />
+                    <span className="sort-label">Мой порядок</span>
                   </button>
                   <button
                     type="button"
+                    aria-label="По статусу"
                     className={categorySortMode === "status" ? "active" : undefined}
+                    title="По статусу"
                     onClick={() =>
                       void handleCategorySortModeChange("status").catch((caughtError) =>
                         setError(formatError(caughtError))
                       )
                     }
                   >
-                    По статусу
+                    <Signal aria-hidden="true" size={18} />
+                    <span className="sort-label">По статусу</span>
                   </button>
                 </div>
               ) : null}

@@ -26,6 +26,7 @@ test("user can group items and run a group check session", async ({ page, reques
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
@@ -91,9 +92,11 @@ test("user can run a step-by-step category check and search in different ways", 
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: firstItemName })).toBeVisible();
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(secondItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: secondItemName })).toBeVisible();
@@ -166,6 +169,7 @@ test("user can archive and restore an item and export their data as JSON", async
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: itemName })).toBeVisible();

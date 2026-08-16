@@ -885,11 +885,16 @@ select {
   gap: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .category-sort-toggle button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
+  gap: 6px;
   padding: 8px 12px;
   border: none;
   border-radius: 0;
@@ -911,6 +916,31 @@ select {
 
 .category-sort-toggle button:not(.active):not(:disabled):hover {
   background: var(--background);
+}
+
+.category-sort-toggle button .sort-label {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 1;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: var(--text);
+  color: var(--surface);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 150ms ease, visibility 150ms ease;
+}
+
+.category-sort-toggle button:hover .sort-label,
+.category-sort-toggle button:focus-visible .sort-label {
+  opacity: 1;
+  visibility: visible;
 }
 
 .section-heading {

@@ -42,6 +42,7 @@ test("browser user can sort category items by status", async ({ page, request },
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   // Create items in an order that does not match status sorting.
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(inStockItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: inStockItemName })).toBeVisible();
@@ -49,11 +50,13 @@ test("browser user can sort category items by status", async ({ page, request },
     .getByRole("combobox", { name: `Статус товара ${inStockItemName}` })
     .selectOption("IN_STOCK");
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(lowItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: lowItemName })).toBeVisible();
   await page.getByRole("combobox", { name: `Статус товара ${lowItemName}` }).selectOption("LOW");
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(needBuyItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: needBuyItemName })).toBeVisible();
@@ -61,6 +64,7 @@ test("browser user can sort category items by status", async ({ page, request },
     .getByRole("combobox", { name: `Статус товара ${needBuyItemName}` })
     .selectOption("NEED_BUY");
 
+  await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(urgentItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.getByRole("heading", { name: urgentItemName })).toBeVisible();
