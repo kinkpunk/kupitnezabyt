@@ -2692,6 +2692,31 @@ export default function HomePage() {
                               </span>
                             ) : null}
                           </div>
+                        </div>
+                      )}
+                      <div className="item-card-controls">
+                        <select
+                          aria-label={`Статус товара ${item.name}`}
+                          className="status-select"
+                          data-status={item.status}
+                          disabled={isActionPending(`item:status:${item.id}`)}
+                          value={item.status}
+                          onChange={(event) =>
+                            void handleSetStatus(item, event.target.value as ItemStatus).catch(
+                              (caughtError) => setError(formatError(caughtError))
+                            )
+                          }
+                        >
+                          {statusOptions.map((status) => (
+                            <option key={status} value={status}>
+                              {statusLabels[status]}
+                            </option>
+                          ))}
+                          {item.status === "PAUSED" ? (
+                            <option value="PAUSED">{statusLabels.PAUSED}</option>
+                          ) : null}
+                        </select>
+                        {editingItemId !== item.id ? (
                           <div className="icon-actions">
                             {canWriteActiveWorkspace &&
                             categorySortMode === "manual" &&
@@ -2759,29 +2784,8 @@ export default function HomePage() {
                               <Archive aria-hidden="true" size={18} />
                             </button>
                           </div>
-                        </div>
-                      )}
-                      <select
-                        aria-label={`Статус товара ${item.name}`}
-                        className="status-select"
-                        data-status={item.status}
-                        disabled={isActionPending(`item:status:${item.id}`)}
-                        value={item.status}
-                        onChange={(event) =>
-                          void handleSetStatus(item, event.target.value as ItemStatus).catch(
-                            (caughtError) => setError(formatError(caughtError))
-                          )
-                        }
-                      >
-                        {statusOptions.map((status) => (
-                          <option key={status} value={status}>
-                            {statusLabels[status]}
-                          </option>
-                        ))}
-                        {item.status === "PAUSED" ? (
-                          <option value="PAUSED">{statusLabels.PAUSED}</option>
                         ) : null}
-                      </select>
+                      </div>
                     </article>
                   ))
                 ) : (
