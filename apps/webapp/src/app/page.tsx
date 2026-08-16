@@ -2490,19 +2490,6 @@ export default function HomePage() {
                 <p className="category-panel-meta">{formatCategoryTabMeta(selectedCategory)}</p>
                 <div className="category-panel-buttons">
                   <button
-                    aria-label={showItemForm ? "Скрыть форму товара" : "Новый товар"}
-                    className="ghost-button icon-button"
-                    title={showItemForm ? "Скрыть" : "Новый товар"}
-                    type="button"
-                    onClick={() => setShowItemForm((current) => !current)}
-                  >
-                    {showItemForm ? (
-                      <X aria-hidden="true" size={18} />
-                    ) : (
-                      <Plus aria-hidden="true" size={18} />
-                    )}
-                  </button>
-                  <button
                     className="ghost-button"
                     disabled={selectedCategory.itemCount === 0}
                     type="button"
@@ -2528,6 +2515,58 @@ export default function HomePage() {
                 </div>
               </div>
 
+              <div className="category-toolbar">
+                <button
+                  aria-label={showItemForm ? "Скрыть форму товара" : "Новый товар"}
+                  className="ghost-button icon-button"
+                  title={showItemForm ? "Скрыть" : "Новый товар"}
+                  type="button"
+                  onClick={() => setShowItemForm((current) => !current)}
+                >
+                  {showItemForm ? (
+                    <X aria-hidden="true" size={18} />
+                  ) : (
+                    <Plus aria-hidden="true" size={18} />
+                  )}
+                </button>
+                {selectedCategory.itemCount > 0 ? (
+                  <div
+                    className="category-sort-toggle"
+                    role="group"
+                    aria-label="Сортировка товаров"
+                  >
+                    <button
+                      type="button"
+                      aria-label="Мой порядок"
+                      className={categorySortMode === "manual" ? "active" : undefined}
+                      title="Мой порядок"
+                      onClick={() =>
+                        void handleCategorySortModeChange("manual").catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
+                    >
+                      <GripVertical aria-hidden="true" size={18} />
+                      <span className="sort-label">Мой порядок</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="По статусу"
+                      className={categorySortMode === "status" ? "active" : undefined}
+                      title="По статусу"
+                      onClick={() =>
+                        void handleCategorySortModeChange("status").catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        )
+                      }
+                    >
+                      <Signal aria-hidden="true" size={18} />
+                      <span className="sort-label">По статусу</span>
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
               {showItemForm ? (
                 <form
                   className="inline-form item-create-form"
@@ -2547,43 +2586,6 @@ export default function HomePage() {
                     {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
                   </button>
                 </form>
-              ) : null}
-
-              {selectedCategory.itemCount > 0 ? (
-                <div
-                  className="category-sort-toggle"
-                  role="group"
-                  aria-label="Сортировка товаров"
-                >
-                  <button
-                    type="button"
-                    aria-label="Мой порядок"
-                    className={categorySortMode === "manual" ? "active" : undefined}
-                    title="Мой порядок"
-                    onClick={() =>
-                      void handleCategorySortModeChange("manual").catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
-                  >
-                    <GripVertical aria-hidden="true" size={18} />
-                    <span className="sort-label">Мой порядок</span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="По статусу"
-                    className={categorySortMode === "status" ? "active" : undefined}
-                    title="По статусу"
-                    onClick={() =>
-                      void handleCategorySortModeChange("status").catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
-                  >
-                    <Signal aria-hidden="true" size={18} />
-                    <span className="sort-label">По статусу</span>
-                  </button>
-                </div>
               ) : null}
 
               {visibleRecommendations.length ? (
