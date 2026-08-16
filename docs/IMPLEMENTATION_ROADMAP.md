@@ -502,6 +502,12 @@ Implemented notes:
 - Added `sortOrder` to `Item` and `POST /api/items/reorder` to persist item
   ordering within a category; creation now assigns `max(sortOrder) + 1` in the
   target category and check sessions follow the persisted order.
+- Added `GET /api/items?sort=status` so the category view can optionally sort
+  items by status urgency (`URGENT`, `NEED_BUY`, `LOW`, `IN_STOCK`, `PAUSED`),
+  falling back to `sortOrder` and `createdAt` within each status group.
+- Added a category sort toggle in the webapp (`Мой порядок` / `По статусу`);
+  the choice is stored in `localStorage`, reorder arrows are hidden in status
+  sort mode, and manual reorder remains the default.
 - Preserved archive/restore as the primary safer workflow.
 
 ### Slice 25: Recommendation Hide Similar

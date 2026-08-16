@@ -60,6 +60,7 @@ import {
   getArchivedCategories,
   getArchivedItems,
   getCategories,
+  getCategorySortMode,
   getGroups,
   getInAppReminders,
   getItems,
@@ -81,6 +82,7 @@ import {
   restoreItem,
   searchItems,
   setActiveWorkspaceId,
+  setCategorySortMode,
   startAppleSignIn,
   setItemStatus,
   setCheckSessionItemStatus,
@@ -94,7 +96,9 @@ import {
   createWorkspaceInvitation,
   transferWorkspaceOwnership,
   updateShoppingListItem
-} from "../lib/api";import type {
+} from "../lib/api";
+import type { CategorySortMode } from "../lib/api";
+import type {
   AuthProvidersResponse,
   Category,
   CheckSession,
@@ -293,6 +297,9 @@ export default function HomePage() {
   ]);
   const [starterItems, setStarterItems] = useState<StarterItemDraft[]>(defaultStarterItems);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [categorySortMode, setCategorySortModeState] = useState<CategorySortMode>(() =>
+    getCategorySortMode()
+  );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -660,7 +667,7 @@ export default function HomePage() {
     setReminderDrafts(nextDrafts);
   }, [categories, groups, items]);
 
-  async function refreshActiveData(authToken = token) {
+  async function refreshActiveData(authToken = token, sortMode: CategorySortMode = categorySortMode) {
     if (!authToken) {
       return {
         categories: [],
@@ -679,7 +686,7 @@ export default function HomePage() {
       nextInAppReminders
     ] = await Promise.all([
       getCategories(authToken),
-      getItems(authToken),
+      getItems(authToken, { sort: sortMode }),
       getShoppingList(authToken),
       getGroups(authToken),
       getInAppReminders(authToken)
@@ -872,8 +879,18 @@ export default function HomePage() {
     }
   }
 
+  async function handleCategorySortModeChange(mode: CategorySortMode) {
+    if (!token || mode === categorySortMode) {
+      return;
+    }
+
+    setCategorySortModeState(mode);
+    setCategorySortMode(mode);
+    await refreshActiveData(token, mode);
+  }
+
   async function handleMoveItem(item: Item, direction: "up" | "down") {
-    if (!token || !selectedCategory) {
+    if (!token || !selectedCategory || categorySortMode === "status") {
       return;
     }
 
@@ -2513,6 +2530,37 @@ export default function HomePage() {
                 </button>
               </form>
 
+              {selectedCategory.itemCount > 0 ? (
+                <div
+                  className="category-sort-toggle"
+                  role="group"
+                  aria-label="Сортировка товаров"
+                >
+                  <button
+                    type="button"
+                    className={categorySortMode === "manual" ? "active" : undefined}
+                    onClick={() =>
+                      void handleCategorySortModeChange("manual").catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    Мой порядок
+                  </button>
+                  <button
+                    type="button"
+                    className={categorySortMode === "status" ? "active" : undefined}
+                    onClick={() =>
+                      void handleCategorySortModeChange("status").catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      )
+                    }
+                  >
+                    По статусу
+                  </button>
+                </div>
+              ) : null}
+
               {visibleRecommendations.length ? (
                 <section className="recommendations" aria-label="Рекомендации">
                   <div>
@@ -2618,7 +2666,9 @@ export default function HomePage() {
                             ) : null}
                           </div>
                           <div className="icon-actions">
-                            {canWriteActiveWorkspace && visibleItems.length > 1 ? (
+                            {canWriteActiveWorkspace &&
+                            categorySortMode === "manual" &&
+                            visibleItems.length > 1 ? (
                               <>
                                 <button
                                   aria-label={`Переместить товар ${item.name} выше`}

@@ -15,6 +15,7 @@ import {
   normalizeSearchQuery,
   createUserDataExport,
   parseRecommendationId,
+  sortItemsByStatus,
   type ItemImportance
 } from "@kupitnezabyt/shared";
 import Fastify from "fastify";
@@ -2453,7 +2454,7 @@ export function buildServer() {
     }
   );
 
-  app.get<{ Querystring: { categoryId?: string } & ArchivedQuery }>("/api/items", async (request) => {
+  app.get<{ Querystring: { categoryId?: string; sort?: string } & ArchivedQuery }>("/api/items", async (request) => {
     const userId = requireUserId(request.userId);
     const workspaceAccess = await resolveWorkspaceAccess(request, userId);
     if (!workspaceAccess) {
@@ -2461,8 +2462,9 @@ export function buildServer() {
     }
     const categoryId = readOptionalString(request.query.categoryId);
     const archived = readBooleanFlag(request.query.archived);
+    const sort = readOptionalString(request.query.sort);
 
-    return prisma.item.findMany({
+    const items = await prisma.item.findMany({
       where: {
         workspaceId: workspaceAccess.workspaceId,
         ...(categoryId ? { categoryId } : {}),
@@ -2473,6 +2475,12 @@ export function buildServer() {
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }]
     });
+
+    if (sort === "status") {
+      return sortItemsByStatus(items);
+    }
+
+    return items;
   });
 
   app.get<{ Querystring: { q?: string } }>("/api/items/search", async (request, reply) => {

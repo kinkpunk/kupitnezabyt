@@ -282,6 +282,71 @@ describe("item reorder routes", () => {
   });
 });
 
+describe("GET /api/items sort=status", () => {
+  it("sorts active items by status urgency", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.item.findMany.mockResolvedValue([
+      {
+        id: "item-in-stock",
+        workspaceId: "workspace-shared",
+        categoryId: "category-1",
+        name: "Соль",
+        status: "IN_STOCK",
+        sortOrder: 0,
+        createdAt: new Date("2026-08-15T10:00:00.000Z"),
+        category: { id: "category-1", name: "Продукты" }
+      },
+      {
+        id: "item-urgent",
+        workspaceId: "workspace-shared",
+        categoryId: "category-1",
+        name: "Молоко",
+        status: "URGENT",
+        sortOrder: 1,
+        createdAt: new Date("2026-08-15T10:00:00.000Z"),
+        category: { id: "category-1", name: "Продукты" }
+      },
+      {
+        id: "item-low",
+        workspaceId: "workspace-shared",
+        categoryId: "category-1",
+        name: "Рис",
+        status: "LOW",
+        sortOrder: 2,
+        createdAt: new Date("2026-08-15T10:00:00.000Z"),
+        category: { id: "category-1", name: "Продукты" }
+      }
+    ]);
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/items?sort=status",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    const body = response.json();
+    expect(body).toHaveLength(3);
+    expect(body.map((item: { id: string }) => item.id)).toEqual([
+      "item-urgent",
+      "item-low",
+      "item-in-stock"
+    ]);
+
+    await app.close();
+  });
+});
+
 function createToken(signToken: typeof import("./auth.js").signToken, userId: string): string {
   return signToken(userId, {
     appBaseUrl: "http://localhost:3000",

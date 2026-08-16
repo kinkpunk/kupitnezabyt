@@ -32,7 +32,7 @@
 | # | Задача | Источник | Оценка |
 |---|--------|----------|--------|
 | ~~B1~~ | ~~Вывести `importance` товара в API и UI~~ — **выполнено 2026-07-21**: `POST`/`PATCH /api/items` принимают `importance` с валидацией (`INVALID_IMPORTANCE`), webapp позволяет выбрать важность при редактировании и показывает бейдж для нестандартных значений | — | — |
-| ~~B2~~ | ~~Item reorder: добавить `sortOrder` у Item и сортировку в UI~~ — **выполнено 2026-08-15**: `Item` получил поле `sortOrder`, `POST /api/items/reorder` обновляет порядок внутри категории, webapp показывает стрелки вверх/вниз на карточке товара | README gaps | M |
+| ~~B2~~ | ~~Item reorder: добавить `sortOrder` у Item и сортировку в UI~~ — **выполнено 2026-08-15**: `Item` получил поле `sortOrder`, `POST /api/items/reorder` обновляет порядок внутри категории, webapp показывает стрелки вверх/вниз на карточке товара. Дополнено 2026-08-16: переключатель сортировки в категории (`Мой порядок` / `По статусу`), `GET /api/items?sort=status`, сохранение выбора в `localStorage` | README gaps | M |
 | B3 | Дописать Telegram-флоу или осознанно убрать из спеки: внешние напоминания, команды бота `/shopping`, `/check`, `/settings`, привязка Telegram-аккаунта | PRODUCT_SPEC §4.3, Roadmap (optional integration) | L |
 | ~~B4~~ | ~~Хвосты Slice 32~~ — **выполнено 2026-08-15**: toast после принятия приглашения (флаг в localStorage + `ToastNotice` в boot), последовательная загрузка active workspace до scoped data, E2E передачи владения (`tests/e2e/workspace-collaboration.spec.ts`, второй сценарий) и фикс `ensurePersonalWorkspace`, который не сбрасывает роль существующего участника на `OWNER` при вызове `GET /api/workspaces` после transfer ownership | — | — |
 

@@ -42,6 +42,7 @@ const tokenStorageKey = "kupitnezabyt.token";
 const activeWorkspaceStorageKey = "kupitnezabyt.activeWorkspaceId";
 const pendingWorkspaceInvitationStorageKey = "kupitnezabyt.pendingWorkspaceInvitationToken";
 const invitationAcceptedStorageKey = "kupitnezabyt.invitationAccepted";
+const categorySortModeStorageKey = "kupitnezabyt.categorySortMode";
 
 type TelegramThemeParams = {
   bg_color?: string;
@@ -334,12 +335,40 @@ export function deleteArchivedCategory(token: string, categoryId: string): Promi
   return del<DeleteResponse>(`/api/categories/${categoryId}`, token);
 }
 
-export function getItems(token: string): Promise<Item[]> {
-  return get<Item[]>("/api/items", token);
+export type CategorySortMode = "manual" | "status";
+
+export function getItems(
+  token: string,
+  options: { archived?: boolean; sort?: CategorySortMode } = {}
+): Promise<Item[]> {
+  const params = new URLSearchParams();
+  if (options.archived) {
+    params.set("archived", "true");
+  }
+  if (options.sort) {
+    params.set("sort", options.sort);
+  }
+  const query = params.toString();
+  return get<Item[]>(`/api/items${query ? `?${query}` : ""}`, token);
 }
 
 export function getArchivedItems(token: string): Promise<Item[]> {
-  return get<Item[]>("/api/items?archived=true", token);
+  return getItems(token, { archived: true });
+}
+
+export function getCategorySortMode(): CategorySortMode {
+  if (typeof window === "undefined") {
+    return "manual";
+  }
+  const value = window.localStorage.getItem(categorySortModeStorageKey);
+  return value === "status" ? "status" : "manual";
+}
+
+export function setCategorySortMode(mode: CategorySortMode): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.localStorage.setItem(categorySortModeStorageKey, mode);
 }
 
 export function searchItems(token: string, query: string): Promise<Item[]> {

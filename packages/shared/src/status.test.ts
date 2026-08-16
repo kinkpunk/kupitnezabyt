@@ -4,7 +4,9 @@ import {
   aggregateCategoryStatus,
   calculateNextCheckAt,
   calculateReadiness,
-  getShoppingSyncAction
+  getShoppingSyncAction,
+  sortItemsByStatus,
+  type SortableItem
 } from "./status.js";
 
 describe("calculateNextCheckAt", () => {
@@ -114,5 +116,40 @@ describe("calculateReadiness", () => {
 
   it("returns null when there are no active tracked items", () => {
     expect(calculateReadiness([{ status: "PAUSED" }])).toBeNull();
+  });
+});
+
+describe("sortItemsByStatus", () => {
+  it("orders items by status urgency, then sortOrder, then createdAt", () => {
+    const items: SortableItem[] = [
+      { status: "IN_STOCK", sortOrder: 0, createdAt: "2026-08-15T10:00:00.000Z" },
+      { status: "URGENT", sortOrder: 2, createdAt: "2026-08-15T10:00:00.000Z" },
+      { status: "LOW", sortOrder: 0, createdAt: "2026-08-15T10:00:00.000Z" },
+      { status: "NEED_BUY", sortOrder: 1, createdAt: "2026-08-15T10:00:00.000Z" },
+      { status: "PAUSED", sortOrder: 0, createdAt: "2026-08-15T10:00:00.000Z" }
+    ];
+
+    const sorted = sortItemsByStatus(items);
+
+    expect(sorted.map((item) => item.status)).toEqual([
+      "URGENT",
+      "NEED_BUY",
+      "LOW",
+      "IN_STOCK",
+      "PAUSED"
+    ]);
+  });
+
+  it("falls back to sortOrder and createdAt within the same status", () => {
+    const items: SortableItem[] = [
+      { status: "IN_STOCK", sortOrder: 2, createdAt: "2026-08-15T12:00:00.000Z" },
+      { status: "IN_STOCK", sortOrder: 1, createdAt: "2026-08-15T13:00:00.000Z" },
+      { status: "IN_STOCK", sortOrder: 1, createdAt: "2026-08-15T11:00:00.000Z" }
+    ];
+
+    const sorted = sortItemsByStatus(items);
+
+    expect(sorted.map((item) => item.sortOrder)).toEqual([1, 1, 2]);
+    expect(sorted.map((item) => new Date(item.createdAt).getUTCHours())).toEqual([11, 13, 12]);
   });
 });

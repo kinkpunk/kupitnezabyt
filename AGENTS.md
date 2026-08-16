@@ -67,6 +67,16 @@ Run `pnpm test:e2e` when changing a user-facing workflow.
 
 If a verification command cannot be run, explain why in the final response.
 
+## Command output and logs
+
+- Never read long logs (tests, builds, e2e runs) in full: start with the
+  summary (`tail -n 80`, failed/passed counts) and the first error block.
+- Open Playwright `error-context.md` only when the error message alone is
+  not enough, and read it with a line limit.
+- Read the full log only when the excerpt is insufficient.
+- Ignore repeated environment warnings (e.g. `NO_COLOR`/`FORCE_COLOR`);
+  do not quote them back or investigate them unless they cause a failure.
+
 ## Data integrity
 
 - Keep background jobs idempotent.

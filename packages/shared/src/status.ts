@@ -96,3 +96,37 @@ export function calculateReadiness(items: readonly StatusItem[]): number | null 
   const inStockCount = activeTrackedItems.filter((item) => item.status === "IN_STOCK").length;
   return Math.round((inStockCount / activeTrackedItems.length) * 100);
 }
+
+export const itemStatusSortOrder: Record<ItemStatus, number> = {
+  URGENT: 0,
+  NEED_BUY: 1,
+  LOW: 2,
+  IN_STOCK: 3,
+  PAUSED: 4
+};
+
+export type SortableItem = {
+  status: ItemStatus;
+  sortOrder: number;
+  createdAt: Date | string;
+};
+
+export function compareItemsByStatus(left: SortableItem, right: SortableItem): number {
+  const statusDiff = itemStatusSortOrder[left.status] - itemStatusSortOrder[right.status];
+  if (statusDiff !== 0) {
+    return statusDiff;
+  }
+
+  const sortDiff = left.sortOrder - right.sortOrder;
+  if (sortDiff !== 0) {
+    return sortDiff;
+  }
+
+  const leftTime = typeof left.createdAt === "string" ? new Date(left.createdAt).getTime() : left.createdAt.getTime();
+  const rightTime = typeof right.createdAt === "string" ? new Date(right.createdAt).getTime() : right.createdAt.getTime();
+  return leftTime - rightTime;
+}
+
+export function sortItemsByStatus<T extends SortableItem>(items: readonly T[]): T[] {
+  return [...items].sort(compareItemsByStatus);
+}

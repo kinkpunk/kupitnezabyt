@@ -303,6 +303,8 @@ Create body:
 ```http
 GET /api/items
 GET /api/items?archived=true
+GET /api/items?sort=status
+GET /api/items?archived=true&sort=status
 GET /api/items/search?q=...
 POST /api/items
 POST /api/items/reorder
@@ -379,6 +381,13 @@ Reorder body:
 category. The payload must include every active item id exactly once. Unknown,
 archived, duplicate, incomplete, or cross-workspace ids are rejected. `VIEWER`
 members receive `403 WORKSPACE_WRITE_FORBIDDEN`.
+
+`GET /api/items` accepts an optional `sort` query parameter. The default value
+`manual` returns items ordered by `sortOrder` and then `createdAt`. When
+`sort=status`, items are ordered by product status urgency (`URGENT`,
+`NEED_BUY`, `LOW`, `IN_STOCK`, `PAUSED`), then by `sortOrder`, then by
+`createdAt`. The webapp uses this for the category view toggle while keeping
+manual reorder as the default.
 
 Snooze body:
 
