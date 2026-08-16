@@ -59,26 +59,21 @@ MVP, если появится подходящая инфраструктура
 Основной способ входа: email magic link. Пользователь вводит email, получает
 одноразовую ссылку, открывает ее в браузере и получает authenticated session.
 
-### 4.3. Optional Telegram integration
+### 4.3. Post-MVP optional Telegram integration
 
-Telegram Bot может быть добавлен после MVP и использоваться для:
+Telegram Mini App, Telegram Bot и внешняя доставка reminders не входят в
+web-first MVP и могут быть добавлены после релиза, если появится подходящая
+инфраструктура для постоянного bot/worker процесса.
 
-- запуска Mini App;
-- отправки внешних напоминаний;
-- быстрых действий с товарами;
-- просмотра краткого списка покупок;
-- переноса напоминаний.
+В будущем это может включать:
 
-Команды optional integration:
+- открытие Mini App из бота;
+- базовые команды бота (`/start`, `/app`, `/help`);
+- внешние напоминания и callback-кнопки;
+- привязку Telegram-аккаунта к существующему пользователю.
 
-```text
-/start
-/app
-/shopping
-/check
-/settings
-/help
-```
+Реализация конкретных команд (`/shopping`, `/check`, `/settings`) и
+полноценной Telegram-авторизации остаётся за рамками MVP.
 
 ## 5. Целевая аудитория
 
@@ -138,7 +133,8 @@ Telegram Bot может быть добавлен после MVP и исполь
 9. Данные одного пользователя недоступны другому.
 10. Локальный режим авторизации разрешен только в development-окружении.
 11. Telegram auth через WebApp `initData` допускается только как optional
-    integration и не является обязательным MVP flow.
+    integration; она не реализована в рамках web-first MVP и не является
+    обязательным flow.
 
 Минимальные данные пользователя:
 
@@ -1024,7 +1020,8 @@ DELETE /api/me
 GET  /api/export/json
 ```
 
-`POST /api/auth/telegram` относится к optional Telegram integration.
+`POST /api/auth/telegram` относится к optional Telegram integration и не
+является частью web-first MVP.
 
 ### 12.2. Categories
 

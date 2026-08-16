@@ -4,7 +4,8 @@ This document tracks the implemented API surface. The current implementation
 covers the core product flow with development auth, email magic link auth,
 Google sign-in, Apple sign-in, and optional Telegram-compatible auth. The
 release target is browser auth through email magic links and configured OAuth
-providers; Telegram auth remains optional integration.
+providers; Telegram auth remains optional integration and is not part of the
+web-first MVP release.
 
 ## Auth
 
@@ -27,8 +28,8 @@ POST /api/auth/telegram
 ```
 
 Optional Telegram integration auth boundary for Telegram Mini App `initData`.
-The backend validates the Telegram signature and returns the same bearer token
-shape as dev auth.
+Not part of the web-first MVP release. The backend validates the Telegram
+signature and returns the same bearer token shape as dev auth.
 
 ```json
 {
