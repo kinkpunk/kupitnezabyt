@@ -218,12 +218,6 @@ select {
   .topbar h1 {
     display: none;
   }
-
-  .item-card .icon-actions .icon-button {
-    width: 36px;
-    min-width: 36px;
-    height: 44px;
-  }
 }
 
 .brand-lockup {
@@ -1101,6 +1095,13 @@ select {
   width: 44px;
   min-width: 44px;
   height: 44px;
+}
+
+@media (max-width: 480px) {
+  .item-card .icon-actions .icon-button {
+    width: 36px;
+    min-width: 36px;
+  }
 }
 
 .ghost-button {
