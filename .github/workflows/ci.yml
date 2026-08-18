@@ -25,6 +25,8 @@ jobs:
 
       - run: corepack pnpm db:generate
 
+      - run: corepack pnpm --filter @kupitnezabyt/shared --filter @kupitnezabyt/database build
+
       - run: corepack pnpm typecheck
 
       - run: corepack pnpm lint
@@ -68,6 +70,8 @@ jobs:
 
       - run: corepack pnpm db:deploy
 
+      - run: corepack pnpm --filter @kupitnezabyt/shared --filter @kupitnezabyt/database build
+
       - run: corepack pnpm test:integration
 
   smoke:
@@ -87,6 +91,10 @@ jobs:
 
       - run: corepack pnpm install --frozen-lockfile
 
+      - run: corepack pnpm db:generate
+
+      - run: corepack pnpm --filter @kupitnezabyt/shared --filter @kupitnezabyt/database build
+
       - name: Create .env for Docker Compose
         run: |
           cat > .env <<EOF
@@ -104,6 +112,10 @@ jobs:
           EOF
 
       - run: docker compose --profile app up -d --wait
+
+      - name: Print Docker Compose logs on failure
+        if: failure()
+        run: docker compose logs
 
       - run: corepack pnpm smoke:local
 
@@ -151,5 +163,7 @@ jobs:
       - run: corepack pnpm db:generate
 
       - run: corepack pnpm db:deploy
+
+      - run: corepack pnpm --filter @kupitnezabyt/shared --filter @kupitnezabyt/database build
 
       - run: corepack pnpm test:e2e
