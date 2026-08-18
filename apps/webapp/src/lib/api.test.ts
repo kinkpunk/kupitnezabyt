@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiError, completeOnboarding, consumeInvitationAcceptedToast, getActiveWorkspaceId, login } from "./api";
 
@@ -41,6 +41,11 @@ describe("webapp api auth", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    vi.stubEnv("NODE_ENV", "test");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it("keeps a workspace invitation while the user signs in through OAuth", async () => {

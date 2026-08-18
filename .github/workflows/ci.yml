@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    name: Typecheck, lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: corepack pnpm install --frozen-lockfile
+
+      - run: corepack pnpm typecheck
+
+      - run: corepack pnpm lint
+
+      - run: corepack pnpm test
+
+  integration:
+    name: DB-backed integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kupitnezabyt
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d kupitnezabyt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: corepack pnpm install --frozen-lockfile
+
+      - run: corepack pnpm db:generate
+
+      - run: corepack pnpm db:deploy
+
+      - run: corepack pnpm test:integration
+
+  smoke:
+    name: Local Docker smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: corepack pnpm install --frozen-lockfile
+
+      - run: docker compose --profile app up -d --wait
+
+      - run: corepack pnpm smoke:local
+
+  e2e:
+    name: Playwright E2E tests
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.61.1-jammy
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: kupitnezabyt
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres -d kupitnezabyt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+      JWT_SECRET: e2e-secret
+      DEV_AUTH_ENABLED: "true"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      E2E_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      E2E_API_PORT: "3001"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: corepack enable
+
+      - run: corepack pnpm install --frozen-lockfile
+
+      - run: corepack pnpm db:generate
+
+      - run: corepack pnpm db:deploy
+
+      - run: corepack pnpm test:e2e

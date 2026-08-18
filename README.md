@@ -276,6 +276,7 @@ pnpm test            # Unit- и integration-тесты
 pnpm test:e2e        # Playwright smoke главного browser flow
 pnpm test:integration # DB-backed API integration tests
 pnpm smoke:deployment # Smoke deployed API/webapp через HTTPS
+pnpm smoke:local     # Smoke локальных Docker-контейнеров api/webapp
 
 pnpm db:generate     # Генерация Prisma Client
 pnpm db:migrate      # Применение локальных миграций
@@ -302,6 +303,26 @@ PostgreSQL недоступен по `DATABASE_URL` (по умолчанию `lo
 docker compose up -d postgres
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/kupitnezabyt \
   corepack pnpm db:deploy
+```
+
+### Запуск тестов внутри Docker
+
+Чтобы проверять код в окружении, близком к CI, поднимите сервисы через
+Docker Compose и выполняйте тесты внутри контейнеров:
+
+```bash
+# Поднять PostgreSQL, Redis, API и webapp.
+docker compose --profile app up -d --wait
+
+# Unit-тесты API внутри контейнера api.
+docker compose exec api corepack pnpm test
+
+# DB-backed integration-тесты внутри контейнера api.
+docker compose exec api sh -lc \
+  "DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kupitnezabyt RUN_DB_INTEGRATION_TESTS=1 corepack pnpm vitest run apps/api/src/db-backed.integration.test.ts"
+
+# Smoke-тест поднятых локальных контейнеров.
+pnpm smoke:local
 ```
 
 Команды в этом разделе должны соответствовать `package.json`. При изменении

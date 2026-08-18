@@ -55,6 +55,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:3001/health/detailed"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
     profiles:
       - app
 
@@ -83,7 +89,13 @@ services:
       - shared-node-modules:/workspace/packages/shared/node_modules
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 120s
     profiles:
       - app
 

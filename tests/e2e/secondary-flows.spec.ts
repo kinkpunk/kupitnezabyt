@@ -19,12 +19,8 @@ test("user can group items and run a group check session", async ({ page, reques
   await finishOnboardingIfNeeded(page);
 
   // Create a category and an item to put into the group.
+  await createCategory(page, categoryName);
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
-  await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await page.getByRole("button", { name: "Новая" }).click();
-  await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
-  await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
@@ -85,12 +81,7 @@ test("user can run a step-by-step category check and search in different ways", 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
-  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
-  await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await page.getByRole("button", { name: "Новая" }).click();
-  await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
-  await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
+  await createCategory(page, categoryName);
 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
@@ -123,6 +114,7 @@ test("user can run a step-by-step category check and search in different ways", 
     [secondCheckedName, "NEED_BUY"]
   ]);
 
+  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
   await expect(page.getByLabel(`Статус товара ${firstItemName}`)).toHaveValue(
     statusByItem.get(firstItemName) ?? "LOW"
@@ -162,12 +154,7 @@ test("user can archive and restore an item and export their data as JSON", async
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
-  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
-  await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await page.getByRole("button", { name: "Новая" }).click();
-  await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
-  await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
+  await createCategory(page, categoryName);
 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
@@ -181,6 +168,7 @@ test("user can archive and restore an item and export their data as JSON", async
   // archive is loaded separately below to verify the persisted result.
   await expect(page.getByRole("heading", { name: itemName })).toHaveCount(0);
 
+  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
     .getByRole("dialog", { name: "Дополнительные разделы" })
@@ -246,6 +234,17 @@ async function cleanupUser(page: Page, request: APIRequestContext): Promise<void
       }
     });
   }
+}
+
+async function createCategory(page: Page, categoryName: string): Promise<void> {
+  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
+  await mainNavigation.getByRole("button", { name: "Категории" }).click();
+  const newCategoryButton = page.getByRole("button", { name: "Новая" });
+  await expect(newCategoryButton).toBeVisible();
+  await newCategoryButton.click();
+  await page.getByLabel("Название категории").fill(categoryName);
+  await page.getByRole("button", { name: "Создать" }).click();
+  await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 }
 
 async function waitForApiHealth(request: APIRequestContext): Promise<void> {
