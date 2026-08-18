@@ -47,9 +47,6 @@ services:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store
       - root-node-modules:/workspace/node_modules
-      - api-node-modules:/workspace/apps/api/node_modules
-      - database-node-modules:/workspace/packages/database/node_modules
-      - shared-node-modules:/workspace/packages/shared/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,8 +82,6 @@ services:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store
       - root-node-modules:/workspace/node_modules
-      - webapp-node-modules:/workspace/apps/webapp/node_modules
-      - shared-node-modules:/workspace/packages/shared/node_modules
     depends_on:
       api:
         condition: service_healthy
@@ -119,9 +114,6 @@ services:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store
       - root-node-modules:/workspace/node_modules
-      - bot-node-modules:/workspace/apps/bot/node_modules
-      - database-node-modules:/workspace/packages/database/node_modules
-      - shared-node-modules:/workspace/packages/shared/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -148,9 +140,6 @@ services:
       - .:/workspace
       - pnpm-store:/root/.local/share/pnpm/store
       - root-node-modules:/workspace/node_modules
-      - worker-node-modules:/workspace/apps/worker/node_modules
-      - database-node-modules:/workspace/packages/database/node_modules
-      - shared-node-modules:/workspace/packages/shared/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,13 +147,7 @@ services:
       - telegram
 
 volumes:
-  api-node-modules:
-  bot-node-modules:
-  database-node-modules:
   postgres-data:
   pnpm-store:
   redis-data:
   root-node-modules:
-  shared-node-modules:
-  webapp-node-modules:
-  worker-node-modules:
