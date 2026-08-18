@@ -23,6 +23,8 @@ jobs:
 
       - run: corepack pnpm install --frozen-lockfile
 
+      - run: corepack pnpm db:generate
+
       - run: corepack pnpm typecheck
 
       - run: corepack pnpm lint
@@ -47,7 +49,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/kupitnezabyt
     steps:
       - uses: actions/checkout@v4
 
@@ -85,6 +87,22 @@ jobs:
 
       - run: corepack pnpm install --frozen-lockfile
 
+      - name: Create .env for Docker Compose
+        run: |
+          cat > .env <<EOF
+          DATABASE_URL=postgresql://postgres:postgres@postgres:5432/kupitnezabyt
+          REDIS_URL=redis://redis:6379
+          APP_BASE_URL=http://localhost:3000
+          NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+          API_PORT=3001
+          E2E_BASE_URL=http://localhost:3000
+          E2E_API_PORT=3001
+          JWT_SECRET=ci-smoke-secret
+          NODE_ENV=development
+          DEV_AUTH_ENABLED=true
+          TELEGRAM_WEBAPP_URL=http://localhost:3000
+          EOF
+
       - run: docker compose --profile app up -d --wait
 
       - run: corepack pnpm smoke:local
@@ -111,8 +129,8 @@ jobs:
       JWT_SECRET: e2e-secret
       DEV_AUTH_ENABLED: "true"
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
-      E2E_BASE_URL: http://localhost:3000
-      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+      E2E_BASE_URL: http://127.0.0.1:3000
+      NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3001
       E2E_API_PORT: "3001"
     steps:
       - uses: actions/checkout@v4
