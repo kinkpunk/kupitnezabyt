@@ -302,6 +302,29 @@ If Telegram delivery is intentionally enabled later, choose one of these paths:
 Any Telegram path must keep `TELEGRAM_BOT_TOKEN` secret and must not log tokens,
 Telegram `initData`, JWTs, or sensitive user notes.
 
+### Telegram Integration Smoke
+
+Run the automated smoke from the repository root when `TELEGRAM_BOT_TOKEN` is
+configured:
+
+```bash
+DEPLOYED_API_BASE_URL=https://<northflank-api-host> \
+TELEGRAM_BOT_TOKEN=<telegram-bot-token> \
+corepack pnpm smoke:telegram
+```
+
+The command verifies:
+
+1. `TELEGRAM_BOT_TOKEN` is present.
+2. Telegram Bot API `getMe` succeeds for the configured token.
+3. API `GET /health` returns `200`.
+4. API `GET /health/detailed` returns `200` with `"db": true`.
+5. `POST /api/auth/telegram` rejects invalid `initData` with `400` or `401`,
+   confirming the endpoint is wired to the configured bot token.
+
+If `TELEGRAM_BOT_TOKEN` is not set, the smoke exits successfully with a skip
+message — the integration remains optional and does not break CI.
+
 ## Rollback
 
 Keep the old Render API and Neon database until Northflank smoke passes.

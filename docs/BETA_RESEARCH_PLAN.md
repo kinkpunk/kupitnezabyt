@@ -42,13 +42,13 @@
 |---|--------|----------|--------|
 | ~~B5~~ | ~~Расширить E2E/DB-backed покрытие вторичных флоу~~ — **выполнено 2026-08-15**: Playwright покрывает группы/group check, category check session, успешный и пустой поиск, archive/restore и JSON export | — | — |
 | ~~B6~~ | ~~Стабилизировать E2E-preflight~~ — **выполнено 2026-08-15**: `scripts/check-local-db.mjs` проверяет доступность PostgreSQL по `DATABASE_URL` за ~секунду и выводит инструкцию (`docker compose up -d postgres` + `pnpm db:deploy`); подключён как preflight в `test:e2e` и `test:integration` | — | — |
-| B7 | Optional Telegram integration smoke | Roadmap | S |
+| ~~B7~~ | ~~Optional Telegram integration smoke~~ — **выполнено 2026-08-19**: добавлен `scripts/smoke-telegram-integration.mjs`, скрипт `smoke:telegram` в `package.json` и deployment-чеклист в `docs/NORTHFLANK_VERCEL_DEPLOYMENT.md`; smoke мягко пропускается без `TELEGRAM_BOT_TOKEN` и проверяет `getMe` Bot API, health API и `POST /api/auth/telegram` при настроенном токене | Roadmap | S |
 
 ### 1.3 Технический долг
 
 | # | Задача | Источник | Оценка |
 |---|--------|----------|--------|
-| B8 | Рефакторинг монолитов: разбить `apps/api/src/server.ts` и `apps/webapp/src/app/page.tsx` (план зафиксирован коммитом `e488452`) | Roadmap Post-MVP Monolith Refactoring | L |
+| ~~B8~~ | ~~Рефакторинг монолитов: разбить `apps/api/src/server.ts` и `apps/webapp/src/app/page.tsx`~~ — **выполнено 2026-08-19**: backend разбит на route-модули в `apps/api/src/routes/`, webapp переписан: `page.tsx` только оркестрирует `useAppState` и view-компоненты (`HomeView`, `CategoriesView`, `ShoppingView`, `GroupsView`, `CheckView`, `SearchView`, `ArchiveView`, `SettingsView`), shell-компоненты вынесены в `apps/webapp/src/components/`. Проверки: `pnpm typecheck`, `pnpm lint`, `pnpm test` (138 passed, 1 skipped), `pnpm test:e2e` (8 passed) | Roadmap Post-MVP Monolith Refactoring | L |
 
 ### 1.4 Разблокировка бета-тестирования (предусловие для Части 2)
 
