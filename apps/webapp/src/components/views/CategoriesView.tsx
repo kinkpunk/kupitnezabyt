@@ -3,29 +3,34 @@
 import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
-  ArrowDown,
-  ArrowUp,
   GripVertical,
   Pencil,
   Plus,
   Signal,
-  TriangleAlert,
-  Users,
-  X
+  Users
 } from "lucide-react";
-import type { RefObject } from "react";
+import React, { useMemo, useState } from "react";
 
 import type { CategorySortMode } from "../../lib/api";
-import { formatError } from "../../lib/format";
+import { formatDate, formatError } from "../../lib/format";
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import {
-  categoryTriggerItemStatus,
-  importanceBadgeClasses,
   importanceLabels,
   importanceOptions,
-  statusLabels,
-  statusOptions
+  itemStatusToUiStatus,
+  nextUiStatus,
+  uiStatusToItemStatus
 } from "../../lib/ui";
+import {
+  AppHeader,
+  BottomSheet,
+  CategoryTabs,
+  FAB,
+  PanelHeader,
+  ProductRow,
+  SearchField
+} from "../features/categories";
+import { Button } from "../ui/Button";
 
 export function CategoriesView({
   categories,
@@ -49,11 +54,13 @@ export function CategoriesView({
   visibleRecommendations,
   recommendationSourceItemName,
   canWriteActiveWorkspace,
-  categoryRowClassName,
-  categoryRowRef,
   showShareEntryPoint,
+  searchQuery,
+  onSearchQueryChange,
+  onSearch,
+  notificationCount,
+  onBellClick,
   onSelectSettings,
-  onClearSearchSession,
   onSelectCategory,
   onCreateCategory,
   onCreateItem,
@@ -68,8 +75,7 @@ export function CategoriesView({
   onArchiveSelectedCategory,
   onStartCategoryCheck,
   setError,
-  isActionPending,
-  formatCategoryTabMeta
+  isActionPending
 }: {
   categories: Category[];
   selectedCategory: Category | null | undefined;
@@ -92,11 +98,13 @@ export function CategoriesView({
   visibleRecommendations: RecommendationSuggestion[];
   recommendationSourceItemName: string | null;
   canWriteActiveWorkspace: boolean;
-  categoryRowClassName: string;
-  categoryRowRef: RefObject<HTMLDivElement | null>;
   showShareEntryPoint: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
+  onSearch: () => Promise<void>;
+  notificationCount: number;
+  onBellClick: () => void;
   onSelectSettings: () => void;
-  onClearSearchSession: () => void;
   onSelectCategory: (categoryId: string) => void;
   onCreateCategory: () => Promise<void>;
   onCreateItem: () => Promise<void>;
@@ -112,46 +120,123 @@ export function CategoriesView({
   onStartCategoryCheck: () => Promise<void>;
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
-  formatCategoryTabMeta: (category: Category) => string;
 }) {
+  const [sheetItemId, setSheetItemId] = useState<string | null>(null);
+
+  const sheetItem = useMemo(
+    () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
+    [visibleItems, sheetItemId]
+  );
+  const sheetItemIndex = useMemo(
+    () => (sheetItem ? visibleItems.findIndex((item) => item.id === sheetItem.id) : -1),
+    [visibleItems, sheetItem]
+  );
+
+  const boughtCount = useMemo(
+    () => visibleItems.filter((item) => item.status === "IN_STOCK").length,
+    [visibleItems]
+  );
+
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void onSearch().catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleStatusClick(item: Item) {
+    const uiStatus = itemStatusToUiStatus(item.status);
+    if (uiStatus === null) {
+      return;
+    }
+
+    const nextStatus = nextUiStatus(uiStatus);
+    void onSetStatus(item, uiStatusToItemStatus(nextStatus)).catch((caughtError) =>
+      setError(formatError(caughtError))
+    );
+  }
+
+  function handleStartEdit(item: Item) {
+    setEditingItemId(item.id);
+    setEditingItemName(item.name);
+    setEditingItemImportance(item.importance);
+    setSheetItemId(null);
+  }
+
+  function handleMove(direction: "up" | "down") {
+    if (!sheetItem) {
+      return;
+    }
+
+    void onMoveItem(sheetItem, direction).catch((caughtError) =>
+      setError(formatError(caughtError))
+    );
+    setSheetItemId(null);
+  }
+
+  function handleArchiveSelectedItem() {
+    if (!sheetItem) {
+      return;
+    }
+
+    void onArchiveItem(sheetItem).catch((caughtError) => setError(formatError(caughtError)));
+    setSheetItemId(null);
+  }
+
+  function getItemSubtitle(item: Item): string {
+    return item.lastCheckedAt
+      ? `Проверено ${formatDate(item.lastCheckedAt)}`
+      : "Ещё не проверялось";
+  }
+
+  function getItemStatus(item: Item): "ok" | "warn" | "bad" | "paused" {
+    return itemStatusToUiStatus(item.status) ?? "paused";
+  }
+
   return (
-    <section className="stack">
-      <div className="section-heading">
+    <section className="ds-categories-view">
+      <AppHeader notificationCount={notificationCount} onBellClick={onBellClick} />
+
+      <form
+        className="ds-categories-view__search"
+        role="search"
+        onSubmit={handleSearchSubmit}
+      >
+        <SearchField value={searchQuery} onChange={onSearchQueryChange} />
+      </form>
+
+      <div className="ds-categories-view__heading">
         <div>
-          <h2>Категории</h2>
-          <p>{categories.length ? `${categories.length} активных` : "Пока нет"}</p>
+          <h2 className="ds-categories-view__title">Категории</h2>
+          <p className="ds-categories-view__meta">
+            {categories.length ? `${categories.length} активных` : "Пока нет"}
+          </p>
         </div>
-        <div className="icon-actions">
+        <div className="ds-categories-view__actions">
           {showShareEntryPoint ? (
-            <button
+            <Button
               aria-label="Поделиться списком"
-              className="ghost-button icon-button"
+              className="ds-button--icon--small"
               title="Поделиться списком"
-              type="button"
+              variant="icon"
               onClick={onSelectSettings}
             >
               <Users aria-hidden="true" size={18} />
-            </button>
+            </Button>
           ) : null}
-          <button
-            aria-label={showCategoryForm ? "Скрыть форму категории" : "Новая категория"}
-            className="ghost-button icon-button"
-            title={showCategoryForm ? "Скрыть" : "Новая категория"}
-            type="button"
-            onClick={() => setShowCategoryForm((current) => !current)}
+          <Button
+            aria-label="Новая категория"
+            className="ds-button--icon--small"
+            title="Новая категория"
+            variant="icon"
+            onClick={() => setShowCategoryForm(true)}
           >
-            {showCategoryForm ? (
-              <X aria-hidden="true" size={18} />
-            ) : (
-              <Plus aria-hidden="true" size={18} />
-            )}
-          </button>
+            <Plus aria-hidden="true" size={18} />
+          </Button>
         </div>
       </div>
 
       {showCategoryForm ? (
         <form
-          className="inline-form category-create-form"
+          className="ds-categories-view__create-form"
           onSubmit={(event) => {
             event.preventDefault();
             void onCreateCategory().catch((caughtError) => setError(formatError(caughtError)));
@@ -164,159 +249,69 @@ export function CategoriesView({
             disabled={isActionPending("category:create")}
             onChange={(event) => setCategoryName(event.target.value)}
           />
-          <button
+          <Button
+            size="compact"
             type="submit"
             disabled={isActionPending("category:create") || !categoryName.trim()}
           >
             {isActionPending("category:create") ? "Создаем..." : "Создать"}
-          </button>
+          </Button>
         </form>
       ) : null}
 
-      <div
-        aria-label="Категории"
-        className={categoryRowClassName}
-        ref={categoryRowRef}
-        role="tablist"
-      >
-        {categories.map((category) => (
-          <button
-            aria-controls="category-panel"
-            aria-label={`${category.name}: ${formatCategoryTabMeta(category)}`}
-            aria-selected={selectedCategory?.id === category.id}
-            className={selectedCategory?.id === category.id ? "category active" : "category"}
-            key={category.id}
-            role="tab"
-            type="button"
-            onClick={() => {
-              onClearSearchSession();
-              onSelectCategory(category.id);
-              setShowCategoryForm(false);
-            }}
-          >
-            <span>
-              {category.icon ? `${category.icon} ` : ""}
-              {category.name}
-            </span>
-            {categoryTriggerItemStatus[category.aggregateStatus] ? (
-              <TriangleAlert
-                aria-hidden="true"
-                className="category-warning"
-                data-status={categoryTriggerItemStatus[category.aggregateStatus]}
-                size={14}
-              />
-            ) : null}
-          </button>
-        ))}
-      </div>
+      <CategoryTabs
+        categories={categories}
+        selectedId={selectedCategory?.id ?? null}
+        onSelect={onSelectCategory}
+      />
 
       {selectedCategory ? (
-        <section
-          aria-label={selectedCategory.name}
-          className="category-panel"
-          id="category-panel"
-          role="tabpanel"
-        >
-          <div className="category-panel-actions">
-            <p className="category-panel-meta">{formatCategoryTabMeta(selectedCategory)}</p>
-            <div className="category-panel-buttons">
-              <button
-                className="ghost-button"
-                disabled={selectedCategory.itemCount === 0}
-                type="button"
+        <>
+          <PanelHeader
+            done={boughtCount}
+            total={visibleItems.length}
+            disabled={selectedCategory.itemCount === 0}
+            onArchive={() =>
+              void onArchiveSelectedCategory().catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+            onCheck={() =>
+              void onStartCategoryCheck().catch((caughtError) =>
+                setError(formatError(caughtError))
+              )
+            }
+          />
+
+          {selectedCategory.itemCount > 0 ? (
+            <div className="ds-categories-view__sort" role="group" aria-label="Сортировка товаров">
+              <Button
+                aria-label="Мой порядок"
+                className={categorySortMode === "manual" ? "ds-button--active" : ""}
+                size="compact"
+                variant={categorySortMode === "manual" ? "primary" : "ghost"}
                 onClick={() =>
-                  void onStartCategoryCheck().catch((caughtError) =>
+                  void onCategorySortModeChange("manual").catch((caughtError) =>
                     setError(formatError(caughtError))
                   )
                 }
               >
-                Проверить
-              </button>
-              <button
-                className="ghost-button danger-button"
-                type="button"
+                <GripVertical aria-hidden="true" size={18} />
+              </Button>
+              <Button
+                aria-label="По статусу"
+                className={categorySortMode === "status" ? "ds-button--active" : ""}
+                size="compact"
+                variant={categorySortMode === "status" ? "primary" : "ghost"}
                 onClick={() =>
-                  void onArchiveSelectedCategory().catch((caughtError) =>
+                  void onCategorySortModeChange("status").catch((caughtError) =>
                     setError(formatError(caughtError))
                   )
                 }
               >
-                Архив
-              </button>
+                <Signal aria-hidden="true" size={18} />
+              </Button>
             </div>
-          </div>
-
-          <div className="category-toolbar">
-            <button
-              aria-label={showItemForm ? "Скрыть форму товара" : "Новый товар"}
-              className="ghost-button icon-button"
-              title={showItemForm ? "Скрыть" : "Новый товар"}
-              type="button"
-              onClick={() => setShowItemForm((current) => !current)}
-            >
-              {showItemForm ? (
-                <X aria-hidden="true" size={18} />
-              ) : (
-                <Plus aria-hidden="true" size={18} />
-              )}
-            </button>
-            {selectedCategory.itemCount > 0 ? (
-              <div
-                className="category-sort-toggle"
-                role="group"
-                aria-label="Сортировка товаров"
-              >
-                <button
-                  type="button"
-                  aria-label="Мой порядок"
-                  className={categorySortMode === "manual" ? "active" : undefined}
-                  title="Мой порядок"
-                  onClick={() =>
-                    void onCategorySortModeChange("manual").catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  <GripVertical aria-hidden="true" size={18} />
-                  <span className="sort-label">Мой порядок</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label="По статусу"
-                  className={categorySortMode === "status" ? "active" : undefined}
-                  title="По статусу"
-                  onClick={() =>
-                    void onCategorySortModeChange("status").catch((caughtError) =>
-                      setError(formatError(caughtError))
-                    )
-                  }
-                >
-                  <Signal aria-hidden="true" size={18} />
-                  <span className="sort-label">По статусу</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          {showItemForm ? (
-            <form
-              className="inline-form item-create-form"
-              onSubmit={(event) => {
-                event.preventDefault();
-                void onCreateItem().catch((caughtError) => setError(formatError(caughtError)));
-              }}
-            >
-              <input
-                aria-label="Название товара"
-                placeholder="Новый товар"
-                value={itemName}
-                disabled={isActionPending("item:create")}
-                onChange={(event) => setItemName(event.target.value)}
-              />
-              <button type="submit" disabled={isActionPending("item:create") || !itemName.trim()}>
-                {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
-              </button>
-            </form>
           ) : null}
 
           {visibleRecommendations.length ? (
@@ -379,151 +374,143 @@ export function CategoriesView({
             </section>
           ) : null}
 
-          <div className="item-list">
+          <div className="ds-product-list">
             {visibleItems.length ? (
-              visibleItems.map((item, index) => (
-                <article className="item-card" key={item.id}>
-                  {editingItemId === item.id ? (
-                    <form
-                      className="inline-form"
-                      onSubmit={(event) => {
-                        event.preventDefault();
-                        void onUpdateItem(item).catch((caughtError) =>
-                          setError(formatError(caughtError))
-                        );
-                      }}
-                    >
-                      <input
-                        aria-label="Новое название товара"
-                        value={editingItemName}
-                        onChange={(event) => setEditingItemName(event.target.value)}
-                      />
-                      <select
-                        aria-label={`Важность товара ${item.name}`}
-                        value={editingItemImportance}
-                        onChange={(event) =>
-                          setEditingItemImportance(event.target.value as ItemImportance)
-                        }
-                      >
-                        {importanceOptions.map((importance) => (
-                          <option key={importance} value={importance}>
-                            {importanceLabels[importance]}
-                          </option>
-                        ))}
-                      </select>
-                      <button type="submit">Сохранить</button>
-                    </form>
-                  ) : (
-                    <div className="item-card-header">
-                      <div>
-                        <h2>{item.name}</h2>
-                        {item.importance !== "NORMAL" ? (
-                          <span className={importanceBadgeClasses[item.importance]}>
-                            {importanceLabels[item.importance]}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                  )}
-                  <div className="item-card-controls">
+              visibleItems.map((item) =>
+                editingItemId === item.id ? (
+                  <form
+                    className="ds-product-row__edit"
+                    key={item.id}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void onUpdateItem(item).catch((caughtError) =>
+                        setError(formatError(caughtError))
+                      );
+                    }}
+                  >
+                    <input
+                      aria-label="Новое название товара"
+                      value={editingItemName}
+                      onChange={(event) => setEditingItemName(event.target.value)}
+                    />
                     <select
-                      aria-label={`Статус товара ${item.name}`}
-                      className="status-select"
-                      data-status={item.status}
-                      disabled={isActionPending(`item:status:${item.id}`)}
-                      value={item.status}
+                      aria-label={`Важность товара ${item.name}`}
+                      value={editingItemImportance}
                       onChange={(event) =>
-                        void onSetStatus(item, event.target.value as ItemStatus).catch(
-                          (caughtError) => setError(formatError(caughtError))
-                        )
+                        setEditingItemImportance(event.target.value as ItemImportance)
                       }
                     >
-                      {statusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {statusLabels[status]}
+                      {importanceOptions.map((importance) => (
+                        <option key={importance} value={importance}>
+                          {importanceLabels[importance]}
                         </option>
                       ))}
-                      {item.status === "PAUSED" ? (
-                        <option value="PAUSED">{statusLabels.PAUSED}</option>
-                      ) : null}
                     </select>
-                    {editingItemId !== item.id ? (
-                      <div className="icon-actions">
-                        {canWriteActiveWorkspace &&
-                        categorySortMode === "manual" &&
-                        visibleItems.length > 1 ? (
-                          <>
-                            <button
-                              aria-label={`Переместить товар ${item.name} выше`}
-                              className="ghost-button icon-button reorder-button"
-                              title="Переместить выше"
-                              type="button"
-                              disabled={index === 0 || isActionPending(`item:reorder:${item.id}`)}
-                              onClick={() =>
-                                void onMoveItem(item, "up").catch((caughtError) =>
-                                  setError(formatError(caughtError))
-                                )
-                              }
-                            >
-                              <ArrowUp aria-hidden="true" size={18} />
-                            </button>
-                            <button
-                              aria-label={`Переместить товар ${item.name} ниже`}
-                              className="ghost-button icon-button reorder-button"
-                              title="Переместить ниже"
-                              type="button"
-                              disabled={
-                                index === visibleItems.length - 1 ||
-                                isActionPending(`item:reorder:${item.id}`)
-                              }
-                              onClick={() =>
-                                void onMoveItem(item, "down").catch((caughtError) =>
-                                  setError(formatError(caughtError))
-                                )
-                              }
-                            >
-                              <ArrowDown aria-hidden="true" size={18} />
-                            </button>
-                          </>
-                        ) : null}
-                        <button
-                          aria-label={`Изменить товар ${item.name}`}
-                          className="ghost-button icon-button"
-                          title="Изменить"
-                          type="button"
-                          onClick={() => {
-                            setEditingItemId(item.id);
-                            setEditingItemName(item.name);
-                            setEditingItemImportance(item.importance);
-                          }}
-                        >
-                          <Pencil aria-hidden="true" size={18} />
-                        </button>
-                        <button
-                          aria-label={`Архивировать товар ${item.name}`}
-                          className="ghost-button danger-button icon-button"
-                          title="Архивировать"
-                          type="button"
-                          onClick={() =>
-                            void onArchiveItem(item).catch((caughtError) =>
-                              setError(formatError(caughtError))
-                            )
-                          }
-                        >
-                          <Archive aria-hidden="true" size={18} />
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                </article>
-              ))
+                    <Button size="compact" type="submit">
+                      Сохранить
+                    </Button>
+                  </form>
+                ) : (
+                  <ProductRow
+                    key={item.id}
+                    name={item.name}
+                    status={getItemStatus(item)}
+                    subtitle={getItemSubtitle(item)}
+                    onMoreClick={() => setSheetItemId(item.id)}
+                    onStatusClick={() => handleStatusClick(item)}
+                  />
+                )
+              )
             ) : (
-              <p className="empty">Добавьте первый товар в эту категорию.</p>
+              <p className="ds-empty">Добавьте первый товар в эту категорию.</p>
             )}
           </div>
-        </section>
+
+          <BottomSheet
+            show={showItemForm}
+            title="Новый товар"
+            onClose={() => setShowItemForm(false)}
+          >
+            <form
+              className="ds-bottom-sheet__create-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void onCreateItem().catch((caughtError) =>
+                  setError(formatError(caughtError))
+                );
+              }}
+            >
+              <input
+                aria-label="Название товара"
+                placeholder="Название товара"
+                value={itemName}
+                disabled={isActionPending("item:create")}
+                onChange={(event) => setItemName(event.target.value)}
+              />
+              <Button
+                type="submit"
+                disabled={isActionPending("item:create") || !itemName.trim()}
+              >
+                {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
+              </Button>
+            </form>
+          </BottomSheet>
+
+          <BottomSheet
+            show={sheetItemId !== null}
+            title={sheetItem?.name ?? ""}
+            onClose={() => setSheetItemId(null)}
+          >
+            <div className="ds-bottom-sheet__actions">
+              <button
+                className="ds-bottom-sheet__action"
+                type="button"
+                onClick={() => sheetItem && handleStartEdit(sheetItem)}
+              >
+                <Pencil aria-hidden="true" size={18} />
+                Редактировать
+              </button>
+              {canWriteActiveWorkspace &&
+              categorySortMode === "manual" &&
+              visibleItems.length > 1 ? (
+                <>
+                  <button
+                    className="ds-bottom-sheet__action"
+                    disabled={sheetItemIndex <= 0 || isActionPending(`item:reorder:${sheetItemId}`)}
+                    type="button"
+                    onClick={() => handleMove("up")}
+                  >
+                    Вверх
+                  </button>
+                  <button
+                    className="ds-bottom-sheet__action"
+                    disabled={
+                      sheetItemIndex === -1 ||
+                      sheetItemIndex >= visibleItems.length - 1 ||
+                      isActionPending(`item:reorder:${sheetItemId}`)
+                    }
+                    type="button"
+                    onClick={() => handleMove("down")}
+                  >
+                    Вниз
+                  </button>
+                </>
+              ) : null}
+              <button
+                className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
+                type="button"
+                onClick={handleArchiveSelectedItem}
+              >
+                <Archive aria-hidden="true" size={18} />
+                В архив
+              </button>
+            </div>
+          </BottomSheet>
+
+          <FAB label="Новый товар" onClick={() => setShowItemForm(true)} />
+        </>
       ) : (
-        <p className="empty">Создайте категорию, чтобы добавить первый товар.</p>
+        <p className="ds-empty">Создайте категорию, чтобы добавить первый товар.</p>
       )}
     </section>
   );

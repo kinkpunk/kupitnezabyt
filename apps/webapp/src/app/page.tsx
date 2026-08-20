@@ -125,11 +125,13 @@ export default function Home() {
             visibleRecommendations={state.visibleRecommendations}
             recommendationSourceItemName={state.recommendationSourceItemName}
             canWriteActiveWorkspace={state.canWriteActiveWorkspace}
-            categoryRowClassName={state.categoryRowClassName}
-            categoryRowRef={state.categoryRowRef}
             showShareEntryPoint={state.showShareEntryPoint}
+            searchQuery={state.searchQuery}
+            onSearchQueryChange={state.setSearchQuery}
+            onSearch={state.handleSearchItems}
+            notificationCount={state.notificationCount}
+            onBellClick={state.handleBellClick}
             onSelectSettings={() => state.handleSelectTab("settings")}
-            onClearSearchSession={state.clearSearchSession}
             onSelectCategory={(categoryId) => {
               state.clearSearchSession();
               state.setSelectedCategoryId(categoryId);
@@ -149,7 +151,6 @@ export default function Home() {
             onStartCategoryCheck={state.handleStartCategoryCheck}
             setError={state.setError}
             isActionPending={state.isActionPending}
-            formatCategoryTabMeta={state.formatCategoryTabMeta}
           />
         );
       case "shopping":
@@ -281,17 +282,19 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <TopBar
-        searchQuery={state.searchQuery}
-        onSearchQueryChange={state.setSearchQuery}
-        onSearch={state.handleSearchItems}
-        theme={state.theme}
-        themeButtonLabel={state.themeButtonLabel}
-        onToggleTheme={state.toggleTheme}
-        notificationCount={state.notificationCount}
-        notificationsViewed={state.notificationsViewed}
-        onBellClick={state.handleBellClick}
-      />
+      {state.activeTab !== "items" ? (
+        <TopBar
+          searchQuery={state.searchQuery}
+          onSearchQueryChange={state.setSearchQuery}
+          onSearch={state.handleSearchItems}
+          theme={state.theme}
+          themeButtonLabel={state.themeButtonLabel}
+          onToggleTheme={state.toggleTheme}
+          notificationCount={state.notificationCount}
+          notificationsViewed={state.notificationsViewed}
+          onBellClick={state.handleBellClick}
+        />
+      ) : null}
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
       <ToastNotice message={state.toastMessage} onClose={() => state.setToastMessage(null)} />
 
