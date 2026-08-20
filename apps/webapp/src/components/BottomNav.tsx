@@ -1,6 +1,7 @@
 "use client";
 
-import { Archive, Boxes, Home, Menu, Settings, ShoppingCart, Tags } from "lucide-react";
+import { Home, Menu, Tags } from "lucide-react";
+import React from "react";
 import type { LucideIcon } from "lucide-react";
 
 import type { ActiveTab } from "../hooks/useAppState";
@@ -10,12 +11,7 @@ const navTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
   { id: "items", icon: Tags, label: "Категории" }
 ];
 
-const menuTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
-  { id: "shopping", icon: ShoppingCart, label: "Покупки" },
-  { id: "groups", icon: Boxes, label: "Наборы" },
-  { id: "settings", icon: Settings, label: "Настройки" },
-  { id: "archive", icon: Archive, label: "Архив" }
-];
+const menuTabIds: ActiveTab[] = ["shopping", "groups", "settings", "archive"];
 
 export function BottomNav({
   activeTab,
@@ -28,33 +24,35 @@ export function BottomNav({
   onSelectTab: (tab: ActiveTab) => void;
   onToggleMenu: () => void;
 }) {
+  const isMenuActive = showMenuSheet || menuTabIds.includes(activeTab);
+
   return (
-    <nav className="bottom-nav" aria-label="Основные разделы">
+    <nav aria-label="Основные разделы" className="bottom-nav">
       {navTabs.map((tab) => {
         const Icon = tab.icon;
 
         return (
           <button
+            aria-current={activeTab === tab.id ? "page" : undefined}
             className={activeTab === tab.id ? "active" : ""}
             key={tab.id}
             type="button"
             onClick={() => onSelectTab(tab.id)}
           >
-            <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
+            <Icon aria-hidden="true" size={22} strokeWidth={2} />
             <span>{tab.label}</span>
           </button>
         );
       })}
       <button
         aria-controls="menu-sheet"
-        aria-expanded={showMenuSheet}
-        className={
-          showMenuSheet || menuTabs.some((tab) => tab.id === activeTab) ? "active" : ""
-        }
+        aria-expanded={isMenuActive}
+        aria-label="Меню"
+        className={isMenuActive ? "active" : ""}
         type="button"
         onClick={onToggleMenu}
       >
-        <Menu aria-hidden="true" size={18} strokeWidth={2.25} />
+        <Menu aria-hidden="true" size={22} strokeWidth={2} />
         <span>Меню</span>
       </button>
     </nav>

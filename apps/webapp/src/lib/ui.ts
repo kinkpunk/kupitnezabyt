@@ -13,6 +13,51 @@ export const statusLabels: Record<ItemStatus, string> = {
 
 export const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
 
+/** UI-level status used by the design-system components (StatusChip, tabs, badges). */
+export type UiItemStatus = "ok" | "warn" | "bad";
+
+export const uiStatusLabels: Record<UiItemStatus, string> = {
+  ok: "Есть",
+  warn: "Мало",
+  bad: "Нет"
+};
+
+/** Cyclic order for the StatusChip tap interaction. */
+export const uiStatusCycle: UiItemStatus[] = ["ok", "warn", "bad"];
+
+export function itemStatusToUiStatus(status: ItemStatus): UiItemStatus | null {
+  switch (status) {
+    case "IN_STOCK":
+      return "ok";
+    case "LOW":
+      return "warn";
+    case "NEED_BUY":
+    case "URGENT":
+      return "bad";
+    case "PAUSED":
+      return null;
+    default:
+      return null;
+  }
+}
+
+export function nextUiStatus(status: UiItemStatus): UiItemStatus {
+  const index = uiStatusCycle.indexOf(status);
+  const next = uiStatusCycle[(index + 1) % uiStatusCycle.length];
+  return next ?? status;
+}
+
+export function uiStatusToItemStatus(status: UiItemStatus): ItemStatus {
+  switch (status) {
+    case "ok":
+      return "IN_STOCK";
+    case "warn":
+      return "LOW";
+    case "bad":
+      return "NEED_BUY";
+  }
+}
+
 export const itemStatusBadgeClasses: Record<ItemStatus, string> = {
   IN_STOCK: "badge badge-success",
   LOW: "badge badge-warning",
