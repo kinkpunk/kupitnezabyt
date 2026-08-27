@@ -1,7 +1,7 @@
 "use client";
 
 import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   acceptRecommendation,
@@ -71,8 +71,6 @@ import {
 import type { CategorySortMode } from "../lib/api";
 import { calculateSnoozedAt, formatError } from "../lib/format";
 import {
-  categoryStatusLabels,
-  categoryTriggerItemStatus,
   onboardingStorageKey,
   reminderSnoozeDays,
   starterCategories,
@@ -215,8 +213,6 @@ export function useAppState() {
     () =>
       typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches
   );
-  const categoryRowRef = useRef<HTMLDivElement | null>(null);
-  const [categoryRowOverflow, setCategoryRowOverflow] = useState({ left: false, right: false });
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
@@ -321,13 +317,6 @@ export function useAppState() {
     () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
     [inAppReminders]
   );
-  const categoryRowClassName = [
-    "category-row",
-    categoryRowOverflow.left ? "fade-left" : null,
-    categoryRowOverflow.right ? "fade-right" : null
-  ]
-    .filter(Boolean)
-    .join(" ");
   const themeButtonLabel =
     theme === "system"
       ? `Тема: как на устройстве (сейчас ${systemPrefersDark ? "тёмная" : "светлая"})`
@@ -365,35 +354,6 @@ export function useAppState() {
     document.documentElement.setAttribute("data-theme", theme);
     window.localStorage.setItem(themeStorageKey, theme);
   }, [theme]);
-
-  useEffect(() => {
-    const row = categoryRowRef.current;
-    if (!row) {
-      setCategoryRowOverflow({ left: false, right: false });
-      return;
-    }
-
-    function updateOverflow() {
-      if (!row) {
-        return;
-      }
-
-      setCategoryRowOverflow({
-        left: row.scrollLeft > 1,
-        right: row.scrollLeft + row.clientWidth < row.scrollWidth - 1
-      });
-    }
-
-    updateOverflow();
-    row.addEventListener("scroll", updateOverflow, { passive: true });
-    const resizeObserver = new ResizeObserver(updateOverflow);
-    resizeObserver.observe(row);
-
-    return () => {
-      row.removeEventListener("scroll", updateOverflow);
-      resizeObserver.disconnect();
-    };
-  }, [activeTab, categories, selectedCategory?.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -975,18 +935,6 @@ export function useAppState() {
 
   function isActionPending(key: string): boolean {
     return pendingActionKeys.includes(key);
-  }
-
-  function formatCategoryTabMeta(category: Category): string {
-    const triggerStatus = categoryTriggerItemStatus[category.aggregateStatus];
-    if (!triggerStatus) {
-      return `${categoryStatusLabels[category.aggregateStatus]} · ${category.itemCount}`;
-    }
-
-    const statusItemCount = items.filter(
-      (item) => item.categoryId === category.id && item.status === triggerStatus
-    ).length;
-    return `${categoryStatusLabels[category.aggregateStatus]} · ${statusItemCount} из ${category.itemCount}`;
   }
 
   function handleOpenReminder(reminder: InAppReminder) {
@@ -1805,8 +1753,6 @@ export function useAppState() {
     theme,
     setTheme,
     systemPrefersDark,
-    categoryRowRef,
-    categoryRowOverflow,
 
     // Derived
     selectedCategory,
@@ -1830,7 +1776,6 @@ export function useAppState() {
     itemReminders,
     categoryReminders,
     groupReminders,
-    categoryRowClassName,
     themeButtonLabel,
 
     // Actions
@@ -1859,7 +1804,6 @@ export function useAppState() {
     setPendingAction,
     showBoughtToast,
     isActionPending,
-    formatCategoryTabMeta,
     handleOpenReminder,
     handleSnoozeReminder,
     handleStartReminderCheck,

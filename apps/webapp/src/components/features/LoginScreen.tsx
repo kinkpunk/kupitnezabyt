@@ -4,6 +4,7 @@ import { Mail } from "lucide-react";
 
 import { ErrorNotice } from "../ui/ErrorNotice";
 import { BrandWord } from "../ui/BrandWord";
+import { Button } from "../ui/Button";
 
 export function LoginScreen({
   error,
@@ -37,10 +38,10 @@ export function LoginScreen({
   const isBusy = isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink;
 
   return (
-    <main className="app-shell onboarding-shell">
+    <main className="app-shell ds-onboarding-shell">
       <ErrorNotice message={error} onClose={onCloseError} />
-      <section className="onboarding-panel">
-        <div className="login-heading">
+      <section className="ds-onboarding-panel">
+        <div className="ds-login-heading">
           <div className="brand-lockup brand-lockup-large">
             <img alt="" className="brand-logo" src="/logo.png" />
             <div>
@@ -53,33 +54,39 @@ export function LoginScreen({
           <p>Войдите один раз, чтобы ваши товары, проверки и покупки были под рукой.</p>
         </div>
         {authProviders?.google !== false && (
-          <button
-            className="provider-button"
+          <Button
+            className="ds-provider-button"
+            variant="ghost"
             type="button"
             disabled={isBusy}
             onClick={() => void onStartGoogleSignIn()}
           >
-            <span aria-hidden="true">G</span>
+            <span aria-hidden="true" className="ds-provider-button__icon">
+              G
+            </span>
             {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
-          </button>
+          </Button>
         )}
         {authProviders?.apple !== false && (
-          <button
-            className="provider-button apple-button"
+          <Button
+            className="ds-provider-button"
+            variant="ghost"
             type="button"
             disabled={isBusy}
             onClick={() => void onStartAppleSignIn()}
           >
-            <span aria-hidden="true"></span>
+            <span aria-hidden="true" className="ds-provider-button__icon">
+              
+            </span>
             {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
-          </button>
+          </Button>
         )}
-        <div className="auth-divider">
+        <div className="ds-auth-divider">
           <span />
           <p className="eyebrow">или email</p>
           <span />
         </div>
-        <div className="email-auth-box">
+        <div className="ds-email-auth-box">
           <input
             aria-label="Email"
             autoComplete="email"
@@ -90,19 +97,20 @@ export function LoginScreen({
             value={email}
             onChange={(event) => onEmailChange(event.target.value)}
           />
-          <button
-            className="ghost-button auth-action"
+          <Button
+            className="ds-provider-button"
+            variant="ghost"
             type="button"
             disabled={isBusy || !email.trim()}
             onClick={() => void onRequestMagicLink()}
           >
             <Mail aria-hidden="true" size={18} />
             {isRequestingMagicLink ? "Отправляем..." : "Получить ссылку"}
-          </button>
+          </Button>
         </div>
-        {emailAuthMessage ? <p className="auth-success">{emailAuthMessage}</p> : null}
+        {emailAuthMessage ? <p className="ds-auth-success">{emailAuthMessage}</p> : null}
         {devMagicLink ? (
-          <a className="dev-magic-link" href={devMagicLink}>
+          <a className="ds-dev-magic-link" href={devMagicLink}>
             Открыть dev magic link
           </a>
         ) : null}

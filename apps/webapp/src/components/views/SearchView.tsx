@@ -1,12 +1,18 @@
 "use client";
 
+import { Search } from "lucide-react";
+import React from "react";
+
 import type { Item } from "../../lib/types";
-import { itemStatusBadgeClasses, statusLabels } from "../../lib/ui";
+import { itemStatusToUiStatus } from "../../lib/ui";
+import { EmptyState, ProductRow, SearchField, SectionHeader } from "../common";
 
 export function SearchView({
   searchQuery,
   hasSearched,
   searchResults,
+  onSearchQueryChange,
+  onSearch,
   onClearSearchSession,
   onSelectCategory,
   onSelectItemsTab
@@ -14,47 +20,67 @@ export function SearchView({
   searchQuery: string;
   hasSearched: boolean;
   searchResults: Item[];
+  onSearchQueryChange: (value: string) => void;
+  onSearch: () => Promise<void>;
   onClearSearchSession: () => void;
   onSelectCategory: (categoryId: string) => void;
   onSelectItemsTab: () => void;
 }) {
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void onSearch();
+  }
+
+  function handleOpenItem(item: Item) {
+    onClearSearchSession();
+    onSelectCategory(item.categoryId);
+    onSelectItemsTab();
+  }
+
+  function getItemStatus(item: Item): "ok" | "warn" | "bad" | "paused" {
+    if (item.status === "PAUSED") {
+      return "paused";
+    }
+
+    return itemStatusToUiStatus(item.status) ?? "paused";
+  }
+
   return (
     <section className="stack">
-      <div className="section-heading">
-        <div>
-          <h2>Поиск</h2>
-          <p>{hasSearched ? `Запрос: ${searchQuery}` : "Название, бренд, заметки или категория"}</p>
-        </div>
-      </div>
+      <SectionHeader
+        title="Поиск"
+        subtitle={
+          hasSearched ? `Запрос: ${searchQuery}` : "Название, бренд, заметки или категория"
+        }
+      />
+
+      <form className="ds-categories-view__search" role="search" onSubmit={handleSearchSubmit}>
+        <SearchField value={searchQuery} onChange={onSearchQueryChange} />
+      </form>
 
       <div className="item-list">
         {searchResults.length ? (
           searchResults.map((item) => (
-            <article className="shopping-row" key={item.id}>
-              <div>
-                <h2>{item.name}</h2>
-                <span className="shopping-meta-line">
-                  <span className="metadata-text">{item.category?.name ?? "Без категории"}</span>
-                  <span className={itemStatusBadgeClasses[item.status]}>{statusLabels[item.status]}</span>
-                </span>
-              </div>
-              <button
-                className="ghost-button"
-                type="button"
-                onClick={() => {
-                  onClearSearchSession();
-                  onSelectCategory(item.categoryId);
-                  onSelectItemsTab();
-                }}
-              >
-                Подробнее
-              </button>
-            </article>
+            <ProductRow
+              key={item.id}
+              status={getItemStatus(item)}
+              subtitle={item.category?.name ?? "Без категории"}
+              title={item.name}
+              onClick={() => handleOpenItem(item)}
+            />
           ))
         ) : hasSearched ? (
-          <p className="empty">Ничего не найдено.</p>
+          <EmptyState
+            description="Попробуйте изменить запрос"
+            icon={Search}
+            title="Ничего не найдено"
+          />
         ) : (
-          <p className="empty">Введите запрос, чтобы найти отслеживаемые товары.</p>
+          <EmptyState
+            description="Введите запрос, чтобы найти отслеживаемые товары"
+            icon={Search}
+            title="Поиск по товарам"
+          />
         )}
       </div>
     </section>

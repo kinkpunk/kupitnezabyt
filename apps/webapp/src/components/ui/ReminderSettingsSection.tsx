@@ -2,6 +2,8 @@
 
 import type { InAppReminder } from "../../lib/types";
 import { getReminderDraftKey } from "../../lib/reminder-draft";
+import { SectionHeader } from "../common";
+import { Button } from "../ui/Button";
 import type { ReminderDraft } from "../../hooks/useAppState";
 
 export function ReminderSettingsSection({
@@ -29,20 +31,29 @@ export function ReminderSettingsSection({
   onSave: () => void;
 }) {
   return (
-    <section className="reminder-settings-group">
-      <div className="reminder-group-header">
-        <div>
-          <h3>{title}</h3>
-          {rows.length ? <p>Настройте каждую карточку и сохраните секцию целиком.</p> : null}
-        </div>
-        {rows.length ? (
-          <button type="button" disabled={isSaving} onClick={onSave}>
-            {isSaving ? "Сохраняем..." : saveLabel}
-          </button>
-        ) : null}
-      </div>
+    <section className="ds-reminder-settings-group">
+      <SectionHeader
+        actions={
+          rows.length ? (
+            <Button
+              disabled={isSaving}
+              size="compact"
+              variant="primary"
+              onClick={onSave}
+            >
+              {isSaving ? "Сохраняем..." : saveLabel}
+            </Button>
+          ) : null
+        }
+        subtitle={
+          rows.length
+            ? "Настройте каждую карточку и сохраните секцию целиком."
+            : undefined
+        }
+        title={title}
+      />
       {rows.length ? (
-        <div className="reminder-settings-list">
+        <div className="ds-reminder-settings-list">
           {rows.map((row) => {
             const key = getReminderDraftKey(row.entityType, row.id);
             const draft = drafts[key] ?? {
@@ -51,12 +62,12 @@ export function ReminderSettingsSection({
             };
 
             return (
-              <article className="reminder-settings-row" key={key}>
+              <article className="ds-reminder-settings-row" key={key}>
                 <div>
                   <h4>{row.title}</h4>
                   <p>{row.subtitle}</p>
                 </div>
-                <label className="reminder-toggle">
+                <label className="ds-reminder-toggle">
                   <input
                     aria-label={`Напоминания: ${row.title}`}
                     checked={draft.reminderEnabled}
@@ -91,7 +102,7 @@ export function ReminderSettingsSection({
           })}
         </div>
       ) : (
-        <p className="empty">{emptyMessage}</p>
+        <p className="ds-empty">{emptyMessage}</p>
       )}
     </section>
   );

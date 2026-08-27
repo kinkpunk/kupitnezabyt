@@ -30,6 +30,12 @@ describe("Button", () => {
     expect(button).toHaveClass("ds-button--compact");
   });
 
+  it("supports compact size for icon variant", () => {
+    render(<Button variant="icon" size="compact" aria-label="Compact icon" />);
+    const button = screen.getByRole("button", { name: "Compact icon" });
+    expect(button).toHaveClass("ds-button--icon--small");
+  });
+
   it("forwards click handler", () => {
     const handleClick = vi.fn();
     render(<Button onClick={handleClick}>Click me</Button>);

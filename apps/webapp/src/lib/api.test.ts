@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, completeOnboarding, consumeInvitationAcceptedToast, getActiveWorkspaceId, login } from "./api";
+import {
+  ApiError,
+  completeOnboarding,
+  consumeInvitationAcceptedToast,
+  getActiveWorkspaceId,
+  getCategorySortMode,
+  login,
+  setCategorySortMode
+} from "./api";
 
 function createLocalStorageMock() {
   const values = new Map<string, string>();
@@ -115,6 +123,36 @@ describe("webapp api auth", () => {
         body: JSON.stringify({}),
         method: "PATCH"
       })
+    );
+  });
+});
+
+describe("category sort mode", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("defaults to status sort when no preference is saved", () => {
+    const { localStorage } = stubWindow("");
+    expect(getCategorySortMode()).toBe("status");
+    expect(localStorage.getItem).toHaveBeenCalledWith(
+      "kupitnezabyt.categorySortMode"
+    );
+  });
+
+  it("preserves manual sort when it was explicitly selected", () => {
+    const { localStorage } = stubWindow("");
+    localStorage.getItem.mockReturnValue("manual");
+    expect(getCategorySortMode()).toBe("manual");
+  });
+
+  it("saves selected sort mode to localStorage", () => {
+    const { localStorage } = stubWindow("");
+    setCategorySortMode("manual");
+    expect(localStorage.setItem).toHaveBeenCalledWith(
+      "kupitnezabyt.categorySortMode",
+      "manual"
     );
   });
 });

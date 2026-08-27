@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -78,8 +78,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     searchQuery: "",
     onSearchQueryChange: vi.fn(),
     onSearch: vi.fn().mockResolvedValue(undefined),
-    notificationCount: 2,
-    onBellClick: vi.fn(),
     onSelectSettings: vi.fn(),
     onSelectCategory: vi.fn(),
     onCreateCategory: vi.fn().mockResolvedValue(undefined),
@@ -101,13 +99,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
 }
 
 describe("CategoriesView", () => {
-  it("renders app header with notification badge", () => {
-    render(<CategoriesView {...createProps()} />);
-    expect(screen.getByAltText("")).toHaveClass("ds-app-header__logo");
-    expect(screen.getByRole("button", { name: "Уведомления" })).toBeInTheDocument();
-    expect(screen.getByLabelText("2 уведомлений")).toHaveTextContent("2");
-  });
-
   it("renders search field and category heading", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("searchbox", { name: "Поиск" })).toBeInTheDocument();
@@ -158,8 +149,18 @@ describe("CategoriesView", () => {
         {...createProps({ showCategoryForm: true, categoryName: "Дом", onCreateCategory })}
       />
     );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Создать" }));
     expect(onCreateCategory).toHaveBeenCalledOnce();
+  });
+
+  it("closes create category bottom sheet on close button click", () => {
+    const setShowCategoryForm = vi.fn();
+    render(
+      <CategoriesView {...createProps({ showCategoryForm: true, setShowCategoryForm })} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    expect(setShowCategoryForm).toHaveBeenCalledWith(false);
   });
 
   it("opens create item sheet via FAB", () => {
@@ -194,7 +195,7 @@ describe("CategoriesView", () => {
         })}
       />
     );
-    clickFirstButton("Действия");
+    clickFirstButton("Ещё");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Редактировать" }));
     expect(setEditingItemId).toHaveBeenCalledWith(itemInStock.id);
@@ -205,9 +206,81 @@ describe("CategoriesView", () => {
   it("archives item from actions sheet", () => {
     const onArchiveItem = vi.fn().mockResolvedValue(undefined);
     render(<CategoriesView {...createProps({ onArchiveItem })} />);
-    clickFirstButton("Действия");
+    clickFirstButton("Ещё");
     fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+  });
+
+  it("enters reorder mode from actions sheet", async () => {
+    const onCategorySortModeChange = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({
+          categorySortMode: "status",
+          onCategorySortModeChange
+        })}
+      />
+    );
+    clickFirstButton("Ещё");
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(onCategorySortModeChange).toHaveBeenCalledWith("manual");
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelector(".ds-product-row__reorder")).toBeInTheDocument();
+  });
+
+  it("moves item up and exits reorder mode via done button", async () => {
+    const onMoveItem = vi.fn().mockResolvedValue(undefined);
+    const onCategorySortModeChange = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({
+          onMoveItem,
+          onCategorySortModeChange
+        })}
+      />
+    );
+    clickFirstButton("Ещё");
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+
+    const rows = screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ });
+    fireEvent.click(rows[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "Вверх" }));
+    expect(onMoveItem).toHaveBeenCalledWith(itemLow, "up");
+
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.querySelector(".ds-product-row__reorder")).not.toBeInTheDocument();
+  });
+
+  it("offers status sort option when manual order is active", async () => {
+    const onCategorySortModeChange = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({
+          categorySortMode: "manual",
+          onCategorySortModeChange
+        })}
+      />
+    );
+    clickFirstButton("Ещё");
+    fireEvent.click(screen.getByRole("button", { name: "Сортировать по статусу" }));
+    await waitFor(() => {
+      expect(onCategorySortModeChange).toHaveBeenCalledWith("status");
+    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not show status sort option when already sorting by status", () => {
+    render(<CategoriesView {...createProps({ categorySortMode: "status" })} />);
+    clickFirstButton("Ещё");
+    expect(
+      screen.queryByRole("button", { name: "Сортировать по статусу" })
+    ).not.toBeInTheDocument();
   });
 
   it("cycles status when status chip is clicked", () => {

@@ -3,10 +3,11 @@
 import { formatDate, formatError } from "../../lib/format";
 import { WorkspacePanel } from "../features/WorkspacePanel";
 import { ReminderSettingsSection } from "../ui/ReminderSettingsSection";
+import { Button } from "../ui/Button";
+import { SectionHeader, ThemeSwitcher } from "../common";
 import type { Category, Item, ItemGroup, WorkspaceSummary } from "../../lib/types";
-import type {
-  ReminderDraft
-} from "../../hooks/useAppState";
+import type { ReminderDraft } from "../../hooks/useAppState";
+import type { ThemeMode } from "../../lib/ui";
 
 export function SettingsView({
   activeWorkspace,
@@ -23,6 +24,8 @@ export function SettingsView({
   categories,
   groups,
   items,
+  theme,
+  onThemeChange,
   reminderSettingsMessage,
   savingReminderKeys,
   reminderDrafts,
@@ -52,6 +55,8 @@ export function SettingsView({
   categories: Category[];
   groups: ItemGroup[];
   items: Item[];
+  theme: ThemeMode;
+  onThemeChange: (theme: ThemeMode) => void;
   reminderSettingsMessage: string | null;
   savingReminderKeys: string[];
   reminderDrafts: Record<string, ReminderDraft>;
@@ -73,12 +78,15 @@ export function SettingsView({
 }) {
   return (
     <section className="stack">
-      <div className="section-heading">
-        <div>
-          <h2>Настройки</h2>
-          <p>Совместный доступ, проверки, экспорт и удаление данных</p>
-        </div>
-      </div>
+      <SectionHeader
+        title="Настройки"
+        subtitle="Совместный доступ, проверки, экспорт и удаление данных"
+      />
+
+      <section aria-label="Тема оформления">
+        <SectionHeader title="Тема оформления" />
+        <ThemeSwitcher theme={theme} onChange={onThemeChange} />
+      </section>
 
       <WorkspacePanel
         activeWorkspace={activeWorkspace}
@@ -99,16 +107,14 @@ export function SettingsView({
         onRetryLoad={onRetryWorkspaceLoad}
       />
 
-      <section className="reminder-settings" aria-label="Настройки проверок">
-        <div className="section-heading">
-          <div>
-            <h2>Проверки</h2>
-            <p>Циклы для напоминаний внутри приложения</p>
-          </div>
-        </div>
+      <section aria-label="Настройки проверок">
+        <SectionHeader
+          title="Проверки"
+          subtitle="Циклы для напоминаний внутри приложения"
+        />
 
         {reminderSettingsMessage ? (
-          <p className="success-message" role="status">
+          <p className="ds-inline-message ds-inline-message--success" role="status">
             {reminderSettingsMessage}
           </p>
         ) : null}
@@ -183,8 +189,8 @@ export function SettingsView({
         />
       </section>
 
-      <div className="settings-actions">
-        <button
+      <div className="ds-settings-actions">
+        <Button
           type="button"
           onClick={() =>
             void onExportUserData().catch((caughtError) =>
@@ -193,12 +199,13 @@ export function SettingsView({
           }
         >
           Скачать JSON
-        </button>
-        <button className="ghost-button" type="button" onClick={onSignOut}>
+        </Button>
+        <Button variant="ghost" type="button" onClick={onSignOut}>
           Выйти
-        </button>
-        <button
-          className="ghost-button danger-button"
+        </Button>
+        <Button
+          className="ds-button--danger"
+          variant="ghost"
           type="button"
           onClick={() =>
             void onDeleteAccount().catch((caughtError) =>
@@ -207,7 +214,7 @@ export function SettingsView({
           }
         >
           Удалить аккаунт
-        </button>
+        </Button>
       </div>
     </section>
   );

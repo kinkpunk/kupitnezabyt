@@ -2,17 +2,15 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { ProductRow } from "./ProductRow";
+import { ProductRow, ProductRowMoreButton } from "./ProductRow";
 
 describe("ProductRow", () => {
-  it("renders name and subtitle", () => {
+  it("renders title and subtitle", () => {
     render(
       <ProductRow
-        name="Рикотта"
+        title="Рикотта"
         subtitle="Обновлено вчера"
-        status="warn"
         onStatusClick={vi.fn()}
-        onMoreClick={vi.fn()}
       />
     );
     expect(screen.getByText("Рикотта")).toBeInTheDocument();
@@ -26,11 +24,9 @@ describe("ProductRow", () => {
   ] as const)("renders status chip for '%s'", (status, label) => {
     render(
       <ProductRow
-        name="Кофе"
-        subtitle=""
+        title="Кофе"
         status={status}
         onStatusClick={vi.fn()}
-        onMoreClick={vi.fn()}
       />
     );
     expect(screen.getByRole("button", { name: new RegExp(label) })).toBeInTheDocument();
@@ -39,11 +35,8 @@ describe("ProductRow", () => {
   it("renders paused status as a static chip", () => {
     render(
       <ProductRow
-        name="Чай"
-        subtitle=""
+        title="Чай"
         status="paused"
-        onStatusClick={vi.fn()}
-        onMoreClick={vi.fn()}
       />
     );
     const chip = screen.getByText("Пауза").closest(".ds-status-chip");
@@ -55,29 +48,63 @@ describe("ProductRow", () => {
     const handleStatusClick = vi.fn();
     render(
       <ProductRow
-        name="Молоко"
-        subtitle=""
+        title="Молоко"
         status="ok"
         onStatusClick={handleStatusClick}
-        onMoreClick={vi.fn()}
       />
     );
     fireEvent.click(screen.getByRole("button", { name: /Есть/ }));
     expect(handleStatusClick).toHaveBeenCalledOnce();
   });
 
-  it("calls onMoreClick when more button is pressed", () => {
-    const handleMoreClick = vi.fn();
+  it("calls onClick when row is pressed", () => {
+    const handleClick = vi.fn();
     render(
       <ProductRow
-        name="Сыр"
-        subtitle=""
-        status="ok"
-        onStatusClick={vi.fn()}
-        onMoreClick={handleMoreClick}
+        title="Сыр"
+        onClick={handleClick}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Действия" }));
-    expect(handleMoreClick).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole("button", { name: "Сыр" }));
+    expect(handleClick).toHaveBeenCalledOnce();
+  });
+
+  it("renders custom actions", () => {
+    render(
+      <ProductRow
+        title="Хлеб"
+        actions={<button type="button">Куплено</button>}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Куплено" })).toBeInTheDocument();
+  });
+
+  it("renders meta content", () => {
+    render(
+      <ProductRow
+        title="Масло"
+        meta={<span>Категория</span>}
+      />
+    );
+    expect(screen.getByText("Категория")).toBeInTheDocument();
+  });
+
+  it("renders reorder handle when requested", () => {
+    render(
+      <ProductRow
+        title="Сахар"
+        reorderHandle
+      />
+    );
+    expect(document.querySelector(".ds-product-row__reorder")).toBeInTheDocument();
+  });
+});
+
+describe("ProductRowMoreButton", () => {
+  it("calls onClick when pressed", () => {
+    const handleClick = vi.fn();
+    render(<ProductRowMoreButton onClick={handleClick} />);
+    fireEvent.click(screen.getByRole("button", { name: "Ещё" }));
+    expect(handleClick).toHaveBeenCalledOnce();
   });
 });

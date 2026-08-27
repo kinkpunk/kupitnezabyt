@@ -3,10 +3,12 @@
 import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
+  ArrowDown,
+  ArrowUp,
   GripVertical,
+  ListOrdered,
   Pencil,
   Plus,
-  Signal,
   Users
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
@@ -15,6 +17,7 @@ import type { CategorySortMode } from "../../lib/api";
 import { formatDate, formatError } from "../../lib/format";
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import {
+  categoryTriggerItemStatus,
   importanceLabels,
   importanceOptions,
   itemStatusToUiStatus,
@@ -22,14 +25,14 @@ import {
   uiStatusToItemStatus
 } from "../../lib/ui";
 import {
-  AppHeader,
   BottomSheet,
-  CategoryTabs,
+  ChipTabs,
   FAB,
   PanelHeader,
   ProductRow,
+  ProductRowMoreButton,
   SearchField
-} from "../features/categories";
+} from "../common";
 import { Button } from "../ui/Button";
 
 export function CategoriesView({
@@ -58,8 +61,6 @@ export function CategoriesView({
   searchQuery,
   onSearchQueryChange,
   onSearch,
-  notificationCount,
-  onBellClick,
   onSelectSettings,
   onSelectCategory,
   onCreateCategory,
@@ -102,8 +103,6 @@ export function CategoriesView({
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onSearch: () => Promise<void>;
-  notificationCount: number;
-  onBellClick: () => void;
   onSelectSettings: () => void;
   onSelectCategory: (categoryId: string) => void;
   onCreateCategory: () => Promise<void>;
@@ -122,6 +121,7 @@ export function CategoriesView({
   isActionPending: (key: string) => boolean;
 }) {
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   const sheetItem = useMemo(
     () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
@@ -169,6 +169,40 @@ export function CategoriesView({
     void onMoveItem(sheetItem, direction).catch((caughtError) =>
       setError(formatError(caughtError))
     );
+  }
+
+  async function handleStartReorder() {
+    if (categorySortMode !== "manual") {
+      try {
+        await onCategorySortModeChange("manual");
+      } catch (caughtError) {
+        setError(formatError(caughtError));
+        return;
+      }
+    }
+
+    setIsReordering(true);
+    setSheetItemId(null);
+  }
+
+  async function handleSortByStatus() {
+    if (categorySortMode === "status") {
+      setSheetItemId(null);
+      return;
+    }
+
+    try {
+      await onCategorySortModeChange("status");
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+      return;
+    }
+
+    setSheetItemId(null);
+  }
+
+  function handleFinishReorder() {
+    setIsReordering(false);
     setSheetItemId(null);
   }
 
@@ -193,8 +227,6 @@ export function CategoriesView({
 
   return (
     <section className="ds-categories-view">
-      <AppHeader notificationCount={notificationCount} onBellClick={onBellClick} />
-
       <form
         className="ds-categories-view__search"
         role="search"
@@ -214,7 +246,7 @@ export function CategoriesView({
           {showShareEntryPoint ? (
             <Button
               aria-label="Поделиться списком"
-              className="ds-button--icon--small"
+              size="compact"
               title="Поделиться списком"
               variant="icon"
               onClick={onSelectSettings}
@@ -224,7 +256,7 @@ export function CategoriesView({
           ) : null}
           <Button
             aria-label="Новая категория"
-            className="ds-button--icon--small"
+            size="compact"
             title="Новая категория"
             variant="icon"
             onClick={() => setShowCategoryForm(true)}
@@ -234,9 +266,13 @@ export function CategoriesView({
         </div>
       </div>
 
-      {showCategoryForm ? (
+      <BottomSheet
+        show={showCategoryForm}
+        title="Новая категория"
+        onClose={() => setShowCategoryForm(false)}
+      >
         <form
-          className="ds-categories-view__create-form"
+          className="ds-bottom-sheet__create-form"
           onSubmit={(event) => {
             event.preventDefault();
             void onCreateCategory().catch((caughtError) => setError(formatError(caughtError)));
@@ -250,17 +286,21 @@ export function CategoriesView({
             onChange={(event) => setCategoryName(event.target.value)}
           />
           <Button
-            size="compact"
             type="submit"
             disabled={isActionPending("category:create") || !categoryName.trim()}
           >
             {isActionPending("category:create") ? "Создаем..." : "Создать"}
           </Button>
         </form>
-      ) : null}
+      </BottomSheet>
 
-      <CategoryTabs
-        categories={categories}
+      <ChipTabs
+        ariaLabel="Категории"
+        items={categories.map((category) => ({
+          id: category.id,
+          label: category.name,
+          warning: categoryTriggerItemStatus[category.aggregateStatus] !== null
+        }))}
         selectedId={selectedCategory?.id ?? null}
         onSelect={onSelectCategory}
       />
@@ -283,37 +323,6 @@ export function CategoriesView({
             }
           />
 
-          {selectedCategory.itemCount > 0 ? (
-            <div className="ds-categories-view__sort" role="group" aria-label="Сортировка товаров">
-              <Button
-                aria-label="Мой порядок"
-                className={categorySortMode === "manual" ? "ds-button--active" : ""}
-                size="compact"
-                variant={categorySortMode === "manual" ? "primary" : "ghost"}
-                onClick={() =>
-                  void onCategorySortModeChange("manual").catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                <GripVertical aria-hidden="true" size={18} />
-              </Button>
-              <Button
-                aria-label="По статусу"
-                className={categorySortMode === "status" ? "ds-button--active" : ""}
-                size="compact"
-                variant={categorySortMode === "status" ? "primary" : "ghost"}
-                onClick={() =>
-                  void onCategorySortModeChange("status").catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                <Signal aria-hidden="true" size={18} />
-              </Button>
-            </div>
-          ) : null}
-
           {visibleRecommendations.length ? (
             <section className="recommendations" aria-label="Рекомендации">
               <div>
@@ -331,9 +340,9 @@ export function CategoriesView({
                       <h3>{recommendation.suggestedItem}</h3>
                       <span>{recommendation.categoryHint ?? "Категория исходного товара"}</span>
                     </div>
-                    <div className="shopping-actions">
+                    <div className="ds-shopping-actions">
                       <button
-                        className="ghost-button"
+                        className="ds-button ds-button--ghost ds-button--compact"
                         type="button"
                         onClick={() =>
                           void onDismissRecommendation(recommendation).catch((caughtError) =>
@@ -344,7 +353,7 @@ export function CategoriesView({
                         Не нужно
                       </button>
                       <button
-                        className="ghost-button"
+                        className="ds-button ds-button--ghost ds-button--compact"
                         type="button"
                         onClick={() =>
                           void onHideSimilarRecommendations(recommendation).catch((caughtError) =>
@@ -355,6 +364,7 @@ export function CategoriesView({
                         Скрыть похожие
                       </button>
                       <button
+                        className="ds-button ds-button--primary ds-button--compact"
                         type="button"
                         disabled={isActionPending(`recommendation:add:${recommendation.id}`)}
                         onClick={() =>
@@ -413,11 +423,17 @@ export function CategoriesView({
                 ) : (
                   <ProductRow
                     key={item.id}
-                    name={item.name}
-                    status={getItemStatus(item)}
+                    actions={
+                      isReordering ? null : (
+                        <ProductRowMoreButton onClick={() => setSheetItemId(item.id)} />
+                      )
+                    }
+                    reorderHandle={isReordering}
+                    status={isReordering ? undefined : getItemStatus(item)}
                     subtitle={getItemSubtitle(item)}
-                    onMoreClick={() => setSheetItemId(item.id)}
-                    onStatusClick={() => handleStatusClick(item)}
+                    title={item.name}
+                    onClick={isReordering ? () => setSheetItemId(item.id) : undefined}
+                    onStatusClick={isReordering ? undefined : () => handleStatusClick(item)}
                   />
                 )
               )
@@ -462,24 +478,17 @@ export function CategoriesView({
             onClose={() => setSheetItemId(null)}
           >
             <div className="ds-bottom-sheet__actions">
-              <button
-                className="ds-bottom-sheet__action"
-                type="button"
-                onClick={() => sheetItem && handleStartEdit(sheetItem)}
-              >
-                <Pencil aria-hidden="true" size={18} />
-                Редактировать
-              </button>
-              {canWriteActiveWorkspace &&
-              categorySortMode === "manual" &&
-              visibleItems.length > 1 ? (
+              {isReordering ? (
                 <>
                   <button
                     className="ds-bottom-sheet__action"
-                    disabled={sheetItemIndex <= 0 || isActionPending(`item:reorder:${sheetItemId}`)}
+                    disabled={
+                      sheetItemIndex <= 0 || isActionPending(`item:reorder:${sheetItemId}`)
+                    }
                     type="button"
                     onClick={() => handleMove("up")}
                   >
+                    <ArrowUp aria-hidden="true" size={18} />
                     Вверх
                   </button>
                   <button
@@ -492,18 +501,57 @@ export function CategoriesView({
                     type="button"
                     onClick={() => handleMove("down")}
                   >
+                    <ArrowDown aria-hidden="true" size={18} />
                     Вниз
                   </button>
+                  <button
+                    className="ds-bottom-sheet__action ds-bottom-sheet__action--active"
+                    type="button"
+                    onClick={handleFinishReorder}
+                  >
+                    Готово
+                  </button>
                 </>
-              ) : null}
-              <button
-                className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
-                type="button"
-                onClick={handleArchiveSelectedItem}
-              >
-                <Archive aria-hidden="true" size={18} />
-                В архив
-              </button>
+              ) : (
+                <>
+                  {canWriteActiveWorkspace && visibleItems.length > 1 ? (
+                    <button
+                      className="ds-bottom-sheet__action"
+                      type="button"
+                      onClick={handleStartReorder}
+                    >
+                      <GripVertical aria-hidden="true" size={18} />
+                      Изменить порядок
+                    </button>
+                  ) : null}
+                  {categorySortMode === "manual" ? (
+                    <button
+                      className="ds-bottom-sheet__action"
+                      type="button"
+                      onClick={handleSortByStatus}
+                    >
+                      <ListOrdered aria-hidden="true" size={18} />
+                      Сортировать по статусу
+                    </button>
+                  ) : null}
+                  <button
+                    className="ds-bottom-sheet__action"
+                    type="button"
+                    onClick={() => sheetItem && handleStartEdit(sheetItem)}
+                  >
+                    <Pencil aria-hidden="true" size={18} />
+                    Редактировать
+                  </button>
+                  <button
+                    className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
+                    type="button"
+                    onClick={handleArchiveSelectedItem}
+                  >
+                    <Archive aria-hidden="true" size={18} />
+                    В архив
+                  </button>
+                </>
+              )}
             </div>
           </BottomSheet>
 

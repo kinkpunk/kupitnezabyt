@@ -1,20 +1,18 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Calendar, ShoppingCart } from "lucide-react";
+import React from "react";
 
 import { formatDate } from "../../lib/format";
+import type { Category, CheckSession, InAppReminder, Item, ShoppingListEntry } from "../../lib/types";
 import {
   formatPositionCount,
   formatReminderCount,
+  itemStatusToUiStatus,
   reminderEntityLabels
 } from "../../lib/ui";
-import type {
-  Category,
-  CheckSession,
-  InAppReminder,
-  Item,
-  ShoppingListEntry
-} from "../../lib/types";
+import { EmptyState, ProductRow, SectionHeader } from "../common";
+import { Button } from "../ui/Button";
 
 export function HomeView({
   items,
@@ -55,48 +53,68 @@ export function HomeView({
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
+  function handleMarkBought(item: Item) {
+    void onSetStatus(item, "IN_STOCK");
+  }
+
+  function getItemStatus(item: Item): "ok" | "warn" | "bad" | "paused" {
+    if (item.status === "PAUSED") {
+      return "paused";
+    }
+
+    return itemStatusToUiStatus(item.status) ?? "paused";
+  }
+
+  function renderReminderMeta(reminder: InAppReminder) {
+    const isDue = reminder.timing === "DUE";
+
+    return (
+      <span className="ds-reminder-meta">
+        <span className={isDue ? "ds-reminder-meta--due" : "ds-reminder-meta--soon"}>
+          {isDue ? "Пора проверить" : "Скоро"}
+        </span>
+        <span>·</span>
+        <span>{formatDate(reminder.nextCheckAt)}</span>
+      </span>
+    );
+  }
+
   function renderReminderActions(reminder: InAppReminder) {
     return (
-      <div className="reminder-actions">
+      <div className="ds-reminder-actions">
         {reminder.entityType !== "ITEM" ? (
-          <button
-            className="primary-light-button"
-            type="button"
+          <Button
+            size="compact"
+            variant="primary"
             onClick={() => void onStartReminderCheck(reminder)}
           >
             Проверить
-          </button>
+          </Button>
         ) : null}
-        <button
-          className="ghost-button"
-          type="button"
+        <Button
           disabled={isActionPending(`reminder:snooze:${reminder.id}`)}
+          size="compact"
+          variant="ghost"
           onClick={() => void onSnoozeReminder(reminder)}
         >
           {isActionPending(`reminder:snooze:${reminder.id}`) ? "Откладываем..." : "Отложить"}
-        </button>
-        <button className="ghost-button" type="button" onClick={() => onOpenReminder(reminder)}>
-          Подробнее
-        </button>
+        </Button>
       </div>
     );
   }
 
   function renderReminderList(reminders: InAppReminder[]) {
     return (
-      <div className="item-list">
+      <div className="ds-product-list">
         {reminders.map((reminder) => (
-          <article className="shopping-row reminder-row" key={reminder.id}>
-            <div>
-              <span className={reminder.timing === "DUE" ? "badge badge-urgent" : "badge badge-muted"}>
-                {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"} ·{" "}
-                {formatDate(reminder.nextCheckAt)}
-              </span>
-              <h2>{reminder.title}</h2>
-              <span className="metadata-text">{reminderEntityLabels[reminder.entityType]}</span>
-            </div>
-            {renderReminderActions(reminder)}
-          </article>
+          <ProductRow
+            key={reminder.id}
+            actions={renderReminderActions(reminder)}
+            meta={renderReminderMeta(reminder)}
+            subtitle={reminderEntityLabels[reminder.entityType]}
+            title={reminder.title}
+            onClick={() => onOpenReminder(reminder)}
+          />
         ))}
       </div>
     );
@@ -104,134 +122,115 @@ export function HomeView({
 
   return (
     <section className="stack">
-      <div className="home-summary">
-        <button
+      <button
+        className="ds-home-summary"
+        type="button"
+        onClick={() => onSelectTab("items")}
+      >
+        <span className="ds-home-summary__eyebrow">Запасы</span>
+        <span
           className={
-            attentionItemsCount ? "home-tile home-tile-attention" : "home-tile home-tile-ok"
+            attentionItemsCount
+              ? "ds-home-summary__value ds-home-summary__value--attention"
+              : "ds-home-summary__value ds-home-summary__value--ok"
           }
-          type="button"
-          onClick={() => onSelectTab("items")}
         >
-          <span className="eyebrow">Запасы</span>
-          {attentionItemsCount ? (
-            <>
-              <strong>{attentionItemsCount}</strong>
-              <span>требуют внимания</span>
-            </>
-          ) : (
-            <>
-              <strong>Все запасы в порядке</strong>
-              <span>
-                {items.length ? `${items.length} отслеживается` : "Добавьте первые товары"}
-              </span>
-            </>
-          )}
-        </button>
-      </div>
+          {attentionItemsCount ? attentionItemsCount : "Все запасы в порядке"}
+        </span>
+        <span className="ds-home-summary__caption">
+          {attentionItemsCount
+            ? "требуют внимания"
+            : items.length
+              ? `${items.length} отслеживается`
+              : "Добавьте первые товары"}
+        </span>
+      </button>
 
       {checkSession?.status === "IN_PROGRESS" ? (
         <section className="home-section">
-          <article className="shopping-row">
-            <div>
-              <p className="normal">Незавершенная проверка</p>
-              <h2>{checkSession.category?.name ?? checkSession.group?.name ?? "Проверка"}</h2>
-              <span>
-                {checkedCount} из {checkSession.items.length}
-              </span>
-            </div>
-            <button
-              className="ghost-button"
-              type="button"
-              onClick={() => onSelectTab("check")}
-            >
-              Продолжить
-            </button>
-          </article>
+          <SectionHeader title="Проверка" />
+          <ProductRow
+            actions={
+              <Button size="compact" variant="ghost" onClick={() => onSelectTab("check")}>
+                Продолжить
+              </Button>
+            }
+            meta={`${checkedCount} из ${checkSession.items.length}`}
+            subtitle="Незавершенная проверка"
+            title={checkSession.category?.name ?? checkSession.group?.name ?? "Проверка"}
+            onClick={() => onSelectTab("check")}
+          />
         </section>
       ) : null}
 
       <section className="home-section">
-        <div className="section-heading">
-          <div>
-            <h2>Купить сейчас</h2>
-            <p>{urgentItems.length ? formatPositionCount(urgentItems.length) : "Пока спокойно"}</p>
-          </div>
-        </div>
+        <SectionHeader
+          title="Купить сейчас"
+          subtitle={urgentItems.length ? formatPositionCount(urgentItems.length) : "Пока спокойно"}
+        />
         {urgentItems.length ? (
-          <div className="item-list">
+          <div className="ds-product-list">
             {urgentItems.map((item) => (
-              <article className="shopping-row shopping-item-card" key={item.id}>
-                <button
-                  aria-label={`Открыть ${item.name}`}
-                  className="shopping-row-open"
-                  type="button"
-                  onClick={() => onSelectCategory(item.categoryId)}
-                >
-                  <span className="shopping-row-title">{item.name}</span>
-                  {item.category?.name ? (
-                    <span className="metadata-text">{item.category.name}</span>
-                  ) : null}
-                </button>
-                <button
-                  className="shopping-item-card-action"
-                  type="button"
-                  disabled={isActionPending(`item:status:${item.id}`)}
-                  onClick={() => void onSetStatus(item, "IN_STOCK")}
-                >
-                  <Check aria-hidden="true" size={18} />
-                  <span>
-                    {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
-                  </span>
-                </button>
-              </article>
+              <ProductRow
+                key={item.id}
+                status={getItemStatus(item)}
+                subtitle={item.category?.name}
+                title={item.name}
+                onClick={() => onSelectCategory(item.categoryId)}
+                onStatusClick={() => handleMarkBought(item)}
+              />
             ))}
           </div>
         ) : (
-          <p className="empty">Нет товаров, которые нужно купить прямо сейчас.</p>
+          <EmptyState
+            description="Нет товаров, которые нужно купить прямо сейчас"
+            icon={ShoppingCart}
+            title="Пока спокойно"
+          />
         )}
       </section>
 
       <section className="home-section">
-        <div className="section-heading">
-          <div>
-            <h2>Напоминания</h2>
-            <p>
-              {inAppReminders.length ? `${inAppReminders.length} активных` : "Нет дат"}
-            </p>
-          </div>
-        </div>
+        <SectionHeader
+          title="Напоминания"
+          subtitle={inAppReminders.length ? `${inAppReminders.length} активных` : "Нет дат"}
+        />
         {inAppReminders.length ? (
           <div className="reminder-groups">
             {categoryReminderList.length ? (
               <section className="reminder-group" aria-label="Напоминания категорий">
-                <div className="reminder-group-heading">
-                  <h3>Категории</h3>
-                  <span>{formatReminderCount(categoryReminderList.length)}</span>
-                </div>
+                <SectionHeader
+                  subtitle={formatReminderCount(categoryReminderList.length)}
+                  title="Категории"
+                />
                 {renderReminderList(categoryReminderList)}
               </section>
             ) : null}
             {groupReminders.length ? (
               <section className="reminder-group" aria-label="Напоминания наборов">
-                <div className="reminder-group-heading">
-                  <h3>Наборы</h3>
-                  <span>{formatReminderCount(groupReminders.length)}</span>
-                </div>
+                <SectionHeader
+                  subtitle={formatReminderCount(groupReminders.length)}
+                  title="Наборы"
+                />
                 {renderReminderList(groupReminders)}
               </section>
             ) : null}
             {itemReminders.length ? (
               <section className="reminder-group" aria-label="Напоминания товаров">
-                <div className="reminder-group-heading">
-                  <h3>Товары</h3>
-                  <span>{formatReminderCount(itemReminders.length)}</span>
-                </div>
+                <SectionHeader
+                  subtitle={formatReminderCount(itemReminders.length)}
+                  title="Товары"
+                />
                 {renderReminderList(itemReminders)}
               </section>
             ) : null}
           </div>
         ) : (
-          <p className="empty">Добавьте циклы проверки, чтобы видеть ближайшие даты.</p>
+          <EmptyState
+            description="Добавьте циклы проверки, чтобы видеть ближайшие даты"
+            icon={Calendar}
+            title="Нет напоминаний"
+          />
         )}
       </section>
     </section>

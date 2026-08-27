@@ -2,6 +2,7 @@
 
 import { ErrorNotice } from "../ui/ErrorNotice";
 import { BrandWord } from "../ui/BrandWord";
+import { Button } from "../ui/Button";
 
 export function OnboardingModal({
   error,
@@ -31,9 +32,9 @@ export function OnboardingModal({
   onFinish: (skipSetup?: boolean) => Promise<void>;
 }) {
   return (
-    <main className="app-shell onboarding-shell">
+    <main className="app-shell ds-onboarding-shell">
       <ErrorNotice message={error} onClose={onCloseError} />
-      <section className="onboarding-panel">
+      <section className="ds-onboarding-panel">
         <p className="eyebrow">Шаг {onboardingStep + 1} из 4</p>
 
         {onboardingStep === 0 ? (
@@ -48,20 +49,20 @@ export function OnboardingModal({
               Помогает помнить о товарах, которые регулярно заканчиваются:
               еда, аптека, косметика, дом и другое.
             </p>
-            <button type="button" onClick={() => setOnboardingStep(1)}>
+            <Button type="button" onClick={() => setOnboardingStep(1)}>
               Начать
-            </button>
+            </Button>
           </>
         ) : onboardingStep === 1 ? (
           <>
             <h1>Стартовые категории</h1>
             <p>Выберите несколько областей, с которых удобно начать.</p>
-            <div className="choice-grid">
+            <div className="ds-choice-grid">
               {starterCategories.map((name) => {
                 const isSelected = selectedStarterCategories.includes(name);
                 return (
                   <button
-                    className={isSelected ? "choice active" : "choice"}
+                    className={isSelected ? "ds-choice ds-choice--active" : "ds-choice"}
                     key={name}
                     type="button"
                     onClick={() =>
@@ -77,12 +78,12 @@ export function OnboardingModal({
                 );
               })}
             </div>
-            <div className="onboarding-actions">
-              <button type="button" onClick={() => setOnboardingStep(2)}>
+            <div className="ds-onboarding-actions">
+              <Button type="button" onClick={() => setOnboardingStep(2)}>
                 Продолжить
-              </button>
-              <button
-                className="ghost-button"
+              </Button>
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setSelectedStarterCategories([]);
@@ -90,16 +91,16 @@ export function OnboardingModal({
                 }}
               >
                 Пропустить
-              </button>
+              </Button>
             </div>
           </>
         ) : onboardingStep === 2 ? (
           <>
             <h1>Первые товары</h1>
             <p>Добавьте 3-5 вещей и выберите категорию для каждой.</p>
-            <div className="starter-items">
+            <div className="ds-starter-items">
               {starterItems.map((value, index) => (
-                <div className="starter-item-row" key={index}>
+                <div className="ds-starter-item-row" key={index}>
                   <input
                     aria-label={`Стартовый товар ${index + 1}`}
                     placeholder={starterItemHints[index] ?? "Товар"}
@@ -138,12 +139,12 @@ export function OnboardingModal({
                 </div>
               ))}
             </div>
-            <div className="onboarding-actions">
-              <button type="button" onClick={() => setOnboardingStep(3)}>
+            <div className="ds-onboarding-actions">
+              <Button type="button" onClick={() => setOnboardingStep(3)}>
                 Продолжить
-              </button>
-              <button
-                className="ghost-button"
+              </Button>
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => {
                   setStarterItems([]);
@@ -151,7 +152,7 @@ export function OnboardingModal({
                 }}
               >
                 Пропустить
-              </button>
+              </Button>
             </div>
           </>
         ) : (
@@ -161,17 +162,17 @@ export function OnboardingModal({
               Я буду показывать напоминания внутри приложения, когда пора
               проверить запасы.
             </p>
-            <div className="onboarding-actions">
-              <button type="button" onClick={() => void onFinish()}>
+            <div className="ds-onboarding-actions">
+              <Button type="button" onClick={() => void onFinish()}>
                 Готово
-              </button>
-              <button
-                className="ghost-button"
+              </Button>
+              <Button
+                variant="ghost"
                 type="button"
                 onClick={() => void onFinish(true)}
               >
                 Пропустить напоминания
-              </button>
+              </Button>
             </div>
           </>
         )}

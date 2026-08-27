@@ -3,9 +3,9 @@
 import { Bell } from "lucide-react";
 import React from "react";
 
-import { Badge } from "../../ui/Badge";
-import { BrandWord } from "../../ui/BrandWord";
-import { Button } from "../../ui/Button";
+import { Badge } from "../ui/Badge";
+import { BrandWord } from "../ui/BrandWord";
+import { Button } from "../ui/Button";
 
 export interface AppHeaderProps {
   notificationCount: number;
@@ -23,7 +23,6 @@ export function AppHeader({ notificationCount, onBellClick }: AppHeaderProps) {
       </div>
       <Button
         aria-label="Уведомления"
-        className="ds-button--icon--small"
         title="Уведомления"
         variant="icon"
         onClick={onBellClick}

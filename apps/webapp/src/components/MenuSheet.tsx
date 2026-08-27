@@ -1,8 +1,9 @@
 "use client";
 
-import { Archive, Boxes, Settings, ShoppingCart, X } from "lucide-react";
+import { Archive, Boxes, Settings, ShoppingCart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { BottomSheet } from "./common";
 import type { ActiveTab } from "../hooks/useAppState";
 import type { WorkspaceSummary } from "../lib/types";
 
@@ -32,53 +33,37 @@ export function MenuSheet({
   onSelectTab: (tab: ActiveTab) => void;
   onSelectWorkspace: (workspaceId: string) => Promise<void>;
 }) {
-  if (!show) {
-    return null;
-  }
-
   return (
-    <div className="menu-sheet-overlay" onClick={onClose}>
-      <section
-        aria-label="Дополнительные разделы"
-        className="menu-sheet"
-        id="menu-sheet"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="menu-sheet-header">
-          <strong>Разделы</strong>
-          <button
-            aria-label="Закрыть меню"
-            className="ghost-button"
-            type="button"
-            onClick={onClose}
+    <BottomSheet show={show} title="Разделы" onClose={onClose}>
+      {activeWorkspace && showWorkspaceSwitcher ? (
+        <label className="ds-menu-workspace-switcher">
+          <span>Список</span>
+          <select
+            aria-label="Активный список"
+            value={activeWorkspace.id}
+            onChange={(event) => void onSelectWorkspace(event.target.value)}
           >
-            <X aria-hidden="true" size={18} />
-          </button>
-        </div>
-        {activeWorkspace && showWorkspaceSwitcher ? (
-          <label className="workspace-switcher">
-            <span>Список</span>
-            <select
-              aria-label="Активный список"
-              value={activeWorkspace.id}
-              onChange={(event) => void onSelectWorkspace(event.target.value)}
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
+            {workspaces.map((workspace) => (
+              <option key={workspace.id} value={workspace.id}>
+                {workspace.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      <div className="ds-bottom-sheet__actions">
         {menuTabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
 
           return (
             <button
-              className={activeTab === tab.id ? "menu-item active" : "menu-item"}
               key={tab.id}
+              className={
+                isActive
+                  ? "ds-bottom-sheet__action ds-bottom-sheet__action--active"
+                  : "ds-bottom-sheet__action"
+              }
               type="button"
               onClick={() => onSelectTab(tab.id)}
             >
@@ -87,7 +72,7 @@ export function MenuSheet({
             </button>
           );
         })}
-      </section>
-    </div>
+      </div>
+    </BottomSheet>
   );
 }

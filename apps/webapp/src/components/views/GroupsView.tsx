@@ -1,8 +1,13 @@
 "use client";
 
+import { Package, PackagePlus, Trash2 } from "lucide-react";
+import React from "react";
+
 import { formatError } from "../../lib/format";
 import type { Item, ItemGroup } from "../../lib/types";
-import { statusLabels } from "../../lib/ui";
+import { itemStatusToUiStatus } from "../../lib/ui";
+import { ChipTabs, EmptyState, ProductRow, SectionHeader } from "../common";
+import { Button } from "../ui/Button";
 
 export function GroupsView({
   groups,
@@ -39,139 +44,162 @@ export function GroupsView({
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
 }) {
+  function handleCreateGroup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void onCreateGroup().catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleAddItem(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void onAddGroupItem().catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleStartCheck() {
+    void onStartGroupCheck().catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleArchiveGroup() {
+    void onArchiveSelectedGroup().catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleRemoveItem(itemId: string) {
+    void onRemoveGroupItem(itemId).catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function getItemStatus(item: Item): "ok" | "warn" | "bad" | "paused" {
+    if (item.status === "PAUSED") {
+      return "paused";
+    }
+
+    return itemStatusToUiStatus(item.status) ?? "paused";
+  }
+
+  function renderGroupActions() {
+    if (!selectedGroup) {
+      return null;
+    }
+
+    return (
+      <div className="ds-row-actions">
+        <Button
+          disabled={selectedGroupCheckItemCount === 0}
+          size="compact"
+          variant="primary"
+          onClick={handleStartCheck}
+        >
+          Проверить
+        </Button>
+        <Button
+          className="ds-button--danger"
+          size="compact"
+          variant="ghost"
+          onClick={handleArchiveGroup}
+        >
+          Архив
+        </Button>
+      </div>
+    );
+  }
+
+  const availableItems = selectedGroup
+    ? items.filter((item) => !selectedGroup.items.some((groupItem) => groupItem.itemId === item.id))
+    : items;
+
   return (
     <section className="stack">
-      <form
-        className="inline-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void onCreateGroup().catch((caughtError) => setError(formatError(caughtError)));
-        }}
-      >
+      <SectionHeader
+        title="Наборы"
+        subtitle={groups.length ? `${groups.length} создано` : "Пока нет"}
+      />
+
+      <form className="ds-groups-create-form" onSubmit={handleCreateGroup}>
         <input
           aria-label="Название набора"
+          disabled={isActionPending("group:create")}
           placeholder="Новый набор"
           value={groupName}
-          disabled={isActionPending("group:create")}
           onChange={(event) => setGroupName(event.target.value)}
         />
-        <button type="submit" disabled={isActionPending("group:create") || !groupName.trim()}>
+        <Button disabled={isActionPending("group:create") || !groupName.trim()} type="submit">
           {isActionPending("group:create") ? "Добавляем..." : "Добавить"}
-        </button>
+        </Button>
       </form>
 
-      <div className="category-row" aria-label="Наборы">
-        {groups.map((group) => (
-          <button
-            className={selectedGroup?.id === group.id ? "category active" : "category"}
-            key={group.id}
-            type="button"
-            onClick={() => onSelectGroup(group.id)}
-          >
-            <span>
-              {group.icon ? `${group.icon} ` : ""}
-              {group.name}
-            </span>
-            <small>{group.items.length} поз.</small>
-          </button>
-        ))}
-      </div>
+      <ChipTabs
+        ariaLabel="Наборы"
+        items={groups.map((group) => ({
+          id: group.id,
+          label: `${group.icon ? `${group.icon} ` : ""}${group.name}`
+        }))}
+        selectedId={selectedGroup?.id ?? null}
+        onSelect={onSelectGroup}
+      />
 
       {selectedGroup ? (
         <>
-          <div className="section-heading">
-            <div>
-              <h2>{selectedGroup.name}</h2>
-              <p>{selectedGroup.items.length} поз.</p>
-            </div>
-            <div className="icon-actions">
-              <button
-                className="ghost-button"
-                disabled={selectedGroupCheckItemCount === 0}
-                type="button"
-                onClick={() =>
-                  void onStartGroupCheck().catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                Проверить
-              </button>
-              <button
-                className="ghost-button danger-button"
-                type="button"
-                onClick={() =>
-                  void onArchiveSelectedGroup().catch((caughtError) =>
-                    setError(formatError(caughtError))
-                  )
-                }
-              >
-                Архив
-              </button>
-            </div>
-          </div>
+          <SectionHeader
+            actions={renderGroupActions()}
+            subtitle={`${selectedGroup.items.length} поз.`}
+            title={selectedGroup.name}
+          />
 
-          <form
-            className="inline-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void onAddGroupItem().catch((caughtError) => setError(formatError(caughtError)));
-            }}
-          >
+          <form className="ds-groups-add-form" onSubmit={handleAddItem}>
             <select
               aria-label="Товар для набора"
-              value={groupItemId}
               disabled={isActionPending("group:item:add")}
+              value={groupItemId}
               onChange={(event) => setGroupItemId(event.target.value)}
             >
               <option value="">Выберите товар</option>
-              {items
-                .filter(
-                  (item) =>
-                    !selectedGroup.items.some((groupItem) => groupItem.itemId === item.id)
-                )
-                .map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
+              {availableItems.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
             </select>
-            <button
-              type="submit"
+            <Button
               disabled={isActionPending("group:item:add") || !groupItemId}
+              type="submit"
             >
               {isActionPending("group:item:add") ? "Добавляем..." : "Добавить"}
-            </button>
+            </Button>
           </form>
 
-          <div className="item-list">
-            {selectedGroup.items.length ? (
-              selectedGroup.items.map((groupItem) => (
-                <article className="shopping-row" key={groupItem.id}>
-                  <div>
-                    <h2>{groupItem.item.name}</h2>
-                    <span>{statusLabels[groupItem.item.status]}</span>
-                  </div>
-                  <button
-                    className="ghost-button danger-button"
-                    type="button"
-                    onClick={() =>
-                      void onRemoveGroupItem(groupItem.itemId).catch((caughtError) =>
-                        setError(formatError(caughtError))
-                      )
-                    }
-                  >
-                    Убрать
-                  </button>
-                </article>
-              ))
-            ) : (
-              <p className="empty">Добавьте товары в набор.</p>
-            )}
-          </div>
+          {selectedGroup.items.length ? (
+            <div className="ds-product-list">
+              {selectedGroup.items.map((groupItem) => (
+                <ProductRow
+                  key={groupItem.id}
+                  actions={
+                    <Button
+                      className="ds-button--danger"
+                      size="compact"
+                      variant="ghost"
+                      onClick={() => handleRemoveItem(groupItem.itemId)}
+                    >
+                      <Trash2 aria-hidden="true" size={16} />
+                      Убрать
+                    </Button>
+                  }
+                  status={getItemStatus(groupItem.item)}
+                  title={groupItem.item.name}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              description="Добавьте товары в набор для совместной проверки"
+              icon={PackagePlus}
+              title="Набор пуст"
+            />
+          )}
         </>
       ) : (
-        <p className="empty">Создайте набор для совместной проверки товаров.</p>
+        <EmptyState
+          description="Создайте набор для совместной проверки товаров"
+          icon={Package}
+          title="Нет выбранного набора"
+        />
       )}
     </section>
   );

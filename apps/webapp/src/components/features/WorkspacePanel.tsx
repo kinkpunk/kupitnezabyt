@@ -1,9 +1,11 @@
 "use client";
 
-import { Crown, Send, UserMinus, Users } from "lucide-react";
+import { Crown, Send, UserMinus } from "lucide-react";
 
 import { formatDate } from "../../lib/format";
 import { formatWorkspaceMemberName } from "../../hooks/useAppState";
+import { ProductRow, SectionHeader } from "../common";
+import { Button } from "../ui/Button";
 import type {
   WorkspaceInvitation,
   WorkspaceMember,
@@ -47,28 +49,23 @@ export function WorkspacePanel({
 }) {
   if (!activeWorkspace) {
     return (
-      <section className="workspace-panel" aria-label="Поделиться списком">
-        <div className="section-heading">
-          <div>
-            <h2>Поделиться списком</h2>
-            <p>Не удалось загрузить данные списка, поэтому приглашения пока недоступны.</p>
-            <p>
-              Проверьте, что backend развернут с поддержкой совместных списков, и обновите
-              списки.
-            </p>
-          </div>
-          <Users aria-hidden="true" size={22} />
-        </div>
+      <section className="ds-settings-section" aria-label="Поделиться списком">
+        <SectionHeader
+          title="Поделиться списком"
+          subtitle="Не удалось загрузить данные списка, поэтому приглашения пока недоступны. Проверьте, что backend развернут с поддержкой совместных списков, и обновите списки."
+        />
         {workspaceLoadFailed ? (
-          <p className="workspace-warning">Сервис списков сейчас не ответил.</p>
+          <p className="ds-inline-message ds-inline-message--warning">
+            Сервис списков сейчас не ответил.
+          </p>
         ) : null}
-        <button
-          className="ghost-button workspace-retry-button"
-          type="button"
+        <Button
+          className="ds-workspace-retry-button"
+          variant="ghost"
           onClick={() => void onRetryLoad()}
         >
           Обновить списки
-        </button>
+        </Button>
       </section>
     );
   }
@@ -79,30 +76,26 @@ export function WorkspacePanel({
     VIEWER: "Просмотр"
   };
 
-  return (
-    <section className="workspace-panel" aria-label="Поделиться списком">
-      <div className="section-heading">
-        <div>
-          <h2>Поделиться списком</h2>
-          <p>
-            {activeWorkspace.name} · {workspaceRoleLabels[activeWorkspace.role]} ·{" "}
-            {activeWorkspace.memberCount}{" "}
-            {activeWorkspace.memberCount === 1 ? "участник" : "участника"}
-          </p>
-          <p>
-            Приглашенный пользователь получит доступ ко всему этому списку. Сейчас можно
-            приглашать только email, который уже входил в сервис.
-          </p>
-        </div>
-        <Users aria-hidden="true" size={22} />
-      </div>
+  const memberCountLabel =
+    activeWorkspace.memberCount === 1 ? "участник" : "участника";
 
-      {workspaceMessage ? <p className="success-message">{workspaceMessage}</p> : null}
+  return (
+    <section className="ds-settings-section" aria-label="Поделиться списком">
+      <SectionHeader
+        title="Поделиться списком"
+        subtitle={`${activeWorkspace.name} · ${workspaceRoleLabels[activeWorkspace.role]} · ${activeWorkspace.memberCount} ${memberCountLabel}`}
+      />
+
+      {workspaceMessage ? (
+        <p className="ds-inline-message ds-inline-message--success">
+          {workspaceMessage}
+        </p>
+      ) : null}
 
       {canManageActiveWorkspace ? (
         <>
           <form
-            className="workspace-invite-form"
+            className="ds-workspace-invite-form"
             onSubmit={(event) => {
               event.preventDefault();
               void onCreateInvitation();
@@ -116,7 +109,7 @@ export function WorkspacePanel({
               disabled={workspaceAction === "invite"}
               onChange={(event) => onInviteEmailChange(event.target.value)}
             />
-            <button
+            <Button
               type="submit"
               aria-label="Отправить приглашение"
               disabled={workspaceAction === "invite" || !workspaceInviteEmail.trim()}
@@ -125,108 +118,115 @@ export function WorkspacePanel({
               <span>
                 {workspaceAction === "invite" ? "Отправляем..." : "Поделиться"}
               </span>
-            </button>
+            </Button>
           </form>
           {devInvitationLink ? (
-            <p className="dev-link">
+            <p className="ds-workspace-dev-link">
               Dev-ссылка: <span>{devInvitationLink}</span>
             </p>
           ) : null}
 
-          <div className="workspace-lists">
-            <div>
-              <h3>Участники</h3>
-              <div className="workspace-list">
+          <div className="ds-workspace-lists">
+            <section aria-label="Участники">
+              <SectionHeader title="Участники" />
+              <div className="ds-product-list">
                 {isLoadingWorkspaceAccess ? (
-                  <p className="empty">Загружаем участников...</p>
+                  <p className="ds-empty">Загружаем участников...</p>
                 ) : workspaceLoadFailed ? (
-                  <p className="empty">Не удалось загрузить участников. Обновите доступ.</p>
+                  <p className="ds-empty">
+                    Не удалось загрузить участников. Обновите доступ.
+                  </p>
                 ) : workspaceMembers.length ? (
                   workspaceMembers.map((member) => {
                     const isCurrentOwner = member.user.id === activeWorkspace.ownerId;
 
                     return (
-                      <article className="workspace-row" key={member.id}>
-                        <div>
-                          <h4>{formatWorkspaceMemberName(member)}</h4>
-                          <p>{workspaceRoleLabels[member.role]}</p>
-                        </div>
-                        {!isCurrentOwner ? (
-                          <div className="workspace-row-actions">
-                            <button
-                              className="ghost-button"
-                              type="button"
-                              disabled={workspaceAction !== null}
-                              onClick={() => void onTransferOwnership(member)}
-                            >
-                              <Crown aria-hidden="true" size={17} />
-                              <span>
-                                {workspaceAction === "transfer" ? "Передаем..." : "Передать"}
-                              </span>
-                            </button>
-                            <button
-                              className="ghost-button danger-button icon-button"
-                              type="button"
-                              aria-label={`Удалить доступ для ${formatWorkspaceMemberName(member)}`}
-                              disabled={workspaceAction !== null}
-                              onClick={() => void onRemoveMember(member)}
-                            >
-                              <UserMinus aria-hidden="true" size={17} />
-                            </button>
-                          </div>
-                        ) : null}
-                      </article>
+                      <ProductRow
+                        key={member.id}
+                        actions={
+                          !isCurrentOwner ? (
+                            <>
+                              <Button
+                                size="compact"
+                                variant="ghost"
+                                disabled={workspaceAction !== null}
+                                onClick={() => void onTransferOwnership(member)}
+                              >
+                                <Crown aria-hidden="true" size={16} />
+                                <span>
+                                  {workspaceAction === "transfer"
+                                    ? "Передаем..."
+                                    : "Передать"}
+                                </span>
+                              </Button>
+                              <Button
+                                size="compact"
+                                variant="icon"
+                                aria-label={`Удалить доступ для ${formatWorkspaceMemberName(member)}`}
+                                title="Удалить доступ"
+                                disabled={workspaceAction !== null}
+                                onClick={() => void onRemoveMember(member)}
+                              >
+                                <UserMinus aria-hidden="true" size={16} />
+                              </Button>
+                            </>
+                          ) : null
+                        }
+                        subtitle={workspaceRoleLabels[member.role]}
+                        title={formatWorkspaceMemberName(member)}
+                      />
                     );
                   })
                 ) : (
-                  <p className="empty">Участников пока нет.</p>
+                  <p className="ds-empty">Участников пока нет.</p>
                 )}
               </div>
-            </div>
+            </section>
 
-            <div>
-              <h3>Приглашения</h3>
-              <div className="workspace-list">
+            <section aria-label="Приглашения">
+              <SectionHeader title="Приглашения" />
+              <div className="ds-product-list">
                 {isLoadingWorkspaceAccess ? (
-                  <p className="empty">Загружаем приглашения...</p>
+                  <p className="ds-empty">Загружаем приглашения...</p>
                 ) : workspaceLoadFailed ? (
-                  <button
-                    className="ghost-button workspace-retry-button"
-                    type="button"
+                  <Button
+                    className="ds-workspace-retry-button"
+                    variant="ghost"
                     onClick={() => void onRetryLoad()}
                   >
                     Обновить доступ
-                  </button>
+                  </Button>
                 ) : workspaceInvitations.length ? (
                   workspaceInvitations.map((invitation) => (
-                    <article className="workspace-row" key={invitation.id}>
-                      <div>
-                        <h4>{invitation.email}</h4>
-                        <p>До {formatDate(invitation.expiresAt)}</p>
-                      </div>
-                      <button
-                        className="ghost-button"
-                        type="button"
-                        disabled={workspaceAction !== null}
-                        onClick={() => void onRevokeInvitation(invitation)}
-                      >
-                        {workspaceAction === `revoke:${invitation.id}`
-                          ? "Отзываем..."
-                          : "Отозвать"}
-                      </button>
-                    </article>
+                    <ProductRow
+                      key={invitation.id}
+                      actions={
+                        <Button
+                          size="compact"
+                          variant="ghost"
+                          disabled={workspaceAction !== null}
+                          onClick={() => void onRevokeInvitation(invitation)}
+                        >
+                          {workspaceAction === `revoke:${invitation.id}`
+                            ? "Отзываем..."
+                            : "Отозвать"}
+                        </Button>
+                      }
+                      subtitle={`До ${formatDate(invitation.expiresAt)}`}
+                      title={invitation.email}
+                    />
                   ))
                 ) : (
-                  <p className="empty">Активных приглашений нет.</p>
+                  <p className="ds-empty">Активных приглашений нет.</p>
                 )}
               </div>
-            </div>
+            </section>
           </div>
         </>
       ) : (
-        <p className="empty">
-          Управлять доступом может владелец списка. Вы можете работать с товарами в
-          текущем списке.
+        <p className="ds-empty">
+          Управлять доступом может владелец списка. Вы можете работать с товарами
+          в текущем списке.
         </p>
       )}
     </section>

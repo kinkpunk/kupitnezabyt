@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import React, { type ReactNode } from "react";
 
-import { Button } from "../../ui/Button";
+import { Button } from "../ui/Button";
 
 export interface BottomSheetProps {
   show: boolean;
@@ -35,7 +35,7 @@ export function BottomSheet({ show, title, onClose, children }: BottomSheetProps
             <strong>{title}</strong>
             <Button
               aria-label="Закрыть"
-              className="ds-button--icon--small"
+              size="compact"
               variant="icon"
               onClick={onClose}
             >

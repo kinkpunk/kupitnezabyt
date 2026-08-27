@@ -17,7 +17,12 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const baseClass = `ds-button ds-button--${variant}`;
-  const sizeClass = variant === "primary" ? ` ds-button--${size}` : "";
+  const sizeClass =
+    size === "compact"
+      ? variant === "icon"
+        ? " ds-button--icon--small"
+        : " ds-button--compact"
+      : "";
   return (
     <button className={`${baseClass}${sizeClass} ${className}`.trim()} type="button" {...rest}>
       {children}

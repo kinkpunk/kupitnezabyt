@@ -4,7 +4,7 @@ import { ErrorNotice } from "../components/ui/ErrorNotice";
 import { ToastNotice } from "../components/ui/ToastNotice";
 import { LoginScreen } from "../components/features/LoginScreen";
 import { OnboardingModal } from "../components/features/OnboardingModal";
-import { TopBar } from "../components/TopBar";
+import { AppHeader } from "../components/common";
 import { BottomNav } from "../components/BottomNav";
 import { MenuSheet } from "../components/MenuSheet";
 import { NotificationSheet } from "../components/NotificationSheet";
@@ -129,8 +129,6 @@ export default function Home() {
             searchQuery={state.searchQuery}
             onSearchQueryChange={state.setSearchQuery}
             onSearch={state.handleSearchItems}
-            notificationCount={state.notificationCount}
-            onBellClick={state.handleBellClick}
             onSelectSettings={() => state.handleSelectTab("settings")}
             onSelectCategory={(categoryId) => {
               state.clearSearchSession();
@@ -225,6 +223,8 @@ export default function Home() {
             searchQuery={state.searchQuery}
             hasSearched={state.hasSearched}
             searchResults={state.searchResults}
+            onSearchQueryChange={state.setSearchQuery}
+            onSearch={state.handleSearchItems}
             onClearSearchSession={state.clearSearchSession}
             onSelectCategory={state.setSelectedCategoryId}
             onSelectItemsTab={() => state.handleSelectTab("items")}
@@ -259,6 +259,8 @@ export default function Home() {
             categories={state.categories}
             groups={state.groups}
             items={state.items}
+            theme={state.theme}
+            onThemeChange={state.setTheme}
             reminderSettingsMessage={state.reminderSettingsMessage}
             savingReminderKeys={state.savingReminderKeys}
             reminderDrafts={state.reminderDrafts}
@@ -282,19 +284,10 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      {state.activeTab !== "items" ? (
-        <TopBar
-          searchQuery={state.searchQuery}
-          onSearchQueryChange={state.setSearchQuery}
-          onSearch={state.handleSearchItems}
-          theme={state.theme}
-          themeButtonLabel={state.themeButtonLabel}
-          onToggleTheme={state.toggleTheme}
-          notificationCount={state.notificationCount}
-          notificationsViewed={state.notificationsViewed}
-          onBellClick={state.handleBellClick}
-        />
-      ) : null}
+      <AppHeader
+        notificationCount={state.notificationCount}
+        onBellClick={state.handleBellClick}
+      />
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
       <ToastNotice message={state.toastMessage} onClose={() => state.setToastMessage(null)} />
 

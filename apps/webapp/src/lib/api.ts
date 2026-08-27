@@ -358,10 +358,10 @@ export function getArchivedItems(token: string): Promise<Item[]> {
 
 export function getCategorySortMode(): CategorySortMode {
   if (typeof window === "undefined") {
-    return "manual";
+    return "status";
   }
   const value = window.localStorage.getItem(categorySortModeStorageKey);
-  return value === "status" ? "status" : "manual";
+  return value === "manual" ? "manual" : "status";
 }
 
 export function setCategorySortMode(mode: CategorySortMode): void {
