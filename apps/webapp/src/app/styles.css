@@ -698,8 +698,10 @@ select {
 
 .ds-category-tabs {
   display: flex;
+  align-items: center;
   gap: 8px;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 2px 0;
   scrollbar-width: none;
 }
