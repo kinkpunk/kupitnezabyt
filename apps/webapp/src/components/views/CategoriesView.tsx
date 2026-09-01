@@ -248,7 +248,7 @@ export function CategoriesView({
               aria-label="Поделиться списком"
               size="compact"
               title="Поделиться списком"
-              variant="icon"
+              variant="ghost"
               onClick={onSelectSettings}
             >
               <Users aria-hidden="true" size={18} />
@@ -258,7 +258,7 @@ export function CategoriesView({
             aria-label="Новая категория"
             size="compact"
             title="Новая категория"
-            variant="icon"
+            variant="ghost"
             onClick={() => setShowCategoryForm(true)}
           >
             <Plus aria-hidden="true" size={18} />
