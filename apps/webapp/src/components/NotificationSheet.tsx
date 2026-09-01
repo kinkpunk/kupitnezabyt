@@ -1,6 +1,8 @@
 "use client";
 
-import { BottomSheet } from "./common";
+import { Bell, ShoppingCart } from "lucide-react";
+
+import { BottomSheet, EmptyState } from "./common";
 import { formatDate } from "../lib/format";
 import { reminderEntityLabels } from "../lib/ui";
 import type { InAppReminder, ShoppingListEntry } from "../lib/types";
@@ -29,67 +31,89 @@ export function NotificationSheet({
   return (
     <BottomSheet show={show} title="Уведомления" onClose={onClose}>
       {notificationCount ? (
-        <div className="ds-bottom-sheet__content">
+        <>
           {shoppingList.length ? (
-            <section className="ds-notification-list" aria-label="Что купить">
-              <h3 className="ds-notification-list__title">Купить</h3>
-              {shoppingList.map((entry) => (
-                <button
-                  key={entry.id}
-                  className="ds-notification-row"
-                  type="button"
-                  onClick={() => onOpenShoppingEntry(entry)}
-                >
-                  <span className="ds-notification-row__title">{entry.title}</span>
-                  <span className="ds-notification-row__meta">
-                    {entry.category?.name ? <span>{entry.category.name}</span> : null}
-                    <span
-                      className={
-                        entry.priority === "URGENT"
-                          ? "ds-notification-badge ds-notification-badge--urgent"
-                          : "ds-notification-badge"
-                      }
+            <section className="ds-notification-group" aria-label="Что купить">
+              <h3 className="ds-notification-group__title">Купить</h3>
+              <div className="ds-bottom-sheet__actions">
+                {shoppingList.map((entry) => {
+                  const isUrgent = entry.priority === "URGENT";
+
+                  return (
+                    <button
+                      key={entry.id}
+                      className="ds-bottom-sheet__action ds-bottom-sheet__action--multiline"
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenShoppingEntry(entry);
+                      }}
                     >
-                      {entry.priority === "URGENT" ? "Срочно" : "Купить"}
-                    </span>
-                  </span>
-                </button>
-              ))}
+                      <ShoppingCart aria-hidden="true" size={18} strokeWidth={2.25} />
+                      <span className="ds-notification-action__text">
+                        <span className="ds-notification-action__title">{entry.title}</span>
+                        {entry.category?.name ? (
+                          <span className="ds-notification-action__meta">{entry.category.name}</span>
+                        ) : null}
+                      </span>
+                      <span
+                        className={
+                          isUrgent
+                            ? "ds-notification-badge ds-notification-badge--urgent"
+                            : "ds-notification-badge"
+                        }
+                      >
+                        {isUrgent ? "Срочно" : "Купить"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
           {inAppReminders.length ? (
-            <section className="ds-notification-list" aria-label="Что проверить">
-              <h3 className="ds-notification-list__title">Проверить</h3>
-              {inAppReminders.map((reminder) => (
-                <button
-                  key={reminder.id}
-                  className="ds-notification-row"
-                  type="button"
-                  onClick={() => onOpenReminder(reminder)}
-                >
-                  <span className="ds-notification-row__title">{reminder.title}</span>
-                  <span className="ds-notification-row__meta">
-                    <span>
-                      {reminderEntityLabels[reminder.entityType]} ·{" "}
-                      {formatDate(reminder.nextCheckAt)}
-                    </span>
-                    <span
-                      className={
-                        reminder.timing === "DUE"
-                          ? "ds-notification-badge ds-notification-badge--urgent"
-                          : "ds-notification-badge"
-                      }
+            <section className="ds-notification-group" aria-label="Что проверить">
+              <h3 className="ds-notification-group__title">Проверить</h3>
+              <div className="ds-bottom-sheet__actions">
+                {inAppReminders.map((reminder) => {
+                  const isDue = reminder.timing === "DUE";
+
+                  return (
+                    <button
+                      key={reminder.id}
+                      className="ds-bottom-sheet__action ds-bottom-sheet__action--multiline"
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenReminder(reminder);
+                      }}
                     >
-                      {reminder.timing === "DUE" ? "Пора проверить" : "Скоро"}
-                    </span>
-                  </span>
-                </button>
-              ))}
+                      <Bell aria-hidden="true" size={18} strokeWidth={2.25} />
+                      <span className="ds-notification-action__text">
+                        <span className="ds-notification-action__title">{reminder.title}</span>
+                        <span className="ds-notification-action__meta">
+                          {reminderEntityLabels[reminder.entityType]} ·{" "}
+                          {formatDate(reminder.nextCheckAt)}
+                        </span>
+                      </span>
+                      <span
+                        className={
+                          isDue
+                            ? "ds-notification-badge ds-notification-badge--urgent"
+                            : "ds-notification-badge"
+                        }
+                      >
+                        {isDue ? "Пора проверить" : "Скоро"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
           ) : null}
-        </div>
+        </>
       ) : (
-        <p className="ds-empty">Нет уведомлений.</p>
+        <EmptyState icon={Bell} title="Нет уведомлений" />
       )}
     </BottomSheet>
   );
