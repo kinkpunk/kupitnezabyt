@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Crown, Send, UserMinus } from "lucide-react";
 
 import { formatDate } from "../../lib/format";

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Bell, ShoppingCart } from "lucide-react";
 
 import { BottomSheet, EmptyState } from "./common";

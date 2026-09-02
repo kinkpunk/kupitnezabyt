@@ -25,6 +25,7 @@ export function BottomSheet({ show, title, onClose, children }: BottomSheetProps
       onClick={onClose}
     >
       <section
+        aria-label={title}
         className="ds-bottom-sheet"
         role="dialog"
         onClick={(event) => event.stopPropagation()}

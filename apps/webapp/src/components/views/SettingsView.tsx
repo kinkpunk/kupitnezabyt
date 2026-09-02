@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { formatDate, formatError } from "../../lib/format";
 import { WorkspacePanel } from "../features/WorkspacePanel";
 import { ReminderSettingsSection } from "../ui/ReminderSettingsSection";

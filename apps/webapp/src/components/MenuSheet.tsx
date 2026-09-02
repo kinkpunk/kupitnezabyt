@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Archive, Boxes, Settings, ShoppingCart } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 

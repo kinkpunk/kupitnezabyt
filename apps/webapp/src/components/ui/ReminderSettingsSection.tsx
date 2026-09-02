@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import type { InAppReminder } from "../../lib/types";
 import { getReminderDraftKey } from "../../lib/reminder-draft";
 import { SectionHeader } from "../common";
