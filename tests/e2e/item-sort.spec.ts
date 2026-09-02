@@ -41,64 +41,68 @@ test("browser user can sort category items by status", async ({ page, request },
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
-  // Create items in an order that does not match status sorting.
-  await page.getByRole("button", { name: "Новый товар" }).click();
-  await page.getByLabel("Название товара").fill(inStockItemName);
-  await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: inStockItemName })).toBeVisible();
-  await page
-    .getByRole("combobox", { name: `Статус товара ${inStockItemName}` })
-    .selectOption("IN_STOCK");
+  // Create items in an order that does not match status sorting. The status
+  // chip UI only cycles Нет/Есть/Мало, so URGENT is set through the API the
+  // same way the webapp calls it; sorting itself is still exercised via UI.
+  for (const name of [inStockItemName, lowItemName, needBuyItemName, urgentItemName]) {
+    await page.getByRole("button", { name: "Новый товар" }).click();
+    await page.getByLabel("Название товара").fill(name);
+    await page.getByLabel("Название товара").press("Enter");
+    await expect(page.locator(".ds-product-row").filter({ hasText: name })).toBeVisible();
+  }
+  await setItemStatusViaApi(request, page, inStockItemName, "IN_STOCK");
+  await setItemStatusViaApi(request, page, lowItemName, "LOW");
+  await setItemStatusViaApi(request, page, needBuyItemName, "NEED_BUY");
+  await setItemStatusViaApi(request, page, urgentItemName, "URGENT");
 
-  await page.getByRole("button", { name: "Новый товар" }).click();
-  await page.getByLabel("Название товара").fill(lowItemName);
-  await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: lowItemName })).toBeVisible();
-  await page.getByRole("combobox", { name: `Статус товара ${lowItemName}` }).selectOption("LOW");
+  // Reload so the category refetches the items with their new statuses.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await mainNavigation.getByRole("button", { name: "Категории" }).click();
+  await page.getByRole("tab", { name: categoryName }).click();
 
-  await page.getByRole("button", { name: "Новый товар" }).click();
-  await page.getByLabel("Название товара").fill(needBuyItemName);
-  await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: needBuyItemName })).toBeVisible();
-  await page
-    .getByRole("combobox", { name: `Статус товара ${needBuyItemName}` })
-    .selectOption("NEED_BUY");
+  // The default sort mode is "status": items load sorted by urgency.
+  const itemRows = page.locator(".ds-product-row");
+  await expect(itemRows.nth(0)).toContainText(urgentItemName);
+  await expect(itemRows.nth(1)).toContainText(needBuyItemName);
+  await expect(itemRows.nth(2)).toContainText(lowItemName);
+  await expect(itemRows.nth(3)).toContainText(inStockItemName);
 
-  await page.getByRole("button", { name: "Новый товар" }).click();
-  await page.getByLabel("Название товара").fill(urgentItemName);
-  await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: urgentItemName })).toBeVisible();
-  await page
-    .getByRole("combobox", { name: `Статус товара ${urgentItemName}` })
-    .selectOption("URGENT");
+  // Reorder handles should be hidden in status sort mode.
+  await expect(page.locator(".ds-product-row__reorder")).toHaveCount(0);
 
-  // Switch to status sorting and wait for the sorted items to load.
+  // Switch to manual order through the item sheet, then back to status.
+  await itemRows.first().getByRole("button", { name: "Ещё" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Изменить порядок" }).click();
+  // In reorder mode the row itself opens the move sheet; "Готово" leaves the
+  // manual order in place.
+  await page.getByRole("button", { name: inStockItemName }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Готово" }).click();
+  await expect(itemRows.nth(0)).toContainText(inStockItemName);
+  await expect(itemRows.nth(1)).toContainText(lowItemName);
+  await expect(itemRows.nth(2)).toContainText(needBuyItemName);
+  await expect(itemRows.nth(3)).toContainText(urgentItemName);
+
+  // Back in manual mode the sheet offers status sorting again.
   const sortedItemsResponse = page.waitForResponse(
     (response) => response.url().includes("/api/items?sort=status") && response.status() === 200
   );
-  await page.getByRole("group", { name: "Сортировка товаров" }).getByRole("button", { name: "По статусу" }).click();
+  await itemRows.first().getByRole("button", { name: "Ещё" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Сортировать по статусу" }).click();
   await sortedItemsResponse;
-
-  const itemCards = page.locator("article.item-card");
-  await expect(itemCards.nth(0)).toContainText(urgentItemName);
-  await expect(itemCards.nth(1)).toContainText(needBuyItemName);
-  await expect(itemCards.nth(2)).toContainText(lowItemName);
-  await expect(itemCards.nth(3)).toContainText(inStockItemName);
-
-  // Reorder arrows should be hidden in status sort mode.
-  await expect(
-    page.getByRole("button", { name: `Переместить товар ${urgentItemName} ниже` })
-  ).not.toBeVisible();
+  await expect(itemRows.nth(0)).toContainText(urgentItemName);
+  await expect(itemRows.nth(1)).toContainText(needBuyItemName);
+  await expect(itemRows.nth(2)).toContainText(lowItemName);
+  await expect(itemRows.nth(3)).toContainText(inStockItemName);
 
   // Reload persists the choice from localStorage.
   await page.reload({ waitUntil: "domcontentloaded" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
   await page.getByRole("tab", { name: categoryName }).click();
-  const reloadedCards = page.locator("article.item-card");
-  await expect(reloadedCards.nth(0)).toContainText(urgentItemName);
-  await expect(reloadedCards.nth(1)).toContainText(needBuyItemName);
-  await expect(reloadedCards.nth(2)).toContainText(lowItemName);
-  await expect(reloadedCards.nth(3)).toContainText(inStockItemName);
+  const reloadedRows = page.locator(".ds-product-row");
+  await expect(reloadedRows.nth(0)).toContainText(urgentItemName);
+  await expect(reloadedRows.nth(1)).toContainText(needBuyItemName);
+  await expect(reloadedRows.nth(2)).toContainText(lowItemName);
+  await expect(reloadedRows.nth(3)).toContainText(inStockItemName);
 
   const token = await page.evaluate(() => window.localStorage.getItem("kupitnezabyt.token"));
   if (token) {
@@ -109,6 +113,31 @@ test("browser user can sort category items by status", async ({ page, request },
     });
   }
 });
+
+async function setItemStatusViaApi(
+  request: APIRequestContext,
+  page: Page,
+  itemName: string,
+  status: string
+): Promise<void> {
+  const token = await page.evaluate(() => window.localStorage.getItem("kupitnezabyt.token"));
+  if (!token) {
+    throw new Error("Token was not found in localStorage");
+  }
+  const headers = { authorization: `Bearer ${token}` };
+  const listResponse = await request.get(`${apiBaseUrl}/api/items`, { headers });
+  expect(listResponse.status()).toBe(200);
+  const items = (await listResponse.json()) as Array<{ id: string; name: string }>;
+  const item = items.find((entry) => entry.name === itemName);
+  if (!item) {
+    throw new Error(`Item "${itemName}" was not found via API`);
+  }
+  const statusResponse = await request.post(`${apiBaseUrl}/api/items/${item.id}/status`, {
+    headers,
+    data: { status }
+  });
+  expect(statusResponse.status()).toBe(200);
+}
 
 async function waitForApiHealth(request: APIRequestContext): Promise<void> {
   const deadline = Date.now() + 15_000;

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, request as playwrightRequest, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
 const apiBaseUrl =
@@ -11,8 +11,9 @@ test.describe("Categories screen visual regression", () => {
   let request: APIRequestContext;
   let cleanupToken: string | null = null;
 
-  test.beforeAll(async ({ browser, request: apiRequest }, testInfo: TestInfo) => {
-    request = apiRequest;
+  test.beforeAll(async ({ browser }, testInfo: TestInfo) => {
+    // Создаём контекст вручную: фикстура { request } из beforeAll недоступна в afterAll.
+    request = await playwrightRequest.newContext({ baseURL: apiBaseUrl });
     page = await browser.newPage();
 
     await waitForApiHealth(request);
@@ -52,6 +53,7 @@ test.describe("Categories screen visual regression", () => {
         }
       });
     }
+    await request.dispose();
     await page.close();
   });
 
@@ -83,7 +85,8 @@ test.describe("Categories screen visual regression", () => {
     await page.getByRole("button", { name: "Создать" }).click();
     await expect(page.getByRole("tab", { name: "Дом" })).toBeVisible();
 
-    // Еда is selected (active), others are inactive.
+    // После создания категории автоматически выбирается последняя, поэтому Еда выбираем явно.
+    await page.getByRole("tab", { name: "Еда" }).click();
     await expect(page.getByRole("tab", { name: "Еда" })).toHaveAttribute("aria-selected", "true");
     await expect(page).toHaveScreenshot("categories-tabs.png");
   });
@@ -94,9 +97,9 @@ test.describe("Categories screen visual regression", () => {
     await addItemWithStatus(page, "Хлеб", 1); // "Есть"
     await addItemWithStatus(page, "Сыр", 2); // "Мало"
 
-    await expect(page.getByText("Молоко")).toBeVisible();
-    await expect(page.getByText("Хлеб")).toBeVisible();
-    await expect(page.getByText("Сыр")).toBeVisible();
+    await expect(page.getByText("Молоко", { exact: true })).toBeVisible();
+    await expect(page.getByText("Хлеб", { exact: true })).toBeVisible();
+    await expect(page.getByText("Сыр", { exact: true })).toBeVisible();
 
     await expect(page).toHaveScreenshot("categories-statuses.png");
   });
@@ -175,7 +178,9 @@ async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   }
 
   await startButton.click();
-  await page.getByRole("button", { name: "Продолжить" }).click();
+  // Пропускаем выбор стартовых категорий, чтобы не создавать лишние данные в БД
+  await page.getByRole("button", { name: "Пропустить" }).click();
+  // Пропускаем добавление стартовых товаров
   await page.getByRole("button", { name: "Пропустить" }).click();
   await page.getByRole("button", { name: "Готово" }).click();
 }

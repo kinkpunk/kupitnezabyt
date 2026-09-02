@@ -42,29 +42,37 @@ test("browser user can reorder items within a category", async ({ page, request 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: firstItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: firstItemName })).toBeVisible();
 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(secondItemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: secondItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
 
-  const firstCard = page.locator("article").filter({ hasText: firstItemName });
-  await firstCard
-    .getByRole("button", { name: `Переместить товар ${firstItemName} ниже` })
+  // Enter reorder mode from the item's "Ещё" sheet, then move the first item down.
+  const firstRow = page.locator(".ds-product-row").filter({ hasText: firstItemName });
+  await firstRow.getByRole("button", { name: "Ещё" }).click();
+  await page
+    .getByRole("dialog", { name: firstItemName })
+    .getByRole("button", { name: "Изменить порядок" })
     .click();
+  // In reorder mode the row itself opens the move sheet.
+  await page.getByRole("button", { name: firstItemName }).click();
+  const moveSheet = page.getByRole("dialog", { name: firstItemName });
+  await moveSheet.getByRole("button", { name: "Вниз" }).click();
+  await moveSheet.getByRole("button", { name: "Готово" }).click();
 
   // After moving the first item down, the second item should be first in the list.
-  const itemCards = page.locator("article.item-card");
-  await expect(itemCards.nth(0)).toContainText(secondItemName);
-  await expect(itemCards.nth(1)).toContainText(firstItemName);
+  const itemRows = page.locator(".ds-product-row");
+  await expect(itemRows.nth(0)).toContainText(secondItemName);
+  await expect(itemRows.nth(1)).toContainText(firstItemName);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
   await page.getByRole("tab", { name: categoryName }).click();
-  const reloadedCards = page.locator("article.item-card");
-  await expect(reloadedCards.nth(0)).toContainText(secondItemName);
-  await expect(reloadedCards.nth(1)).toContainText(firstItemName);
+  const reloadedRows = page.locator(".ds-product-row");
+  await expect(reloadedRows.nth(0)).toContainText(secondItemName);
+  await expect(reloadedRows.nth(1)).toContainText(firstItemName);
 
   const token = await page.evaluate(() => window.localStorage.getItem("kupitnezabyt.token"));
   if (token) {

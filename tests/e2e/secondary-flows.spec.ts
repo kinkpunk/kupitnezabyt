@@ -25,20 +25,19 @@ test("user can group items and run a group check session", async ({ page, reques
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
+  const itemRow = page.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(itemRow).toBeVisible();
 
   // Create a group and add the item to it.
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Наборы" })
     .click();
 
   await page.getByLabel("Название набора").fill(groupName);
   await page.getByLabel("Название набора").press("Enter");
-  await expect(
-    page.locator("[aria-label='Наборы']").getByRole("button", { name: new RegExp(groupName) })
-  ).toBeVisible();
+  await expect(page.getByRole("tab", { name: new RegExp(groupName) })).toBeVisible();
 
   await page.getByLabel("Товар для набора").selectOption({ label: itemName });
   await page
@@ -46,21 +45,24 @@ test("user can group items and run a group check session", async ({ page, reques
     .filter({ has: page.getByLabel("Товар для набора") })
     .getByRole("button", { name: "Добавить" })
     .click();
-  await expect(
-    page.locator("article").filter({ hasText: itemName }).getByRole("heading", { name: itemName })
-  ).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
 
   // Run the group check session to completion.
   await page.getByRole("button", { name: "Проверить" }).click();
   await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
-  const checkCard = page.locator("article.check-card");
+  const checkCard = page.locator(".ds-check-card");
   await expect(checkCard.getByRole("heading", { name: itemName })).toBeVisible();
   await checkCard.getByRole("button", { name: "Есть" }).click();
-  await expect(page.getByText("Проверка завершена.")).toBeVisible();
+  await expect(page.getByText("Проверка завершена")).toBeVisible();
 
   // The item status is updated by the completed session.
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await expect(page.getByLabel(`Статус товара ${itemName}`)).toHaveValue("IN_STOCK");
+  await expect(
+    page
+      .locator(".ds-product-row")
+      .filter({ hasText: itemName })
+      .getByRole("button", { name: /Статус: Есть/ })
+  ).toBeVisible();
 
   await cleanupUser(page, request);
 });
@@ -86,55 +88,54 @@ test("user can run a step-by-step category check and search in different ways", 
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: firstItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: firstItemName })).toBeVisible();
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(secondItemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: secondItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
 
   // Start the category check session from the category panel.
-  await page
-    .getByRole("tabpanel", { name: categoryName })
-    .getByRole("button", { name: "Проверить" })
-    .click();
+  await page.getByRole("button", { name: "Проверить" }).click();
   await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
 
   // Answer both items; the session completes automatically after the last one.
-  const checkCard = page.locator("article.check-card");
+  const checkCard = page.locator(".ds-check-card");
   await expect(checkCard).toBeVisible();
   const firstCheckedName = (await checkCard.locator("h2").textContent())?.trim() ?? "";
   await checkCard.getByRole("button", { name: "Мало" }).click();
   await expect(checkCard.locator("h2")).not.toHaveText(firstCheckedName);
   const secondCheckedName = (await checkCard.locator("h2").textContent())?.trim() ?? "";
   await checkCard.getByRole("button", { name: "Купить" }).click();
-  await expect(page.getByText("Проверка завершена.")).toBeVisible();
+  await expect(page.getByText("Проверка завершена")).toBeVisible();
 
-  const statusByItem = new Map([
-    [firstCheckedName, "LOW"],
-    [secondCheckedName, "NEED_BUY"]
+  const chipLabelByItem = new Map([
+    [firstCheckedName, "Мало"],
+    [secondCheckedName, "Нет"]
   ]);
 
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await expect(page.getByLabel(`Статус товара ${firstItemName}`)).toHaveValue(
-    statusByItem.get(firstItemName) ?? "LOW"
-  );
-  await expect(page.getByLabel(`Статус товара ${secondItemName}`)).toHaveValue(
-    statusByItem.get(secondItemName) ?? "NEED_BUY"
-  );
+  for (const [name, chipLabel] of chipLabelByItem) {
+    await expect(
+      page
+        .locator(".ds-product-row")
+        .filter({ hasText: name })
+        .getByRole("button", { name: new RegExp(`Статус: ${chipLabel}`) })
+    ).toBeVisible();
+  }
 
   // Search variant 1: a partial query matches both items.
-  const searchRegion = page.getByRole("search");
-  await searchRegion.getByLabel("Глобальный поиск").fill(runId);
-  await searchRegion.getByRole("button", { name: "Искать" }).click();
+  const searchBox = page.getByRole("searchbox", { name: "Поиск" });
+  await searchBox.fill(runId);
+  await searchBox.press("Enter");
   await expect(page.getByRole("heading", { name: "Поиск" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: firstItemName })).toBeVisible();
-  await expect(page.getByRole("heading", { name: secondItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: firstItemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
 
   // Search variant 2: a query without matches shows the empty state.
-  await searchRegion.getByLabel("Глобальный поиск").fill(`нет-такого-${runId}`);
-  await searchRegion.getByRole("button", { name: "Искать" }).click();
-  await expect(page.getByText("Ничего не найдено.")).toBeVisible();
+  await searchBox.fill(`нет-такого-${runId}`);
+  await searchBox.press("Enter");
+  await expect(page.getByText("Ничего не найдено")).toBeVisible();
 
   await cleanupUser(page, request);
 });
@@ -159,24 +160,26 @@ test("user can archive and restore an item and export their data as JSON", async
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
+  const itemRow = page.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(itemRow).toBeVisible();
 
   // Archive the item and find it in the archive section.
   page.once("dialog", (dialog) => void dialog.accept());
-  await page.getByLabel(`Архивировать товар ${itemName}`).click();
+  await itemRow.getByRole("button", { name: "Ещё" }).click();
+  await page.getByRole("dialog", { name: itemName }).getByRole("button", { name: "В архив" }).click();
   // Archiving removes the item from the active category immediately; the
   // archive is loaded separately below to verify the persisted result.
-  await expect(page.getByRole("heading", { name: itemName })).toHaveCount(0);
+  await expect(itemRow).toHaveCount(0);
 
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Архив" })
     .click();
   const archivedItem = page
     .getByLabel("Архивные товары")
-    .locator("article")
+    .locator(".ds-product-row")
     .filter({ hasText: itemName });
   await expect(archivedItem).toBeVisible();
 
@@ -184,12 +187,12 @@ test("user can archive and restore an item and export their data as JSON", async
   await archivedItem.getByRole("button", { name: "Вернуть" }).click();
   await expect(archivedItem).toHaveCount(0);
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
 
   // Export user data and verify the downloaded JSON contains the item.
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Настройки" })
     .click();
   const downloadPromise = page.waitForEvent("download");
@@ -239,6 +242,9 @@ async function cleanupUser(page: Page, request: APIRequestContext): Promise<void
 async function createCategory(page: Page, categoryName: string): Promise<void> {
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();
+  // Wait for the tablist so the heading (with the "Новая" button) has settled
+  // after the categories refetch; clicking too early races a re-render.
+  await expect(page.getByRole("tablist", { name: "Категории" })).toBeVisible();
   const newCategoryButton = page.getByRole("button", { name: "Новая" });
   await expect(newCategoryButton).toBeVisible();
   await newCategoryButton.click();

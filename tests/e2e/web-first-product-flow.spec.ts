@@ -47,24 +47,27 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await page.getByRole("button", { name: "Новый товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
-  await expect(page.getByRole("heading", { name: itemName })).toBeVisible();
-  const createdItem = page.locator("article").filter({ hasText: itemName });
-  await expect(createdItem.getByRole("combobox")).toHaveValue("NEED_BUY");
+  const createdItem = page.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(createdItem).toBeVisible();
+  // A new item starts in the "Нет" (NEED_BUY) status chip.
+  await expect(createdItem.getByRole("button", { name: /Статус: Нет/ })).toBeVisible();
 
   await mainNavigation.getByRole("button", { name: "Меню" }).click();
   await page
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Покупки" })
     .click();
-  const shoppingRow = page.locator("article").filter({ hasText: itemName });
+  const shoppingRow = page.locator(".ds-product-row").filter({ hasText: itemName });
   await expect(shoppingRow).toBeVisible();
   await shoppingRow.getByRole("button", { name: "Куплено" }).click();
   await expect(shoppingRow).toHaveCount(0);
 
-  await page.getByRole("search").getByLabel("Глобальный поиск").fill(itemName);
-  await page.getByRole("button", { name: "Искать" }).click();
+  const searchBox = page.getByRole("searchbox", { name: "Поиск" });
+  await mainNavigation.getByRole("button", { name: "Категории" }).click();
+  await searchBox.fill(itemName);
+  await searchBox.press("Enter");
   await expect(page.getByRole("heading", { name: "Поиск" })).toBeVisible();
-  await expect(page.locator("article").filter({ hasText: itemName })).toBeVisible();
+  await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
 
   const token = await page.evaluate(() => window.localStorage.getItem("kupitnezabyt.token"));
   if (token) {

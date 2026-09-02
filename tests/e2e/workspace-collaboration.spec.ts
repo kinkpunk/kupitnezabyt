@@ -34,8 +34,10 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
   await ownerPage.getByRole("button", { name: "Новый товар" }).click();
   await ownerPage.getByLabel("Название товара").fill(itemName);
   await ownerPage.getByLabel("Название товара").press("Enter");
-  await expect(ownerPage.getByRole("heading", { name: itemName })).toBeVisible();
-  await expect(ownerPage.getByText("Купить").first()).toBeVisible();
+  const ownerItemRow = ownerPage.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(ownerItemRow).toBeVisible();
+  // A new item starts in the "Нет" (NEED_BUY) status chip.
+  await expect(ownerItemRow.getByRole("button", { name: /Статус: Нет/ })).toBeVisible();
 
   // The invitee must already be a verified user before the invitation is sent.
   await createVerifiedUser(request, memberEmail);
@@ -79,26 +81,26 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
   await memberNavigation.getByRole("button", { name: "Категории" }).click();
   await expect(memberPage.getByRole("tab", { name: categoryName })).toBeVisible();
   await memberPage.getByRole("tab", { name: categoryName }).click();
-  await expect(memberPage.getByRole("heading", { name: itemName })).toBeVisible({
+  const memberItem = memberPage.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(memberItem).toBeVisible({
     timeout: 15_000
   });
 
-  // Member changes the item status to IN_STOCK.
-  const memberItem = memberPage.locator("article").filter({ hasText: itemName });
-  await memberItem.getByRole("combobox").selectOption("IN_STOCK");
-  await expect(memberItem.getByRole("combobox")).toHaveValue("IN_STOCK");
+  // Member changes the item status to IN_STOCK ("Нет" chip cycles to "Есть").
+  await memberItem.getByRole("button", { name: /^Статус:/ }).click();
+  await expect(memberItem.getByRole("button", { name: /Статус: Есть/ })).toBeVisible();
 
   // Owner refreshes and sees the change made by the member.
   await ownerPage.reload({ waitUntil: "domcontentloaded" });
   await ownerNavigation.getByRole("button", { name: "Категории" }).click();
   await ownerPage.getByRole("tab", { name: categoryName }).click();
-  const ownerItem = ownerPage.locator("article").filter({ hasText: itemName });
-  await expect(ownerItem.getByRole("combobox")).toHaveValue("IN_STOCK");
+  const ownerItem = ownerPage.locator(".ds-product-row").filter({ hasText: itemName });
+  await expect(ownerItem.getByRole("button", { name: /Статус: Есть/ })).toBeVisible();
 
   // Owner removes the member from the workspace.
   await ownerNavigation.getByRole("button", { name: "Меню" }).click();
   await ownerPage
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Настройки" })
     .click();
   ownerPage.on("dialog", (dialog) => void dialog.accept());
@@ -111,7 +113,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
   await memberPage.reload({ waitUntil: "domcontentloaded" });
   await memberNavigation.getByRole("button", { name: "Категории" }).click();
   await expect(memberPage.getByRole("tab", { name: categoryName })).toHaveCount(0);
-  await expect(memberPage.getByRole("heading", { name: itemName })).toHaveCount(0);
+  await expect(memberPage.locator(".ds-product-row").filter({ hasText: itemName })).toHaveCount(0);
 
   // Cleanup.
   const memberToken = await memberPage.evaluate(() =>
@@ -200,7 +202,7 @@ test("ownership transfer makes the invited member the workspace owner", async ({
   // Owner transfers ownership to the member from Settings.
   await ownerNavigation.getByRole("button", { name: "Меню" }).click();
   await ownerPage
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Настройки" })
     .click();
   ownerPage.on("dialog", (dialog) => void dialog.accept());
@@ -239,7 +241,7 @@ test("ownership transfer makes the invited member the workspace owner", async ({
   const memberNavigation = memberPage.getByRole("navigation", { name: "Основные разделы" });
   await memberNavigation.getByRole("button", { name: "Меню" }).click();
   await memberPage
-    .getByRole("dialog", { name: "Дополнительные разделы" })
+    .getByRole("dialog", { name: "Разделы" })
     .getByRole("button", { name: "Настройки" })
     .click();
   await expect(memberPage.getByLabel("Email участника")).toBeVisible();
