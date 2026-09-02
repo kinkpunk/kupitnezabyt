@@ -64,7 +64,10 @@ bot остаются optional integration/future work, потому что по�
 `docs/PRODUCT_SPEC.md` остается источником полного продуктового и технического
 задания. После web-first pivot реализованное ядро MVP пока не закрывает:
 
-- расширенное e2e/DB-backed покрытие для всех вспомогательных сценариев;
+- дополнительное покрытие краевых случаев для уже существующих e2e-сценариев
+  (основной flow, проверки, поиск, архив, экспорт, сортировка и collaboration
+  beta покрыты в `tests/e2e/`, DB-backed API сценарии — в
+  `apps/api/src/db-backed.integration.test.ts`);
 - расширенное двухаккаунтное e2e-покрытие collaboration beta и понятный UX для
   приглашения пользователей, которые уже входили в сервис;
 - optional Telegram integration smoke, если позже появится платный bot/worker
@@ -90,9 +93,13 @@ bot остаются optional integration/future work, потому что по�
 - `docs/PRODUCT_SPEC.md` - продуктовое и техническое задание;
 - `docs/API.md` - описание API;
 - `docs/ARCHITECTURE.md` - архитектурные решения;
+- `docs/IMPLEMENTATION_ROADMAP.md` - roadmap реализации и manual checklist'ы;
 - `docs/FINAL_INTEGRATION.md` - финальный MVP integration checklist;
 - `docs/NORTHFLANK_VERCEL_DEPLOYMENT.md` - целевой staging/production
   deployment: Vercel webapp, Northflank API и PostgreSQL;
+- `docs/RENDER_VERCEL_NEON_DEPLOYMENT.md` - текущий production deployment:
+  Render API, Vercel webapp и Neon PostgreSQL;
+- `docs/DESIGN-SYSTEM.md` - дизайн-токены и правила UI webapp;
 - `AGENTS.md` - правила работы Codex и других AI-агентов с репозиторием.
 
 Если реализация расходится с документацией, сначала нужно проверить `docs/PRODUCT_SPEC.md`, а затем обновить устаревший документ вместе с кодом.
@@ -126,7 +133,8 @@ bot остаются optional integration/future work, потому что по�
 - Docker Compose;
 - ESLint;
 - TypeScript;
-- Vitest.
+- Vitest;
+- Playwright (browser e2e и визуальные снапшоты).
 
 ## Структура репозитория
 
@@ -144,9 +152,16 @@ bot остаются optional integration/future work, потому что по�
     PRODUCT_SPEC.md
     API.md
     ARCHITECTURE.md
+    IMPLEMENTATION_ROADMAP.md
     FINAL_INTEGRATION.md
+    NORTHFLANK_VERCEL_DEPLOYMENT.md
+    RENDER_VERCEL_NEON_DEPLOYMENT.md
+  tests/
+    e2e/                # Playwright-сценарии и визуальные снапшоты
+  scripts/              # smoke-тесты, preflight БД, обновление linux-снапшотов
   docker-compose.yml
   pnpm-workspace.yaml
+  playwright.config.ts
   .env.example
   AGENTS.md
   README.md
@@ -268,15 +283,16 @@ docker compose --profile telegram up bot worker
 ## Основные команды
 
 ```bash
-pnpm dev             # Запуск всех сервисов в режиме разработки
+pnpm dev             # Запуск api и webapp в режиме разработки
 pnpm build           # Production-сборка
 pnpm typecheck       # Проверка типов
 pnpm lint            # Статический анализ
 pnpm test            # Unit- и integration-тесты
-pnpm test:e2e        # Playwright smoke главного browser flow
+pnpm test:e2e        # Полный Playwright e2e-сьют (все specs из tests/e2e)
 pnpm test:integration # DB-backed API integration tests
 pnpm smoke:deployment # Smoke deployed API/webapp через HTTPS
 pnpm smoke:local     # Smoke локальных Docker-контейнеров api/webapp
+pnpm smoke:telegram  # Smoke optional Telegram integration (нужен bot token)
 
 pnpm db:generate     # Генерация Prisma Client
 pnpm db:migrate      # Применение локальных миграций
@@ -284,8 +300,12 @@ pnpm db:deploy       # Применение production migrations
 pnpm db:seed         # Добавление стартовых данных
 ```
 
-`pnpm test:e2e` запускает Playwright-сценарий против dev webapp/API и требует
-локальную PostgreSQL базу, миграции и `DEV_AUTH_ENABLED=true`. `pnpm
+`pnpm test:e2e` запускает весь Playwright-сьют против dev webapp/API и
+требует локальную PostgreSQL базу, миграции и `DEV_AUTH_ENABLED=true`. Сьют
+включает основной продуктовый flow (`web-first-product-flow.spec.ts`),
+вспомогательные сценарии (`secondary-flows.spec.ts`, `item-sort.spec.ts`,
+`item-reorder.spec.ts`), collaboration beta (`workspace-collaboration.spec.ts`)
+и визуальные спеки со снапшотами (`*-visual.spec.ts`). `pnpm
 test:integration` запускает DB-backed API сценарии с
 `RUN_DB_INTEGRATION_TESTS=1`; обычный `pnpm test` остается быстрым и не требует
 живой базы.
@@ -436,7 +456,8 @@ pnpm test:e2e
 pnpm test:integration
 ```
 
-Минимальный E2E-сценарий MVP, покрываемый `pnpm test:e2e`:
+Минимальный E2E-сценарий MVP покрыт в
+`tests/e2e/web-first-product-flow.spec.ts` (входит в `pnpm test:e2e`):
 
 1. Открыть приложение.
 2. Создать категорию.
