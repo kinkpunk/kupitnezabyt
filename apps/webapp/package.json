@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@kupitnezabyt/shared": "workspace:*",
+    "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.21.0",
     "next": "^15.3.3",
     "react": "^19.1.0",
