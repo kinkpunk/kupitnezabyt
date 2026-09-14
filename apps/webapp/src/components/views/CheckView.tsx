@@ -11,7 +11,7 @@ import { EmptyState, SectionHeader } from "../common";
 import { Button } from "../ui/Button";
 import { ProgressBar } from "../ui/ProgressBar";
 
-const statusButtonOrder: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
+const statusButtonOrder: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY"];
 
 export function CheckView({
   checkSession,

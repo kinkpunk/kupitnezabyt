@@ -23,7 +23,6 @@ const shoppingEntry: ShoppingListEntry = {
   title: "Молоко",
   itemId: null,
   categoryId: "cat-1",
-  priority: "URGENT",
   category,
   item: null
 };

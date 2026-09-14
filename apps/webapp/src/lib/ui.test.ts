@@ -11,9 +11,8 @@ describe("itemStatusToUiStatus", () => {
     expect(itemStatusToUiStatus("LOW")).toBe("warn");
   });
 
-  it("maps NEED_BUY and URGENT to bad", () => {
+  it("maps NEED_BUY to bad", () => {
     expect(itemStatusToUiStatus("NEED_BUY")).toBe("bad");
-    expect(itemStatusToUiStatus("URGENT")).toBe("bad");
   });
 
   it("maps PAUSED to null", () => {

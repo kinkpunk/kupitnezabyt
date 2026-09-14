@@ -1,4 +1,4 @@
-import type { CategoryStatus, ItemImportance, ItemStatus, ShoppingPriority } from "@kupitnezabyt/shared";
+import type { CategoryStatus, ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
 
 export type Category = {
   id: string;
@@ -37,7 +37,6 @@ export type ShoppingListEntry = {
   title: string;
   itemId: string | null;
   categoryId: string | null;
-  priority: ShoppingPriority;
   category: Category | null;
   item: Item | null;
 };

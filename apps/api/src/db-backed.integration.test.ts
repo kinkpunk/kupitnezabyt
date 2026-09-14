@@ -112,7 +112,7 @@ describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
         authorization: `Bearer ${otherToken}`
       },
       payload: {
-        status: "URGENT"
+        status: "NEED_BUY"
       }
     });
     expect(forbiddenStatusResponse.statusCode).toBe(404);
@@ -124,7 +124,7 @@ describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
         authorization: `Bearer ${ownerToken}`
       },
       payload: {
-        status: "URGENT"
+        status: "NEED_BUY"
       }
     });
     expect(statusResponse.statusCode).toBe(200);
@@ -137,7 +137,7 @@ describe.skipIf(!shouldRunDbIntegration)("DB-backed API integration", () => {
       }
     });
     expect(ownerShoppingItems).toHaveLength(1);
-    expect(ownerShoppingItems[0]?.priority).toBe("URGENT");
+    expect(ownerShoppingItems[0]?.title).toBe("Integration coffee");
 
     const otherShoppingItems = await prisma.shoppingListItem.findMany({
       where: {

@@ -169,14 +169,6 @@ export function readBooleanFlag(value: unknown): boolean {
   return value === "true" || value === "1";
 }
 
-export function readShoppingPriority(value: unknown): "NORMAL" | "URGENT" | null {
-  if (value === undefined || value === null || value === "") {
-    return "NORMAL";
-  }
-
-  return value === "NORMAL" || value === "URGENT" ? value : null;
-}
-
 export function readOptionalItemImportance(value: unknown): ItemImportance | null | undefined {
   if (value === undefined || value === null || value === "") {
     return undefined;

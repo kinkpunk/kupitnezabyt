@@ -23,7 +23,6 @@ const manualEntry: ShoppingListEntry = {
   title: "Хлеб",
   itemId: null,
   categoryId: "cat-1",
-  priority: "NORMAL",
   category,
   item: null
 };
@@ -33,7 +32,6 @@ const trackedEntry: ShoppingListEntry = {
   title: "Молоко",
   itemId: "item-1",
   categoryId: "cat-1",
-  priority: "URGENT",
   category,
   item: null
 };
@@ -47,8 +45,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
     setManualShoppingTitle: vi.fn(),
     manualShoppingCategoryId: "",
     setManualShoppingCategoryId: vi.fn(),
-    manualShoppingPriority: "NORMAL" as const,
-    setManualShoppingPriority: vi.fn(),
     editingShoppingId: null,
     setEditingShoppingId: vi.fn(),
     editingShoppingTitle: "",

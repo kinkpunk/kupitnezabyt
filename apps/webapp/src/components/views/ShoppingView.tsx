@@ -1,6 +1,5 @@
 "use client";
 
-import type { ShoppingPriority } from "@kupitnezabyt/shared";
 import { Pencil, ShoppingCart, Trash2 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
@@ -17,8 +16,6 @@ export function ShoppingView({
   setManualShoppingTitle,
   manualShoppingCategoryId,
   setManualShoppingCategoryId,
-  manualShoppingPriority,
-  setManualShoppingPriority,
   editingShoppingId,
   setEditingShoppingId,
   editingShoppingTitle,
@@ -38,8 +35,6 @@ export function ShoppingView({
   setManualShoppingTitle: (value: string) => void;
   manualShoppingCategoryId: string;
   setManualShoppingCategoryId: (value: string) => void;
-  manualShoppingPriority: ShoppingPriority;
-  setManualShoppingPriority: (value: ShoppingPriority) => void;
   editingShoppingId: string | null;
   setEditingShoppingId: (value: string | null) => void;
   editingShoppingTitle: string;
@@ -103,14 +98,6 @@ export function ShoppingView({
     );
   }
 
-  function renderPriorityMeta(priority: ShoppingPriority) {
-    if (priority === "URGENT") {
-      return <span className="ds-shopping-priority ds-shopping-priority--urgent">Срочно</span>;
-    }
-
-    return <span className="ds-shopping-priority">Купить</span>;
-  }
-
   return (
     <section className="stack">
       <SectionHeader
@@ -146,15 +133,6 @@ export function ShoppingView({
             </option>
           ))}
         </select>
-        <select
-          aria-label="Приоритет покупки"
-          value={manualShoppingPriority}
-          disabled={isActionPending("shopping:add")}
-          onChange={(event) => setManualShoppingPriority(event.target.value as ShoppingPriority)}
-        >
-          <option value="NORMAL">Купить</option>
-          <option value="URGENT">Срочно</option>
-        </select>
         <Button disabled={isActionPending("shopping:add") || !manualShoppingTitle.trim()} type="submit">
           {isActionPending("shopping:add") ? "Добавляем..." : "Добавить"}
         </Button>
@@ -186,7 +164,6 @@ export function ShoppingView({
                     <ProductRow
                       key={entry.id}
                       actions={renderEntryActions(entry)}
-                      meta={renderPriorityMeta(entry.priority)}
                       subtitle={getEntrySubtitle(entry)}
                       title={entry.title}
                     />

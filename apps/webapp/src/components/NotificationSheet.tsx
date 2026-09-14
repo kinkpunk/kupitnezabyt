@@ -37,38 +37,26 @@ export function NotificationSheet({
             <section className="ds-notification-group" aria-label="Что купить">
               <h3 className="ds-notification-group__title">Купить</h3>
               <div className="ds-bottom-sheet__actions">
-                {shoppingList.map((entry) => {
-                  const isUrgent = entry.priority === "URGENT";
-
-                  return (
-                    <button
-                      key={entry.id}
-                      className="ds-bottom-sheet__action ds-bottom-sheet__action--multiline"
-                      type="button"
-                      onClick={() => {
-                        onClose();
-                        onOpenShoppingEntry(entry);
-                      }}
-                    >
-                      <ShoppingCart aria-hidden="true" size={18} strokeWidth={2.25} />
-                      <span className="ds-notification-action__text">
-                        <span className="ds-notification-action__title">{entry.title}</span>
-                        {entry.category?.name ? (
-                          <span className="ds-notification-action__meta">{entry.category.name}</span>
-                        ) : null}
-                      </span>
-                      <span
-                        className={
-                          isUrgent
-                            ? "ds-notification-badge ds-notification-badge--urgent"
-                            : "ds-notification-badge"
-                        }
-                      >
-                        {isUrgent ? "Срочно" : "Купить"}
-                      </span>
-                    </button>
-                  );
-                })}
+                {shoppingList.map((entry) => (
+                  <button
+                    key={entry.id}
+                    className="ds-bottom-sheet__action ds-bottom-sheet__action--multiline"
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenShoppingEntry(entry);
+                    }}
+                  >
+                    <ShoppingCart aria-hidden="true" size={18} strokeWidth={2.25} />
+                    <span className="ds-notification-action__text">
+                      <span className="ds-notification-action__title">{entry.title}</span>
+                      {entry.category?.name ? (
+                        <span className="ds-notification-action__meta">{entry.category.name}</span>
+                      ) : null}
+                    </span>
+                    <span className="ds-notification-badge">Купить</span>
+                  </button>
+                ))}
               </div>
             </section>
           ) : null}

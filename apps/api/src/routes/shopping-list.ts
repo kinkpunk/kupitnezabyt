@@ -7,7 +7,6 @@ import {
   hasOwnProperty,
   readOptionalString,
   readRequiredString,
-  readShoppingPriority,
   requireUserId,
   resolveWorkspaceAccess,
   sendError
@@ -31,7 +30,7 @@ export default async function shoppingListRoutes(app: FastifyInstance) {
         category: true,
         item: true
       },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }]
+      orderBy: [{ createdAt: "asc" }]
     });
   });
 
@@ -69,19 +68,12 @@ export default async function shoppingListRoutes(app: FastifyInstance) {
       }
     }
 
-    const priority = readShoppingPriority(request.body?.priority);
-    if (!priority) {
-      await sendError(reply, 400, "INVALID_PRIORITY", "Shopping list priority is invalid.");
-      return;
-    }
-
     return prisma.shoppingListItem.create({
       data: {
         userId,
         workspaceId: workspaceAccess.workspaceId,
         title,
-        categoryId: categoryId ?? null,
-        priority
+        categoryId: categoryId ?? null
       },
       include: {
         category: true,
@@ -160,22 +152,13 @@ export default async function shoppingListRoutes(app: FastifyInstance) {
         }
       }
 
-      const priority = hasOwnProperty(request.body, "priority")
-        ? readShoppingPriority(request.body.priority)
-        : shoppingListItem.priority;
-      if (!priority) {
-        await sendError(reply, 400, "INVALID_PRIORITY", "Shopping list priority is invalid.");
-        return;
-      }
-
       return prisma.shoppingListItem.update({
         where: {
           id: shoppingListItem.id
         },
         data: {
           title,
-          categoryId,
-          priority
+          categoryId
         },
         include: {
           category: true,

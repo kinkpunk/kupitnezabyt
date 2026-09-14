@@ -493,7 +493,6 @@ export function createShoppingListItem(
   input: {
     title: string;
     categoryId?: string | null;
-    priority?: "NORMAL" | "URGENT";
   }
 ): Promise<ShoppingListEntry> {
   return post<ShoppingListEntry>("/api/shopping-list", token, input);
@@ -505,7 +504,6 @@ export function updateShoppingListItem(
   input: {
     title: string;
     categoryId?: string | null;
-    priority?: "NORMAL" | "URGENT";
   }
 ): Promise<ShoppingListEntry> {
   return patch<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}`, token, input);

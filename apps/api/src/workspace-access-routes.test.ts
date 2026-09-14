@@ -266,8 +266,7 @@ describe("workspace access routes", () => {
         workspaceId: "workspace-shared",
         itemId: "item-1",
         title: "Кофе",
-        categoryId: "category-1",
-        priority: "NORMAL"
+        categoryId: "category-1"
       }
     });
 
@@ -540,7 +539,6 @@ describe("workspace access routes", () => {
         id: "shopping-1",
         workspaceId: "workspace-shared",
         title: "Кофе",
-        priority: "NORMAL",
         isCompleted: false,
         category: null,
         item: null
@@ -573,7 +571,7 @@ describe("workspace access routes", () => {
         category: true,
         item: true
       },
-      orderBy: [{ priority: "desc" }, { createdAt: "asc" }]
+      orderBy: [{ createdAt: "asc" }]
     });
 
     await app.close();
@@ -597,8 +595,7 @@ describe("workspace access routes", () => {
         "x-workspace-id": "workspace-shared"
       },
       payload: {
-        title: "Кофе",
-        priority: "URGENT"
+        title: "Кофе"
       }
     });
 
@@ -624,7 +621,6 @@ describe("workspace access routes", () => {
       itemId: null,
       title: "Кофе",
       categoryId: null,
-      priority: "NORMAL",
       isCompleted: false
     });
     mockPrisma.shoppingListItem.update.mockResolvedValue({
@@ -633,7 +629,6 @@ describe("workspace access routes", () => {
       itemId: null,
       title: "Кофе в зернах",
       categoryId: null,
-      priority: "URGENT",
       isCompleted: false,
       category: null,
       item: null
@@ -647,8 +642,7 @@ describe("workspace access routes", () => {
         "x-workspace-id": "workspace-shared"
       },
       payload: {
-        title: "Кофе в зернах",
-        priority: "URGENT"
+        title: "Кофе в зернах"
       }
     });
 
@@ -666,8 +660,7 @@ describe("workspace access routes", () => {
       },
       data: {
         title: "Кофе в зернах",
-        categoryId: null,
-        priority: "URGENT"
+        categoryId: null
       },
       include: {
         category: true,

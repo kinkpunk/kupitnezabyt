@@ -7,7 +7,6 @@ export function isItemStatus(value: string): value is ItemStatus {
     value === "IN_STOCK" ||
     value === "LOW" ||
     value === "NEED_BUY" ||
-    value === "URGENT" ||
     value === "PAUSED"
   );
 }
@@ -35,15 +34,7 @@ export function calculateNextCheckAt(
 export function getShoppingSyncAction(status: ItemStatus): ShoppingSyncAction {
   if (status === "NEED_BUY") {
     return {
-      type: "UPSERT",
-      priority: "NORMAL"
-    };
-  }
-
-  if (status === "URGENT") {
-    return {
-      type: "UPSERT",
-      priority: "URGENT"
+      type: "UPSERT"
     };
   }
 
@@ -67,10 +58,6 @@ export function aggregateCategoryStatus(items: readonly StatusItem[]): CategoryS
   const activeItems = items.filter(
     (item) => item.archivedAt === undefined || item.archivedAt === null
   );
-
-  if (activeItems.some((item) => item.status === "URGENT")) {
-    return "URGENT";
-  }
 
   if (activeItems.some((item) => item.status === "NEED_BUY")) {
     return "NEED_BUY";
@@ -98,11 +85,10 @@ export function calculateReadiness(items: readonly StatusItem[]): number | null 
 }
 
 export const itemStatusSortOrder: Record<ItemStatus, number> = {
-  URGENT: 0,
-  NEED_BUY: 1,
-  LOW: 2,
-  IN_STOCK: 3,
-  PAUSED: 4
+  NEED_BUY: 0,
+  LOW: 1,
+  IN_STOCK: 2,
+  PAUSED: 3
 };
 
 export type SortableItem = {

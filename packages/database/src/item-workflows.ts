@@ -178,8 +178,7 @@ async function syncShoppingListItem(
         },
         data: {
           title: item.name,
-          categoryId: item.categoryId,
-          priority: action.priority
+          categoryId: item.categoryId
         }
       });
       return;
@@ -191,8 +190,7 @@ async function syncShoppingListItem(
         workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
         itemId: item.id,
         title: item.name,
-        categoryId: item.categoryId,
-        priority: action.priority
+        categoryId: item.categoryId
       }
     });
     return;

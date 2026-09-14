@@ -18,7 +18,7 @@ export function HomeView({
   items,
   inAppReminders,
   checkSession,
-  urgentItems,
+  needBuyItems,
   attentionItemsCount,
   itemReminders,
   categoryReminders: categoryReminderList,
@@ -36,7 +36,7 @@ export function HomeView({
   shoppingList: ShoppingListEntry[];
   inAppReminders: InAppReminder[];
   checkSession: CheckSession | null;
-  urgentItems: Item[];
+  needBuyItems: Item[];
   attentionItemsCount: number;
   itemReminders: InAppReminder[];
   categoryReminders: InAppReminder[];
@@ -166,11 +166,11 @@ export function HomeView({
       <section className="home-section">
         <SectionHeader
           title="Купить сейчас"
-          subtitle={urgentItems.length ? formatPositionCount(urgentItems.length) : "Пока спокойно"}
+          subtitle={needBuyItems.length ? formatPositionCount(needBuyItems.length) : "Пока спокойно"}
         />
-        {urgentItems.length ? (
+        {needBuyItems.length ? (
           <div className="ds-product-list">
-            {urgentItems.map((item) => (
+            {needBuyItems.map((item) => (
               <ProductRow
                 key={item.id}
                 status={getItemStatus(item)}

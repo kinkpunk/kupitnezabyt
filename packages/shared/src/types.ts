@@ -2,7 +2,6 @@ export const itemStatuses = [
   "IN_STOCK",
   "LOW",
   "NEED_BUY",
-  "URGENT",
   "PAUSED"
 ] as const;
 
@@ -12,11 +11,7 @@ export const itemImportances = ["LOW", "NORMAL", "HIGH", "CRITICAL"] as const;
 
 export type ItemImportance = (typeof itemImportances)[number];
 
-export const shoppingPriorities = ["NORMAL", "URGENT"] as const;
-
-export type ShoppingPriority = (typeof shoppingPriorities)[number];
-
-export const categoryStatuses = ["OK", "ATTENTION", "NEED_BUY", "URGENT"] as const;
+export const categoryStatuses = ["OK", "ATTENTION", "NEED_BUY"] as const;
 
 export type CategoryStatus = (typeof categoryStatuses)[number];
 
@@ -36,7 +31,6 @@ export type ReminderStatus = (typeof reminderStatuses)[number];
 export type ShoppingSyncAction =
   | {
       type: "UPSERT";
-      priority: ShoppingPriority;
     }
   | {
       type: "COMPLETE_OPEN";

@@ -177,7 +177,6 @@ export function useAppState() {
   const [editingItemImportance, setEditingItemImportance] = useState<ItemImportance>("NORMAL");
   const [manualShoppingTitle, setManualShoppingTitle] = useState("");
   const [manualShoppingCategoryId, setManualShoppingCategoryId] = useState("");
-  const [manualShoppingPriority, setManualShoppingPriority] = useState<"NORMAL" | "URGENT">("NORMAL");
   const [editingShoppingId, setEditingShoppingId] = useState<string | null>(null);
   const [editingShoppingTitle, setEditingShoppingTitle] = useState("");
   const [checkSession, setCheckSession] = useState<CheckSession | null>(null);
@@ -300,8 +299,8 @@ export function useAppState() {
     [items]
   );
 
-  const urgentItems = useMemo(
-    () => items.filter((item) => item.status === "URGENT" || item.status === "NEED_BUY").slice(0, 5),
+  const needBuyItems = useMemo(
+    () => items.filter((item) => item.status === "NEED_BUY").slice(0, 5),
     [items]
   );
   const notificationCount = shoppingList.length + inAppReminders.length;
@@ -834,12 +833,10 @@ export function useAppState() {
       setPendingAction(actionKey, true);
       await createShoppingListItem(token, {
         title: manualShoppingTitle.trim(),
-        categoryId: manualShoppingCategoryId || null,
-        priority: manualShoppingPriority
+        categoryId: manualShoppingCategoryId || null
       });
       setManualShoppingTitle("");
       setManualShoppingCategoryId("");
-      setManualShoppingPriority("NORMAL");
       await refreshActiveData(token);
     } finally {
       setPendingAction(actionKey, false);
@@ -854,8 +851,7 @@ export function useAppState() {
     setError(null);
     await updateShoppingListItem(token, entry.id, {
       title: editingShoppingTitle.trim(),
-      categoryId: entry.categoryId,
-      priority: entry.priority
+      categoryId: entry.categoryId
     });
     setEditingShoppingId(null);
     setEditingShoppingTitle("");
@@ -1730,8 +1726,6 @@ export function useAppState() {
     setManualShoppingTitle,
     manualShoppingCategoryId,
     setManualShoppingCategoryId,
-    manualShoppingPriority,
-    setManualShoppingPriority,
     editingShoppingId,
     setEditingShoppingId,
     editingShoppingTitle,
@@ -1771,7 +1765,7 @@ export function useAppState() {
     currentCheckItem,
     checkedCount,
     attentionItemsCount,
-    urgentItems,
+    needBuyItems,
     notificationCount,
     itemReminders,
     categoryReminders,

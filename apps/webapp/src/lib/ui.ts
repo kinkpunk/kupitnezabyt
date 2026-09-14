@@ -7,11 +7,10 @@ export const statusLabels: Record<ItemStatus, string> = {
   IN_STOCK: "Есть",
   LOW: "Мало",
   NEED_BUY: "Купить",
-  URGENT: "Срочно",
   PAUSED: "Пауза"
 };
 
-export const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY", "URGENT"];
+export const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY"];
 
 /** UI-level status used by the design-system components (StatusChip, tabs, badges). */
 export type UiItemStatus = "ok" | "warn" | "bad";
@@ -32,7 +31,6 @@ export function itemStatusToUiStatus(status: ItemStatus): UiItemStatus | null {
     case "LOW":
       return "warn";
     case "NEED_BUY":
-    case "URGENT":
       return "bad";
     case "PAUSED":
       return null;
@@ -62,7 +60,6 @@ export const itemStatusBadgeClasses: Record<ItemStatus, string> = {
   IN_STOCK: "badge badge-success",
   LOW: "badge badge-warning",
   NEED_BUY: "badge badge-attention",
-  URGENT: "badge badge-urgent",
   PAUSED: "badge badge-muted"
 };
 
@@ -84,15 +81,13 @@ export const importanceBadgeClasses: Record<Exclude<ItemImportance, "NORMAL">, s
 export const categoryStatusLabels: Record<CategoryStatus, string> = {
   OK: "OK",
   ATTENTION: "Мало",
-  NEED_BUY: "Купить",
-  URGENT: "Срочно"
+  NEED_BUY: "Купить"
 };
 
 export const categoryTriggerItemStatus: Record<CategoryStatus, ItemStatus | null> = {
   OK: null,
   ATTENTION: "LOW",
-  NEED_BUY: "NEED_BUY",
-  URGENT: "URGENT"
+  NEED_BUY: "NEED_BUY"
 };
 
 export const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {

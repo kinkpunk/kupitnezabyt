@@ -87,7 +87,7 @@ export default function Home() {
             shoppingList={state.shoppingList}
             inAppReminders={state.inAppReminders}
             checkSession={state.checkSession}
-            urgentItems={state.urgentItems}
+            needBuyItems={state.needBuyItems}
             attentionItemsCount={state.attentionItemsCount}
             itemReminders={state.itemReminders}
             categoryReminders={state.categoryReminders}
@@ -161,8 +161,6 @@ export default function Home() {
             setManualShoppingTitle={state.setManualShoppingTitle}
             manualShoppingCategoryId={state.manualShoppingCategoryId}
             setManualShoppingCategoryId={state.setManualShoppingCategoryId}
-            manualShoppingPriority={state.manualShoppingPriority}
-            setManualShoppingPriority={state.setManualShoppingPriority}
             editingShoppingId={state.editingShoppingId}
             setEditingShoppingId={state.setEditingShoppingId}
             editingShoppingTitle={state.editingShoppingTitle}

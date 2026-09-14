@@ -18,7 +18,6 @@ describe("renderItemCheckNotification", () => {
       "Есть",
       "Мало",
       "Купить",
-      "Срочно",
       "Позже",
       "Открыть"
     ]);

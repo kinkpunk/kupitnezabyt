@@ -121,7 +121,7 @@ describe("CheckView", () => {
     expect(screen.getByRole("button", { name: "Есть" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Мало" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Купить" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Срочно" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Срочно" })).not.toBeInTheDocument();
   });
 
   it("calls onCheckStatus when status button is clicked", () => {

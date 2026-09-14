@@ -304,11 +304,11 @@ describe("GET /api/items sort=status", () => {
         category: { id: "category-1", name: "Продукты" }
       },
       {
-        id: "item-urgent",
+        id: "item-need-buy",
         workspaceId: "workspace-shared",
         categoryId: "category-1",
         name: "Молоко",
-        status: "URGENT",
+        status: "NEED_BUY",
         sortOrder: 1,
         createdAt: new Date("2026-08-15T10:00:00.000Z"),
         category: { id: "category-1", name: "Продукты" }
@@ -338,7 +338,7 @@ describe("GET /api/items sort=status", () => {
     const body = response.json();
     expect(body).toHaveLength(3);
     expect(body.map((item: { id: string }) => item.id)).toEqual([
-      "item-urgent",
+      "item-need-buy",
       "item-low",
       "item-in-stock"
     ]);

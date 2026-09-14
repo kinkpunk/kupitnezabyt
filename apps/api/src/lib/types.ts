@@ -83,7 +83,6 @@ export type AppleAuthCallbackBody = {
 export type ShoppingListBody = {
   title?: unknown;
   categoryId?: unknown;
-  priority?: unknown;
 };
 
 export type GroupItemBody = {

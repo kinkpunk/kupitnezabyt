@@ -1196,17 +1196,6 @@ select {
   gap: 8px;
 }
 
-.ds-shopping-priority {
-  color: var(--ds-text-3);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-.ds-shopping-priority--urgent {
-  color: var(--ds-status-bad);
-  font-weight: var(--font-weight-semibold);
-}
-
 .ds-product-row__actions {
   flex-wrap: wrap;
 }

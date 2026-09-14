@@ -74,9 +74,9 @@ Shared pure functions in `packages/shared` define:
 - `getShoppingSyncAction`
 - status type guards
 
-The API applies those rules inside database transactions. `NEED_BUY` and
-`URGENT` create or update one open shopping list entry per item. Returning an
-item to `IN_STOCK`, `LOW`, or `PAUSED` completes the open entry.
+The API applies those rules inside database transactions. `NEED_BUY` creates or
+updates one open shopping list entry per item. Returning an item to `IN_STOCK`,
+`LOW`, or `PAUSED` completes the open entry.
 
 ## Optional Telegram Bot
 

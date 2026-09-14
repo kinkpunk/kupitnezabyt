@@ -38,8 +38,7 @@ export async function syncRestoredItem(
         },
         data: {
           title: item.name,
-          categoryId: item.categoryId,
-          priority: action.priority
+          categoryId: item.categoryId
         }
       });
     } else {
@@ -49,8 +48,7 @@ export async function syncRestoredItem(
           workspaceId: item.workspaceId ?? getPersonalWorkspaceId(item.userId),
           itemId: item.id,
           title: item.name,
-          categoryId: item.categoryId,
-          priority: action.priority
+          categoryId: item.categoryId
         }
       });
     }

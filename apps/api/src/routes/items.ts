@@ -219,8 +219,7 @@ export default async function itemRoutes(app: FastifyInstance) {
             workspaceId: workspaceAccess.workspaceId,
             itemId: item.id,
             title: item.name,
-            categoryId: item.categoryId,
-            priority: "NORMAL"
+            categoryId: item.categoryId
           }
         });
       }
@@ -456,8 +455,7 @@ export default async function itemRoutes(app: FastifyInstance) {
             workspaceId: workspaceAccess.workspaceId,
             itemId: item.id,
             title: item.name,
-            categoryId: item.categoryId,
-            priority: "NORMAL"
+            categoryId: item.categoryId
           }
         });
 

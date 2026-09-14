@@ -20,6 +20,14 @@ Telegram Mini App, Telegram Bot, and external Telegram reminder delivery are
 kept as optional integration/future work because always-on Render background
 workers are not free in the current deployment setup.
 
+Product direction changed on 2026-09-14: after user testing, the `URGENT` item
+status and the shopping list `priority` were removed entirely (items now have
+`IN_STOCK`, `LOW`, `NEED_BUY`, `PAUSED`; the category aggregate is `OK`,
+`ATTENTION`, `NEED_BUY`). The mentions of `URGENT`/`priority` in the slices
+below are historical and describe the behaviour at the time each slice was
+implemented. The current model is documented in `docs/PRODUCT_SPEC.md` and
+`docs/API.md`.
+
 This does not mean full compliance with `docs/PRODUCT_SPEC.md`. The product spec
 remains the source of the complete target. Existing Telegram slices are
 historical implemented work, but the next release-readiness path is browser

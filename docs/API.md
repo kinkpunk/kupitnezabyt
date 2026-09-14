@@ -358,7 +358,6 @@ Supported statuses:
 IN_STOCK
 LOW
 NEED_BUY
-URGENT
 PAUSED
 ```
 
@@ -385,8 +384,8 @@ members receive `403 WORKSPACE_WRITE_FORBIDDEN`.
 
 `GET /api/items` accepts an optional `sort` query parameter. The default value
 `manual` returns items ordered by `sortOrder` and then `createdAt`. When
-`sort=status`, items are ordered by product status urgency (`URGENT`,
-`NEED_BUY`, `LOW`, `IN_STOCK`, `PAUSED`), then by `sortOrder`, then by
+`sort=status`, items are ordered by product status urgency
+(`NEED_BUY`, `LOW`, `IN_STOCK`, `PAUSED`), then by `sortOrder`, then by
 `createdAt`. The webapp uses this for the category view toggle while keeping
 manual reorder as the default.
 
@@ -478,13 +477,11 @@ Manual entries are created without `itemId`:
 ```json
 {
   "title": "Молоко",
-  "categoryId": "...",
-  "priority": "NORMAL"
+  "categoryId": "..."
 }
 ```
 
-`categoryId` is optional. `priority` can be `NORMAL` or `URGENT` and defaults to
-`NORMAL`.
+`categoryId` is optional.
 
 Manual entries can be updated and deleted. Shopping list entries linked to a
 tracked item are managed by item status and cannot be manually patched or
@@ -654,7 +651,6 @@ Supported check statuses:
 IN_STOCK
 LOW
 NEED_BUY
-URGENT
 ```
 
 ## Errors

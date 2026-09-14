@@ -566,8 +566,7 @@ describe("archive routes", () => {
         workspaceId: "workspace_user-1",
         itemId: "item-1",
         title: "Кофе",
-        categoryId: "category-1",
-        priority: "NORMAL"
+        categoryId: "category-1"
       }
     });
 

@@ -41,13 +41,12 @@ export function renderItemCheckNotification(
       ],
       [
         statusButton("Купить", input.itemId, "NEED_BUY"),
-        statusButton("Срочно", input.itemId, "URGENT")
-      ],
-      [
         {
           text: "Позже",
           callbackData: createItemReminderSnoozeCallbackData(input.itemId, 3)
-        },
+        }
+      ],
+      [
         {
           text: "Открыть",
           webAppUrl: input.webAppUrl
@@ -106,7 +105,6 @@ function isCallbackStatus(value: string): value is ItemStatus {
     value === "IN_STOCK" ||
     value === "LOW" ||
     value === "NEED_BUY" ||
-    value === "URGENT" ||
     value === "PAUSED"
   );
 }

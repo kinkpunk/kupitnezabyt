@@ -53,7 +53,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof HomeView>> =
     shoppingList: [] as ShoppingListEntry[],
     inAppReminders: [categoryReminder],
     checkSession: null as CheckSession | null,
-    urgentItems: [itemNeedBuy],
+    needBuyItems: [itemNeedBuy],
     attentionItemsCount: 1,
     itemReminders: [] as InAppReminder[],
     categoryReminders: [categoryReminder],
@@ -78,7 +78,7 @@ describe("HomeView", () => {
   });
 
   it("renders summary ok state when nothing needs attention", () => {
-    render(<HomeView {...createProps({ attentionItemsCount: 0, urgentItems: [] })} />);
+    render(<HomeView {...createProps({ attentionItemsCount: 0, needBuyItems: [] })} />);
     expect(screen.getByText("Все запасы в порядке")).toBeInTheDocument();
     expect(screen.getByText("1 отслеживается")).toBeInTheDocument();
   });
@@ -90,7 +90,7 @@ describe("HomeView", () => {
     expect(onSelectTab).toHaveBeenCalledWith("items");
   });
 
-  it("renders urgent items and navigates on click", () => {
+  it("renders need-buy items and navigates on click", () => {
     const onSelectCategory = vi.fn();
     render(<HomeView {...createProps({ onSelectCategory })} />);
     const row = screen.getByRole("button", { name: "Молоко Еда Нет" });
@@ -99,15 +99,15 @@ describe("HomeView", () => {
     expect(onSelectCategory).toHaveBeenCalledWith(itemNeedBuy.categoryId);
   });
 
-  it("marks urgent item as bought via status chip", () => {
+  it("marks need-buy item as bought via status chip", () => {
     const onSetStatus = vi.fn().mockResolvedValue(undefined);
     render(<HomeView {...createProps({ onSetStatus })} />);
     fireEvent.click(screen.getByRole("button", { name: /Статус: Нет/ }));
     expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK");
   });
 
-  it("shows empty state when there are no urgent items", () => {
-    render(<HomeView {...createProps({ urgentItems: [] })} />);
+  it("shows empty state when there are no need-buy items", () => {
+    render(<HomeView {...createProps({ needBuyItems: [] })} />);
     expect(document.querySelector(".ds-empty-state")?.textContent).toContain("Пока спокойно");
   });
 
