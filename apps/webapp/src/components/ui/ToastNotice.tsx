@@ -15,7 +15,7 @@ export function ToastNotice({
     <div className="toast-notice" role="status">
       <span>{message}</span>
       {/* TODO: Add undo once purchase completion has a rollback path. */}
-      <button type="button" aria-label="Закрыть уведомление" onClick={onClose}>
+      <button type="button" className="toast-notice__close" aria-label="Закрыть уведомление" onClick={onClose}>
         Закрыть
       </button>
     </div>
