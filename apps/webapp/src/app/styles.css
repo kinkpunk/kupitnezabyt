@@ -582,6 +582,7 @@ select {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
+  transform: translateZ(0);
 }
 
 .ds-app-header__brand {

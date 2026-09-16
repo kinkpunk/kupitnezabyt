@@ -1,7 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 import { Badge } from "../ui/Badge";
 import { BrandWord } from "../ui/BrandWord";
@@ -13,8 +13,38 @@ export interface AppHeaderProps {
 }
 
 export function AppHeader({ notificationCount, onBellClick }: AppHeaderProps) {
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    // iOS standalone WebView keeps a stale low-res tile of the top area after
+    // the launch animation; toggling the transform forces a re-rasterization.
+    const forceRepaint = () => {
+      header.style.transform = "translateZ(0)";
+      void header.offsetHeight;
+      header.style.transform = "";
+      void header.offsetHeight;
+    };
+
+    const timer = window.setTimeout(forceRepaint, 600);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        forceRepaint();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   return (
-    <header className="ds-app-header">
+    <header ref={headerRef} className="ds-app-header">
       <div className="ds-app-header__brand">
         <img alt="" className="ds-app-header__logo" src="/logo.png" />
         <span className="ds-app-header__wordmark">
