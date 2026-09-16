@@ -166,6 +166,7 @@ select {
   height: 100dvh;
   margin: 0 auto;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .brand-lockup {
@@ -582,7 +583,6 @@ select {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  transform: translateZ(0);
 }
 
 .ds-app-header__brand {

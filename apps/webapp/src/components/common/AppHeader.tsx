@@ -20,11 +20,11 @@ export function AppHeader({ notificationCount, onBellClick }: AppHeaderProps) {
     if (!header) return;
 
     // iOS standalone WebView keeps a stale low-res tile of the top area after
-    // the launch animation; toggling the transform forces a re-rasterization.
+    // the launch animation; toggling opacity forces a re-rasterization.
     const forceRepaint = () => {
-      header.style.transform = "translateZ(0)";
+      header.style.opacity = "0.999";
       void header.offsetHeight;
-      header.style.transform = "";
+      header.style.opacity = "";
       void header.offsetHeight;
     };
 
