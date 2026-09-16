@@ -119,8 +119,14 @@
   box-sizing: border-box;
 }
 
+html,
 body {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
   margin: 0;
   background: var(--background);
   color: var(--text);
