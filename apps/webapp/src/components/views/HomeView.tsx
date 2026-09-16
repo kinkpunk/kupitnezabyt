@@ -155,7 +155,7 @@ export function HomeView({
                 Продолжить
               </Button>
             }
-            meta={`${checkedCount} из ${checkSession.items.length}`}
+            meta={`${checkedCount + 1} из ${checkSession.items.length}`}
             subtitle="Незавершенная проверка"
             title={checkSession.category?.name ?? checkSession.group?.name ?? "Проверка"}
             onClick={() => onSelectTab("check")}

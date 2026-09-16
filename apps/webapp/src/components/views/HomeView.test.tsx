@@ -157,6 +157,6 @@ describe("HomeView", () => {
     };
     render(<HomeView {...createProps({ checkSession })} />);
     expect(screen.getByRole("heading", { name: "Проверка" })).toBeInTheDocument();
-    expect(screen.getByText("0 из 1")).toBeInTheDocument();
+    expect(screen.getByText("1 из 1")).toBeInTheDocument();
   });
 });

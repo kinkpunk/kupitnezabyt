@@ -118,6 +118,7 @@ describe("CheckView", () => {
       />
     );
     expect(screen.getByText("Кофе")).toBeInTheDocument();
+    expect(screen.getByText("1 из 1")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Есть" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Мало" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Купить" })).toBeInTheDocument();
@@ -184,6 +185,25 @@ describe("CheckView", () => {
     };
     render(<CheckView {...createProps({ checkSession })} />);
     expect(screen.getByText("Проверка завершена")).toBeInTheDocument();
+  });
+
+  it("shows the final position when the check is completed", () => {
+    const checkSession: CheckSession = {
+      id: "check-1",
+      categoryId: category.id,
+      groupId: null,
+      status: "COMPLETED",
+      startedAt: "2026-09-01T00:00:00Z",
+      completedAt: "2026-09-01T01:00:00Z",
+      category,
+      group: null,
+      items: [
+        { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: "LOW", checkedAt: "2026-09-01T00:30:00Z", item },
+        { id: "ci-2", sessionId: "check-1", itemId: "item-2", sortOrder: 1, selectedStatus: "IN_STOCK", checkedAt: "2026-09-01T01:00:00Z", item }
+      ]
+    };
+    render(<CheckView {...createProps({ checkSession, checkedCount: 2 })} />);
+    expect(screen.getByText("2 из 2")).toBeInTheDocument();
   });
 
   it("renders cancelled empty state", () => {

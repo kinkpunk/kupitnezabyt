@@ -53,6 +53,10 @@ export function CheckView({
     void onCheckStatus(status).catch((caughtError) => setError(formatError(caughtError)));
   }
 
+  const totalItems = checkSession?.items.length ?? 0;
+  const currentPosition =
+    checkSession?.status === "IN_PROGRESS" && currentCheckItem ? checkedCount + 1 : checkedCount;
+
   function renderStatusButton(status: ItemStatus) {
     return (
       <Button
@@ -71,7 +75,7 @@ export function CheckView({
     <section className="stack">
       <SectionHeader
         title="Проверка"
-        subtitle={checkSession ? `${checkedCount} из ${checkSession.items.length}` : "Выберите категорию"}
+        subtitle={checkSession ? `${currentPosition} из ${totalItems}` : "Выберите категорию"}
         actions={
           checkSession?.status === "IN_PROGRESS" ? (
             <Button size="compact" variant="ghost" onClick={handleCancel}>
