@@ -44,6 +44,14 @@ const itemLow: Item = {
   lastCheckedAt: null
 };
 
+const itemNeedBuy: Item = {
+  ...itemInStock,
+  id: "item-3",
+  name: "Хлеб",
+  status: "NEED_BUY",
+  lastCheckedAt: null
+};
+
 function clickFirstButton(name: string | RegExp) {
   const buttons = screen.getAllByRole("button", { name });
   const first = buttons[0];
@@ -111,11 +119,16 @@ describe("CategoriesView", () => {
     expect(screen.getByRole("tab", { name: "Еда" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("renders panel header with progress", () => {
+  it("renders panel header with low label when nothing needs to be bought", () => {
     render(<CategoriesView {...createProps()} />);
-    expect(screen.getByText("Купить · 1 из 2")).toBeInTheDocument();
+    expect(screen.getByText("Мало · 1 из 2")).toBeInTheDocument();
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "2");
+  });
+
+  it("renders need-buy label with count of items to buy", () => {
+    render(<CategoriesView {...createProps({ visibleItems: [itemInStock, itemLow, itemNeedBuy] })} />);
+    expect(screen.getByText("Купить · 1 из 3")).toBeInTheDocument();
   });
 
   it("renders product rows for visible items", () => {

@@ -132,8 +132,12 @@ export function CategoriesView({
     [visibleItems, sheetItem]
   );
 
-  const boughtCount = useMemo(
-    () => visibleItems.filter((item) => item.status === "IN_STOCK").length,
+  const { inStockCount, needBuyCount, lowCount } = useMemo(
+    () => ({
+      inStockCount: visibleItems.filter((item) => item.status === "IN_STOCK").length,
+      needBuyCount: visibleItems.filter((item) => item.status === "NEED_BUY").length,
+      lowCount: visibleItems.filter((item) => item.status === "LOW").length
+    }),
     [visibleItems]
   );
 
@@ -308,8 +312,10 @@ export function CategoriesView({
       {selectedCategory ? (
         <>
           <PanelHeader
-            done={boughtCount}
             total={visibleItems.length}
+            inStock={inStockCount}
+            needBuy={needBuyCount}
+            low={lowCount}
             disabled={selectedCategory.itemCount === 0}
             onArchive={() =>
               void onArchiveSelectedCategory().catch((caughtError) =>
