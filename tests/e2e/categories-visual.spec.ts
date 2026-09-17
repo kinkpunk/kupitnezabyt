@@ -138,11 +138,18 @@ async function addItemWithStatus(page: Page, name: string, statusClicks: number)
   const row = page.locator(".ds-product-row").filter({ hasText: name });
   await expect(row).toBeVisible();
 
+  // Статус обновляется только после ответа сервера (без optimistic update),
+  // поэтому ждём смены aria-label кнопки вместо фиксированной задержки.
+  const statusButton = row.getByRole("button", { name: /^Статус:/ });
   for (let i = 0; i < statusClicks; i++) {
-      const currentAriaLabel = await statusButton.getAttribute("aria-label");
-      await statusButton.click();
-      await expect(statusButton).not.toHaveAttribute("aria-label", currentAriaLabel ?? "");
-    }
+    const previousLabel = await statusButton.getAttribute("aria-label");
+
+    await statusButton.click();
+
+    await expect
+      .poll(() => statusButton.getAttribute("aria-label"))
+      .not.toBe(previousLabel);
+  }
 }
 
 async function waitForApiHealth(request: APIRequestContext): Promise<void> {

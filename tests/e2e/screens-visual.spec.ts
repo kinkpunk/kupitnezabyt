@@ -193,7 +193,12 @@ test.describe("Screens visual regression", () => {
   test("archive with category", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
     await page.locator(".ds-panel-header").getByRole("button", { name: "Архив" }).click();
+    // Архивная вкладка загружает данные один раз при открытии. Дожидаемся,
+    // пока архивация завершится на сервере, иначе вкладка может прочитать
+    // ещё не заархивированное состояние и не перечитать его повторно.
+    await expect(page.getByRole("tab", { name: "Еда" })).toHaveCount(0);
     await openMenuTab(page, "Архив");
+    await expect(page.locator(".ds-product-row").filter({ hasText: "Еда" })).toBeVisible();
     await expect(page.getByText("Еда")).toBeVisible();
     // Дата архивации зависит от текущего дня — исключаем её из сравнения.
     await expect(page).toHaveScreenshot("archive-with-category.png", {
@@ -258,7 +263,7 @@ async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   }
 
   await startButton.click();
-  await page.getByRole("button", { name: "Пропустить" }).click();
+  await page.getByRole("button", { name: "Продолжить" }).click();
   await page.getByRole("button", { name: "Пропустить" }).click();
   await page.getByRole("button", { name: "Готово" }).click();
 }
