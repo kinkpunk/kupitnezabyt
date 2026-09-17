@@ -585,6 +585,10 @@ select {
   padding: 12px 16px;
 }
 
+.is-standalone .ds-app-header {
+  padding-top: 32px;
+}
+
 .ds-app-header__brand {
   display: flex;
   align-items: center;

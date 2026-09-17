@@ -57,6 +57,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   // ignore storage access errors
                 }
               })();
+              (function () {
+                try {
+                  if (window.navigator.standalone === true) {
+                    document.documentElement.classList.add("is-standalone");
+                  }
+                } catch (e) {
+                  // ignore standalone detection errors
+                }
+              })();
             `
           }}
         />
