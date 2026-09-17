@@ -57,6 +57,33 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   // ignore storage access errors
                 }
               })();
+              (function () {
+                // Keep in sync with src/lib/appHeight.ts.
+                try {
+                  var nav = window.navigator;
+                  var standalone = nav.standalone === true;
+                  var isAppleMobile = /iP(hone|ad|od)/.test(nav.platform || "") ||
+                    (nav.platform === "MacIntel" && nav.maxTouchPoints > 1);
+                  if (!standalone || !isAppleMobile) return;
+                  var apply = function () {
+                    var sh = window.screen.height;
+                    var sw = window.screen.width;
+                    if (!sh || !sw) return;
+                    var portrait = window.innerHeight >= window.innerWidth;
+                    var full = portrait ? Math.max(sh, sw) : Math.min(sh, sw);
+                    var h = Math.max(window.innerHeight, full);
+                    document.documentElement.style.setProperty("--app-height", h + "px");
+                  };
+                  apply();
+                  window.addEventListener("resize", apply);
+                  window.addEventListener("orientationchange", apply);
+                  document.addEventListener("visibilitychange", function () {
+                    if (document.visibilityState === "visible") apply();
+                  });
+                } catch (e) {
+                  // ignore viewport override errors
+                }
+              })();
             `
           }}
         />

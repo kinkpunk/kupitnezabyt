@@ -164,6 +164,7 @@ select {
   width: min(100%, 560px);
   height: 100vh;
   height: 100dvh;
+  height: var(--app-height, 100dvh);
   margin: 0 auto;
   overflow: hidden;
   padding-top: env(safe-area-inset-top, 0px);
