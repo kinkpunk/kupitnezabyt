@@ -195,7 +195,10 @@ test.describe("Screens visual regression", () => {
     await page.locator(".ds-panel-header").getByRole("button", { name: "Архив" }).click();
     await openMenuTab(page, "Архив");
     await expect(page.getByText("Еда")).toBeVisible();
-    await expect(page).toHaveScreenshot("archive-with-category.png");
+    // Дата архивации зависит от текущего дня — исключаем её из сравнения.
+    await expect(page).toHaveScreenshot("archive-with-category.png", {
+      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
+    });
   });
 });
 
@@ -255,7 +258,7 @@ async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   }
 
   await startButton.click();
-  await page.getByRole("button", { name: "Продолжить" }).click();
+  await page.getByRole("button", { name: "Пропустить" }).click();
   await page.getByRole("button", { name: "Пропустить" }).click();
   await page.getByRole("button", { name: "Готово" }).click();
 }

@@ -101,7 +101,10 @@ test.describe("Categories screen visual regression", () => {
     await expect(page.getByText("Хлеб", { exact: true })).toBeVisible();
     await expect(page.getByText("Сыр", { exact: true })).toBeVisible();
 
-    await expect(page).toHaveScreenshot("categories-statuses.png");
+    // Подписи «Проверено <дата>» зависят от текущего дня — исключаем их из сравнения.
+    await expect(page).toHaveScreenshot("categories-statuses.png", {
+      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
+    });
   });
 
   test("long product name", async () => {
@@ -109,7 +112,10 @@ test.describe("Categories screen visual regression", () => {
     await addItemWithStatus(page, longName, 0);
 
     await expect(page.getByText(longName)).toBeVisible();
-    await expect(page).toHaveScreenshot("categories-long-name.png");
+    // Соседние строки показывают «Проверено <дата>» — исключаем дату из сравнения.
+    await expect(page).toHaveScreenshot("categories-long-name.png", {
+      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
+    });
   });
 
   test("empty selected category", async () => {
@@ -133,10 +139,10 @@ async function addItemWithStatus(page: Page, name: string, statusClicks: number)
   await expect(row).toBeVisible();
 
   for (let i = 0; i < statusClicks; i++) {
-    await row.getByRole("button", { name: /^Статус:/ }).click();
-    // Wait for the status transition to settle.
-    await page.waitForTimeout(100);
-  }
+      const currentAriaLabel = await statusButton.getAttribute("aria-label");
+      await statusButton.click();
+      await expect(statusButton).not.toHaveAttribute("aria-label", currentAriaLabel ?? "");
+    }
 }
 
 async function waitForApiHealth(request: APIRequestContext): Promise<void> {
