@@ -1,11 +1,11 @@
 # API
 
 This document tracks the implemented API surface. The current implementation
-covers the core product flow with development auth, email magic link auth,
-Google sign-in, Apple sign-in, and optional Telegram-compatible auth. The
-release target is browser auth through email magic links and configured OAuth
-providers; Telegram auth remains optional integration and is not part of the
-web-first MVP release.
+covers the core product flow with development auth, Google sign-in, Apple
+sign-in, email magic link auth, and optional Telegram-compatible auth. The
+release target is browser auth through Google sign-in (OAuth), email magic
+links and Apple sign-in; Telegram auth remains optional integration and is not
+part of the MVP release.
 
 ## Auth
 
@@ -28,7 +28,7 @@ POST /api/auth/telegram
 ```
 
 Optional Telegram integration auth boundary for Telegram Mini App `initData`.
-Not part of the web-first MVP release. The backend validates the Telegram
+Not part of the MVP release. The backend validates the Telegram
 signature and returns the same bearer token shape as dev auth.
 
 ```json
@@ -37,7 +37,7 @@ signature and returns the same bearer token shape as dev auth.
 }
 ```
 
-Web-first auth endpoints:
+Browser auth endpoints:
 
 ```http
 POST /api/auth/email/request
@@ -398,7 +398,7 @@ Snooze body:
 ```
 
 Snoozing sets `Item.nextCheckAt` to `now + days` and recreates the pending
-`ITEM_CHECK` reminder data. In the web-first MVP this powers in-app reminders;
+`ITEM_CHECK` reminder data. In the MVP this powers in-app reminders;
 optional external Telegram delivery is handled by `apps/worker` only when that
 integration is deployed.
 

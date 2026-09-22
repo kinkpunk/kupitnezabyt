@@ -1,6 +1,6 @@
 # Render + Vercel + Neon Deployment
 
-This document describes the free-friendly staging deployment for the web-first
+This document describes the free-friendly staging deployment for the core
 MVP. Telegram bot and worker services are optional integrations, not required
 for the first browser release.
 
@@ -17,7 +17,7 @@ Neon:
   kupitnezabyt-postgres
 ```
 
-No always-on Render background worker is required for the web-first MVP. In-app
+No always-on Render background worker is required for the core MVP. In-app
 reminders are shown by the webapp/API when the user opens the product. Optional
 Telegram delivery can be deployed later if paid worker infrastructure is
 accepted.
@@ -180,7 +180,7 @@ process reads the new values.
 
 ### Optional Bot Background Worker
 
-This service is not required for the free-friendly web-first MVP. Create it only
+This service is not required for the free-friendly core MVP. Create it only
 when Telegram integration is intentionally enabled.
 
 Suggested name:
@@ -215,7 +215,7 @@ required.
 
 ### Optional Reminder Worker Background Worker
 
-This service is not required for the free-friendly web-first MVP. Create it only
+This service is not required for the free-friendly core MVP. Create it only
 when external Telegram reminder delivery is intentionally enabled.
 
 Suggested name:

@@ -5,10 +5,11 @@
 The current architecture supports the implemented core MVP slices. It should not
 be read as full compliance with every requirement in `docs/PRODUCT_SPEC.md`.
 The product spec remains the complete target. As of 2026-06-21, the release
-target is web-first: email magic link auth and in-app reminders, with Telegram
-kept as optional integration.
+target is the installable PWA: Google OAuth sign-in and in-app reminders, with
+email magic link and Apple sign-in as additional providers and Telegram kept
+as optional integration.
 
-- email magic link auth and production-safe browser sessions;
+- Google OAuth sign-in, email magic link auth and production-safe browser sessions;
 - in-app reminders and check-cycle settings;
 - optional reminder delivery beyond in-app surfaces;
 - optional Telegram bot commands beyond `/start`, `/app`, and `/help`;
@@ -50,18 +51,31 @@ packages/shared      Shared domain types and pure business logic
 `packages/ui` is intentionally not created yet because there are no reused UI
 components in Slice 1.
 
-## Auth
+## Authentication
 
-The API resolves user identity from an authorization context only.
+The production MVP uses browser auth. Google sign-in is the primary login
+method; email magic link is an available but non-primary fallback; Apple
+sign-in is implemented at the application level and ready for provider
+setup/smoke.
 
-- Target production auth: email magic link request/verify flow and configured
-  OAuth provider callbacks.
-- `POST /api/auth/telegram` validates Telegram Mini App `initData` only when
-  optional Telegram integration is enabled.
-- `POST /api/auth/dev` exists only when `NODE_ENV=development` and
-  `DEV_AUTH_ENABLED=true`.
+The backend creates a user and a bearer/browser session only after a verified
+auth exchange: a one-time magic link token, an OAuth state/code callback, or
+another explicitly enabled provider boundary.
+
+- The API resolves user identity from the authorization context only.
+  `userId` from request body or query parameters is never trusted.
 - Authenticated requests use a signed bearer token.
-- `userId` from request body or query parameters is never trusted.
+- `POST /api/auth/telegram` validates Telegram Mini App `initData` only when
+  optional Telegram integration is enabled. The Telegram user id is not the
+  sole mandatory product identifier.
+- `POST /api/auth/dev` exists only when `NODE_ENV=development` and
+  `DEV_AUTH_ENABLED=true`; it must never be enabled in production.
+
+Endpoint-level details live in `docs/API.md`; product-level auth requirements
+live in `docs/PRODUCT_SPEC.md` (§ 7.1).
+
+In-app reminders are shown inside the webapp (home, settings, category/item
+screens). External Telegram/email/push reminders are out of MVP scope.
 
 ## Business Logic
 
@@ -134,7 +148,7 @@ Slice 5 adds reminder scheduling data:
 
 Reminder rows include an `idempotencyKey` so later worker slices can avoid
 duplicates for the same user, reminder type, entity, and UTC scheduled date.
-For the web-first MVP, this scheduling data powers in-app reminders. Due and
+For the MVP, this scheduling data powers in-app reminders. Due and
 upcoming reminders can be shown when the user opens the app; this does not
 require an always-on worker process.
 
@@ -254,7 +268,7 @@ against Compose PostgreSQL and Redis. Telegram-facing services are behind a
 separate `telegram` profile because they require a real bot token, a public
 Mini App URL, network access to Telegram, and an always-on process.
 
-The web-first deployment target is free-friendly:
+The deployment target is free-friendly:
 
 - Vercel webapp.
 - Northflank API service.

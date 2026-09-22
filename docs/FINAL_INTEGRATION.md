@@ -1,7 +1,7 @@
 # Final MVP Integration
 
 This document records the integration checklist for the implemented core MVP
-and the new web-first release path. Passing this checklist proves that the
+and the current release path. Passing this checklist proves that the
 current product core works together locally and can be prepared for browser
 release; it does not mean full compliance with every requirement in
 `docs/PRODUCT_SPEC.md`.
@@ -35,7 +35,7 @@ Optional Telegram services:
 docker compose --profile telegram up bot worker
 ```
 
-The `telegram` profile is not required for the web-first MVP. It requires a
+The `telegram` profile is not required for the core MVP. It requires a
 real `TELEGRAM_BOT_TOKEN`, a public `TELEGRAM_WEBAPP_URL`, network access to
 Telegram APIs, and an always-on process.
 
@@ -90,7 +90,7 @@ Minimum browser smoke:
 10. Search for an item.
 11. Export JSON from settings.
 
-## Web-First Smoke Checklist
+## Release Smoke Checklist
 
 Target release smoke after email auth is implemented:
 

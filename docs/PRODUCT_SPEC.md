@@ -22,48 +22,44 @@
 
 ## 3. Цель MVP
 
-Создать mobile-first web app с email magic link авторизацией и in-app
-reminders, в котором пользователь может:
+Создать прогрессивное web-приложение (PWA) с авторизацией через Google-аккаунт, в котором пользователь может:
 
-1. Авторизоваться через email magic link.
+1. Авторизоваться через Google-аккаунт (дополнительно: Apple Sign In и email magic link).
 2. Создавать персональные категории.
 3. Добавлять регулярно покупаемые товары.
 4. Изменять состояние товара одним нажатием.
 5. Назначать периодические проверки.
-6. Видеть in-app reminders о товарах, категориях и наборах, которые пора
+6. Видеть напоминания внутри приложения о товарах, категориях и наборах, которые пора
    проверить.
 7. Автоматически формировать список покупок.
 8. Создавать наборы связанных товаров.
 9. Проходить пошаговую проверку категории или набора.
-10. Получать базовые rule-based рекомендации.
+10. Получать базовые rule-based рекомендации (если купил кофе, предложить молоко).
 11. Искать товары.
 12. Экспортировать свои данные в JSON.
 
-Telegram Mini App, Telegram Bot-команды и внешняя доставка Telegram reminders
-не входят в бесплатный web-first MVP. Они остаются optional integration после
-MVP, если появится подходящая инфраструктура для постоянного bot/worker
-процесса.
+Telegram Mini App, Telegram Bot-команды и доставка Telegram напоминаний
+не входят в MVP. Они остаются опциональными после
+MVP.
 
 ## 4. Платформы
 
 ### 4.1. Основной интерфейс
 
-Основная платформа MVP: **mobile web app в обычном браузере**.
+Основная платформа MVP: **устанавливаемое PWA (mobile web app в обычном браузере)**.
 
-Интерфейс открывается по HTTPS URL, оптимизирован под мобильный экран и может
-быть добавлен на домашний экран телефона как browser/PWA-like experience.
-Полный offline-first PWA не обязателен для MVP.
+Интерфейс открывается по HTTPS URL, оптимизирован под мобильный экран и
+устанавливается на домашний экран телефона как отдельное приложение (web
+manifest, `display: standalone`). Offline-first режим (service worker) не
+обязателен для MVP.
 
-### 4.2. Email auth
+### 4.2. Авторизация
 
-Основной способ входа: email magic link. Пользователь вводит email, получает
-одноразовую ссылку, открывает ее в браузере и получает authenticated session.
+Основной способ входа: Google-аккаунт через OAuth 2.0 / OpenID Connect. Дополнительно: Sign in with Apple и email magic link. Пользователь вводит email, получает одноразовую ссылку, открывает ее в браузере и получает аутентифицированный сеанс.
 
 ### 4.3. Post-MVP optional Telegram integration
 
-Telegram Mini App, Telegram Bot и внешняя доставка reminders не входят в
-web-first MVP и могут быть добавлены после релиза, если появится подходящая
-инфраструктура для постоянного bot/worker процесса.
+Telegram Mini App, Telegram Bot и внешняя доставка напоминаний не входят в MVP и могут быть добавлены после релиза, если появится подходящая инфраструктура для постоянного bot/worker процесса.
 
 В будущем это может включать:
 
@@ -120,21 +116,44 @@ web-first MVP и могут быть добавлены после релиза,
 
 ### 7.1. Авторизация
 
-1. Пользователь вводит email в webapp.
-2. Backend создает одноразовый magic link token с коротким TTL.
-3. Backend отправляет magic link на email пользователя через настроенный email
-   provider.
-4. Пользователь открывает magic link в браузере.
-5. Backend проверяет токен, срок действия, одноразовость и создает
-   authenticated session.
-6. Для каждого email создается отдельный пользователь.
-7. Все запросы выполняются в контексте авторизованного пользователя.
-8. `userId` из request body или query parameters не используется как источник истины.
-9. Данные одного пользователя недоступны другому.
-10. Локальный режим авторизации разрешен только в development-окружении.
-11. Telegram auth через WebApp `initData` допускается только как optional
-    integration; она не реализована в рамках web-first MVP и не является
-    обязательным flow.
+Основной способ входа — **Google-аккаунт** через OAuth 2.0 / OpenID Connect
+(authorization code flow).
+
+1. Пользователь нажимает `Войти через Google` в webapp.
+2. Frontend вызывает `POST /api/auth/google/start`; backend (с rate limit)
+   создает одноразовый OAuth state token (хэши `state` и `nonce`, короткий TTL)
+   и возвращает URL страницы авторизации Google со scope `openid email profile`
+   и `prompt=select_account`.
+3. Пользователь выбирает аккаунт и подтверждает вход в Google; Google
+   перенаправляет браузер на `GET /api/auth/google/callback` с `code` и `state`.
+4. Backend проверяет `state` (соответствие хэша, провайдер, срок действия,
+   одноразовость) и обменивает `code` на `id_token` в token endpoint Google.
+5. Backend проверяет `id_token`: подпись RS256 по открытым ключам Google (JWKS),
+   issuer `accounts.google.com`, audience равен `client_id`, срок действия
+   и соответствие `nonce`.
+6. Backend определяет пользователя по связке (`GOOGLE`, `sub`) в
+   `auth_accounts`; если записи нет — ищет пользователя с таким подтвержденным
+   email и привязывает аккаунт; иначе создает нового пользователя
+   (email считается подтвержденным). При первом входе создается личный
+   workspace.
+7. Backend выпускает session JWT и перенаправляет пользователя в webapp
+   (`/?oauth_token=...`); ошибки перенаправляют с кодом `oauth_error`.
+8. Все последующие запросы выполняются с Bearer JWT в контексте авторизованного
+   пользователя.
+9. `userId` из request body или query parameters не используется как источник
+   истины.
+10. Данные одного пользователя недоступны другому.
+
+Дополнительные способы входа:
+
+- вход по email через одноразовый magic link (короткий TTL, подтверждение
+  email по факту перехода по ссылке);
+- Sign in with Apple — по той же OAuth-схеме, что и Google;
+- Telegram auth через WebApp `initData` допускается только как optional
+  integration; она не реализована в рамках MVP и не является обязательным
+  flow.
+
+Локальный режим авторизации разрешен только в development-окружении.
 
 Минимальные данные пользователя:
 
@@ -147,6 +166,17 @@ language
 timezone
 created_at
 updated_at
+```
+
+Связь с провайдером входа хранится отдельно в `auth_accounts`:
+
+```text
+user_id
+provider (GOOGLE | APPLE | ...)
+provider_account_id
+email
+email_verified
+display_name
 ```
 
 ### 7.2. Онбординг
@@ -195,8 +225,7 @@ kupitnezabyt помогает помнить о товарах, которые �
 Я буду показывать напоминания внутри приложения, когда пора проверить запасы.
 ```
 
-Подтверждение не является системным разрешением на push-уведомления. В
-бесплатном MVP напоминания отображаются внутри webapp при открытии приложения.
+Подтверждение не является системным разрешением на push-уведомления. В MVP напоминания отображаются внутри webapp при открытии приложения.
 
 ### 7.3. Категории
 
@@ -261,6 +290,12 @@ NEED_BUY
 PAUSED
 ```
 
+`PAUSED` — зарезервированный системный статус: в интерфейсе MVP
+пользователь его не устанавливает (доступен только через прямой вызов API).
+Товары в статусе `PAUSED` исключаются из напоминаний, проверок,
+агрегирования категории и списка покупок, `nextCheckAt` для них не
+рассчитывается.
+
 Важность:
 
 ```text
@@ -272,8 +307,9 @@ CRITICAL
 
 Поле `importance` реализовано (2026-07-21): значение по умолчанию `NORMAL`,
 управляется через API (`POST`/`PATCH /api/items`, код ошибки
-`INVALID_IMPORTANCE`) и через интерфейс (выбор важности при редактировании
-товара, бейдж на карточке для значений выше/ниже обычной). Важность — это
+`INVALID_IMPORTANCE`) и через интерфейс — выбор задается в форме редактирования
+товара (select «Важность»), на карточке товара показывается бейдж для значений
+выше/ниже обычной. Важность — это
 хранимый атрибут: она не влияет на переходы статусов, порядок в списке
 покупок и расписание напоминаний. Порядок товара по-прежнему определяется
 статусом (`NEED_BUY`, `LOW`, `IN_STOCK`, `PAUSED`).
@@ -483,7 +519,7 @@ SHOPPING_REMINDER
 backend-логику, что и карточки товара в webapp.
 
 Внешняя доставка через Telegram Bot API, email reminders или push notifications
-не входит в бесплатный web-first MVP. Эти каналы могут быть добавлены позже
+не входит в MVP. Эти каналы могут быть добавлены позже
 поверх той же модели `Reminder`.
 
 ### 7.12. Поиск
@@ -526,20 +562,23 @@ MVP:
 
 1. Ошибка отправки magic link email не должна создавать authenticated session.
 2. Magic link токены одноразовые и имеют короткий срок действия.
-3. In-app reminders не требуют постоянно запущенного worker процесса.
-4. Действия с reminders идемпотентны.
-5. Для одного объекта и расчетного периода не создаются дубли reminder-записей.
+3. OAuth state токены одноразовые, привязаны к провайдеру и имеют короткий срок действия.
+4. In-app reminders не требуют постоянно запущенного worker процесса.
+5. Действия с reminders идемпотентны.
+6. Для одного объекта и расчетного периода не создаются дубли reminder-записей.
 
 ### 8.3. Безопасность
 
 1. Magic link токены проверяются только на backend.
-2. Пользователь определяется из авторизационного контекста.
-3. Все запросы фильтруются по `userId`.
-4. Секреты хранятся только в переменных окружения.
-5. Magic link токены, email provider tokens, `initData`, JWT и чувствительные заметки не логируются.
-6. Development authentication запрещена в production.
-7. Валидация входных данных выполняется на границе API.
-8. Rate limiting применяется к auth и чувствительным endpoints.
+2. Google `id_token` проверяется только на backend: подпись по JWKS, issuer,
+   audience, срок действия и nonce.
+3. Пользователь определяется из авторизационного контекста.
+4. Все запросы фильтруются по `userId`.
+5. Секреты хранятся только в переменных окружения.
+6. Magic link токены, OAuth state токены, email provider tokens, `initData`, JWT и чувствительные заметки не логируются.
+7. Development authentication запрещена в production.
+8. Валидация входных данных выполняется на границе API.
+9. Rate limiting применяется к auth и чувствительным endpoints.
 
 ### 8.4. Приватность
 
@@ -699,7 +738,7 @@ reminder integration после MVP.
 `apps/webapp`:
 
 - UI;
-- email magic link login flow;
+- OAuth login flow (Google/Apple) и email magic link flow;
 - вызовы API;
 - optimistic updates;
 - in-app reminders.
@@ -782,6 +821,43 @@ MagicLinkToken {
 ```
 
 `tokenHash` хранится вместо raw token.
+
+### 11.1.2. AuthAccount
+
+```ts
+AuthAccount {
+  id: string
+  userId: string
+  provider: AuthProvider        // GOOGLE | APPLE
+  providerAccountId: string     // например `sub` из Google id_token
+  email?: string
+  emailVerified: boolean
+  displayName?: string
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+Связь `(provider, providerAccountId)` уникальна. Один пользователь может иметь
+несколько `AuthAccount` от разных провайдеров. Аккаунт привязывается к
+существующему пользователю по совпадению подтвержденного email.
+
+### 11.1.3. OAuthStateToken
+
+```ts
+OAuthStateToken {
+  id: string
+  provider: AuthProvider        // GOOGLE | APPLE
+  stateHash: string
+  nonceHash: string
+  expiresAt: Date
+  consumedAt?: Date
+  createdAt: Date
+}
+```
+
+`stateHash` и `nonceHash` хранятся вместо raw значений. Токен одноразовый,
+привязан к провайдеру и имеет короткий TTL.
 
 ### 11.2. Category
 
@@ -994,6 +1070,11 @@ CheckSessionItem {
 ### 12.1. Auth и пользователь
 
 ```http
+GET  /api/auth/providers
+POST /api/auth/google/start
+GET  /api/auth/google/callback
+POST /api/auth/apple/start
+POST /api/auth/apple/callback
 POST /api/auth/telegram
 POST /api/auth/email/request
 POST /api/auth/email/verify
@@ -1002,8 +1083,11 @@ DELETE /api/me
 GET  /api/export/json
 ```
 
+`/api/auth/google/*` реализует основной OAuth-вход; `/api/auth/apple/*` —
+дополнительный вход через Apple; `POST /api/auth/email/*` — дополнительный
+вход по magic link.
 `POST /api/auth/telegram` относится к optional Telegram integration и не
-является частью web-first MVP.
+является частью MVP.
 
 ### 12.2. Categories
 
@@ -1134,7 +1218,7 @@ NEED_BUY > LOW > IN_STOCK
 
 ### 13.4. Напоминания
 
-В web-first MVP reminders отображаются при открытии приложения и запросе
+В MVP reminders отображаются при открытии приложения и запросе
 пользовательских данных. Backend/API:
 
 1. Выбирает due-объекты.
@@ -1201,6 +1285,18 @@ EMAIL_FROM=
 EMAIL_PROVIDER_API_KEY=
 MAGIC_LINK_TOKEN_TTL_MINUTES=15
 
+# OAuth-провайдеры (основной вход)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI=
+
+# Apple Sign In (дополнительный вход)
+APPLE_CLIENT_ID=
+APPLE_TEAM_ID=
+APPLE_KEY_ID=
+APPLE_PRIVATE_KEY=
+APPLE_REDIRECT_URI=
+
 DEV_AUTH_ENABLED=false
 
 # Optional Telegram integration
@@ -1227,25 +1323,28 @@ TELEGRAM_WEBAPP_URL=
 8. Агрегирование категории.
 9. Расчет due reminders.
 10. Magic link token hashing, expiry and one-time consumption.
+11. OAuth state token hashing, expiry and one-time consumption.
+12. Проверку Google `id_token` (подпись, issuer, audience, nonce).
 
 ### 16.2. Integration tests
 
 Покрыть:
 
-1. Email magic link request/verify flow.
-2. Изоляцию данных по `userId`.
-3. CRUD категорий и товаров.
-4. Shopping list flow.
-5. Reminder creation и duplicate prevention.
-6. In-app reminder actions.
-7. Check session flow.
-8. Экспорт и удаление аккаунта.
+1. Google OAuth start/callback flow (state, nonce, id_token, создание пользователя).
+2. Email magic link request/verify flow.
+3. Изоляцию данных по `userId`.
+4. CRUD категорий и товаров.
+5. Shopping list flow.
+6. Reminder creation и duplicate prevention.
+7. In-app reminder actions.
+8. Check session flow.
+9. Экспорт и удаление аккаунта.
 
 ### 16.3. E2E tests
 
 Минимальные сценарии:
 
-1. Первый вход через email magic link.
+1. Первый вход через Google-аккаунт (OAuth).
 2. Создание категории.
 3. Добавление товара.
 4. Изменение статуса на `NEED_BUY`.
@@ -1268,7 +1367,7 @@ pnpm test:e2e
 MVP готов, если:
 
 1. Webapp открывается в мобильном браузере по HTTPS URL.
-2. Email magic link auth работает в production-like окружении.
+2. OAuth-авторизация через Google работает в production-like окружении.
 3. Пользователь может создавать и редактировать категории.
 4. Пользователь может создавать и редактировать товары.
 5. Быстрое изменение статуса работает.
@@ -1294,7 +1393,9 @@ MVP готов, если:
 3. Интеграции с магазинами.
 4. Мониторинг цен и скидок.
 5. LLM- или ML-рекомендатель.
-6. Семейные аккаунты.
+6. Расширенные семейные аккаунты с тонкими ролями, несколькими владельцами,
+   аудитом изменений и отдельными privacy/export режимами поверх текущей
+   collaboration beta.
 7. Совместные списки.
 8. Нативные приложения iOS и Android.
 9. Оплата и подписки.
@@ -1343,21 +1444,22 @@ LLM-слой может предлагать связанные товары н�
 ### 19.7. Telegram integration
 
 Telegram Mini App, Bot-команды, Telegram reminder delivery и callback-кнопки
-могут быть возвращены как optional integration после web-first MVP.
+могут быть возвращены как optional integration после MVP.
 
 ## 20. Принятые решения для MVP
 
 1. Package manager: `pnpm`.
 2. Backend framework: Fastify.
-3. Production auth MVP: email magic links.
+3. Production auth MVP: Google (OAuth 2.0 / OpenID Connect); дополнительно email magic link и Apple Sign In.
 4. Database: PostgreSQL через Prisma.
-5. Queue/worker: не требуется для бесплатного web-first MVP.
+5. Queue/worker: не требуется — напоминания доставляются in-app при открытии
+   приложения; внешние каналы доставки отложены.
 6. Первый язык интерфейса: русский.
 7. Категории пользовательские, со стартовыми шаблонами.
 8. Рекомендации только rule-based.
 9. Цены и магазины не входят в MVP.
 10. Семейный режим отложен.
-11. Mobile web app является основным каналом.
+11. Устанавливаемое PWA (mobile web app) является основным каналом.
 12. Telegram Mini App и bot являются optional integration после MVP.
 13. Лекарства, средства гигиены и заметки считаются чувствительными данными.
 14. Инструкции для coding agents хранятся только в корневом `AGENTS.md`.

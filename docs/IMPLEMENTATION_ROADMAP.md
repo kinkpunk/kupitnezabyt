@@ -33,12 +33,43 @@ remains the source of the complete target. Existing Telegram slices are
 historical implemented work, but the next release-readiness path is browser
 auth, browser smoke, and in-app reminders.
 
-Remaining web-first MVP gaps:
+Current MVP scope (implemented):
 
-- Extended E2E/DB-backed coverage for secondary flows beyond the Slice 26 smoke
-  and user-isolation harness.
-- Item reorder if a later UX/data-model change adds item-level `sortOrder`.
-- Optional Telegram integration smoke if/when bot/worker deployment is enabled.
+- Google sign-in is implemented and verified in production — the primary login
+  method.
+- Email magic link auth is implemented; browser sessions use bearer/JWT after
+  magic link verify.
+- Apple sign-in is implemented at the application level and ready for provider
+  setup/smoke.
+- Onboarding completion is stored on the backend and does not repeat after a
+  new login.
+- Home/settings UI for in-app reminders is implemented.
+- `usageCycleDays`, `nextCheckAt`, and `reminderEnabled` are configurable in
+  the UI for items, categories, and groups.
+- Item importance (`importance`: `LOW`/`NORMAL`/`HIGH`/`CRITICAL`) is
+  implemented in API and UI; it is a stored attribute and does not affect
+  status or shopping-list logic.
+- Continued browser smoke against the deployed HTTPS URL without Telegram
+  credentials.
+- Collaboration beta can be shown to users after a separate two-account smoke
+  test: invite, accept, list switch, shared editing, access removal, ownership
+  transfer.
+- Telegram auth/bot/reminder delivery remains a toggleable optional
+  integration.
+- Shared lists remain a beta/hardening track relative to the core MVP: the main
+  functionality is implemented, but production smoke, edge-case UX, and
+  extended two-account coverage should be closed before wide rollout.
+
+Remaining gaps vs `docs/PRODUCT_SPEC.md`:
+
+- Additional edge-case coverage for existing e2e scenarios (main flow, checks,
+  search, archive, export, sorting, and collaboration beta are covered in
+  `tests/e2e/`; DB-backed API scenarios in
+  `apps/api/src/db-backed.integration.test.ts`).
+- Extended two-account e2e coverage for the collaboration beta and clear UX
+  for inviting users who have already signed in.
+- Optional Telegram integration smoke if/when bot/worker deployment is
+  enabled.
 
 ## Web-First Release Plan
 
@@ -609,6 +640,22 @@ Slice 26. The current implementation scopes almost every product entity by
 collaboration with ad hoc exceptions. Collaboration should introduce an
 explicit shared space and membership model, then migrate access checks onto
 that model.
+
+### Collaboration Beta Status
+
+Shared lists are implemented as a beta feature. The current model shares the
+entire active list/workspace, not individual item sets. The owner can invite a
+member by email, revoke a pending invitation, remove access, and transfer
+ownership.
+
+Slice 32 is closed: the "Поделиться списком" entry point is available to the
+owner on the Categories tab and in Settings, API tests cover invitation edge
+cases, and the two-account scenario is covered by browser E2E
+(`tests/e2e/workspace-collaboration.spec.ts`). Before a wide rollout, manually
+run the full sharing scenario on a real deployment (staging/production) with
+real email addresses: invite, sign in via the email link, shared editing,
+access removal, and ownership transfer. The manual checklist is in Slice 32
+below.
 
 ### Slice 27: Shared Workspace Data Model
 

@@ -1,7 +1,7 @@
 # Northflank + Vercel Deployment
 
 This document describes the current free-friendly staging topology for the
-web-first MVP:
+core MVP:
 
 ```text
 Vercel:
