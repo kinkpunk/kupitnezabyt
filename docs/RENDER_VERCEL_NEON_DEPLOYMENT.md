@@ -308,6 +308,10 @@ to a local address in a Vercel build (see `apps/webapp/next.config.ts`), so a
 misconfigured deployment cannot ship silently. If a Vercel deploy fails with
 this error, add the variable for the affected environment and redeploy.
 
+The webapp also serves a public privacy policy page at `/privacy`
+(`apps/webapp/src/app/privacy/page.tsx`); the login screen links to it. It is
+statically prerendered and does not depend on the API.
+
 ## Optional Telegram Setup
 
 In BotFather:

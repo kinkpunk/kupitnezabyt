@@ -88,4 +88,12 @@ describe("LoginScreen", () => {
       "http://localhost/dev-auth"
     );
   });
+
+  it("renders a link to the privacy policy", () => {
+    render(<LoginScreen {...createProps()} />);
+    expect(screen.getByRole("link", { name: "Политика конфиденциальности" })).toHaveAttribute(
+      "href",
+      "/privacy"
+    );
+  });
 });

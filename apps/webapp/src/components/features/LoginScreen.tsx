@@ -116,6 +116,9 @@ export function LoginScreen({
           </a>
         ) : null}
       </section>
+      <footer className="ds-login-footer">
+        <a href="/privacy">Политика конфиденциальности</a>
+      </footer>
     </main>
   );
 }

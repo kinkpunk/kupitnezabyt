@@ -10,6 +10,10 @@ smoke-процедуры и настройка OAuth-провайдеров. П�
 - API — https://kupitnezabyt-api.onrender.com;
 - база — Neon PostgreSQL.
 
+Webapp отдаёт публичную страницу политики конфиденциальности по адресу
+`https://kupitnezabyt-webapp.vercel.app/privacy` (роут
+`apps/webapp/src/app/privacy/page.tsx`); на неё ведёт ссылка с экрана входа.
+
 Полная инструкция: `docs/RENDER_VERCEL_NEON_DEPLOYMENT.md` (топология,
 переменные окружения сервисов, migration job, Vercel webapp, smoke checklist,
 известные ограничения).
