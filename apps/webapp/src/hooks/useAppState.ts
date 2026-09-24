@@ -447,9 +447,16 @@ export function useAppState() {
       hasCompletedOnboardingLocally ||
       hasExistingProductData;
 
-    setConsentRecorded(
-      loginConsentRecorded ?? hasProfileConsent(userProfile)
-    );
+    const recorded = loginConsentRecorded ?? hasProfileConsent(userProfile);
+    if (recorded && !getStoredLegalConsent()) {
+      const fallback = buildLegalConsent();
+      saveStoredLegalConsent({
+        termsVersion: userProfile.termsAcceptedVersion ?? fallback.termsVersion,
+        privacyVersion: userProfile.privacyAcceptedVersion ?? fallback.privacyVersion,
+        acceptedAt: userProfile.termsAcceptedAt ?? fallback.acceptedAt
+      });
+    }
+    setConsentRecorded(recorded);
     setShowOnboarding(!hasCompletedOnboarding);
     if (hasCompletedOnboarding && !userProfile.onboardingCompletedAt) {
       void completeOnboarding(authToken).catch(() => undefined);
