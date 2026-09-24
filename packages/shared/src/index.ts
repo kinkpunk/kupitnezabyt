@@ -1,3 +1,4 @@
+export * from "./legal.js";
 export * from "./status.js";
 export * from "./reminders.js";
 export * from "./notifications.js";

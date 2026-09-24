@@ -16,6 +16,14 @@ function createProps(overrides: Partial<React.ComponentProps<typeof LoginScreen>
     onEmailChange: vi.fn(),
     emailAuthMessage: null,
     devMagicLink: null,
+    showLegalConsent: false,
+    termsAccepted: true,
+    privacyAccepted: true,
+    onTermsAcceptedChange: vi.fn(),
+    onPrivacyAcceptedChange: vi.fn(),
+    telegramAvailable: false,
+    isContinuingWithTelegram: false,
+    onContinueWithTelegram: vi.fn().mockResolvedValue(undefined),
     onStartGoogleSignIn: vi.fn().mockResolvedValue(undefined),
     onStartAppleSignIn: vi.fn().mockResolvedValue(undefined),
     onRequestMagicLink: vi.fn().mockResolvedValue(undefined),
@@ -95,5 +103,60 @@ describe("LoginScreen", () => {
       "href",
       "/privacy"
     );
+  });
+
+  it("renders a link to the terms of service", () => {
+    render(<LoginScreen {...createProps()} />);
+    expect(screen.getAllByRole("link", { name: "Условия использования" }).length).toBeGreaterThan(0);
+  });
+
+  it("disables all sign-in actions until both consent checkboxes are ticked", () => {
+    function Harness() {
+      const [terms, setTerms] = React.useState(false);
+      const [privacy, setPrivacy] = React.useState(false);
+
+      return (
+        <LoginScreen
+          {...createProps({
+            showLegalConsent: true,
+            termsAccepted: terms,
+            privacyAccepted: privacy,
+            onTermsAcceptedChange: setTerms,
+            onPrivacyAcceptedChange: setPrivacy,
+            email: "test@example.com"
+          })}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.getByRole("button", { name: "Войти через Google" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Войти через Apple" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Получить ссылку" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Условия использования/ }));
+    expect(screen.getByRole("button", { name: "Войти через Google" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Политике конфиденциальности/ }));
+    expect(screen.getByRole("button", { name: "Войти через Google" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Получить ссылку" })).toBeEnabled();
+  });
+
+  it("hides consent checkboxes when consent was already accepted on this device", () => {
+    render(<LoginScreen {...createProps({ showLegalConsent: false })} />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Войти через Google" })).toBeEnabled();
+  });
+
+  it("renders the Telegram continue button and calls onContinueWithTelegram", () => {
+    const onContinueWithTelegram = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LoginScreen
+        {...createProps({ telegramAvailable: true, onContinueWithTelegram })}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Продолжить через Telegram" }));
+    expect(onContinueWithTelegram).toHaveBeenCalledOnce();
   });
 });

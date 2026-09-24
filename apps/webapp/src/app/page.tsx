@@ -3,6 +3,7 @@
 import { ErrorNotice } from "../components/ui/ErrorNotice";
 import { ToastNotice } from "../components/ui/ToastNotice";
 import { LoginScreen } from "../components/features/LoginScreen";
+import { LegalConsentModal } from "../components/features/LegalConsentModal";
 import { OnboardingModal } from "../components/features/OnboardingModal";
 import { AppHeader } from "../components/common";
 import { BottomNav } from "../components/BottomNav";
@@ -43,10 +44,24 @@ export default function Home() {
         onEmailChange={state.setEmail}
         emailAuthMessage={state.emailAuthMessage}
         devMagicLink={state.devMagicLink}
+        showLegalConsent={state.showLegalConsent}
+        termsAccepted={state.termsAccepted}
+        privacyAccepted={state.privacyAccepted}
+        onTermsAcceptedChange={state.setTermsAccepted}
+        onPrivacyAcceptedChange={state.setPrivacyAccepted}
+        telegramAvailable={state.telegramAvailable}
+        isContinuingWithTelegram={state.isContinuingWithTelegram}
+        onContinueWithTelegram={state.handleContinueWithTelegram}
         onStartGoogleSignIn={state.handleStartGoogleSignIn}
         onStartAppleSignIn={state.handleStartAppleSignIn}
         onRequestMagicLink={state.handleRequestMagicLink}
       />
+    );
+  }
+
+  if (state.consentRecorded === false) {
+    return (
+      <LegalConsentModal isSaving={state.isSavingConsent} onAccept={state.handleAcceptLegalConsent} />
     );
   }
 

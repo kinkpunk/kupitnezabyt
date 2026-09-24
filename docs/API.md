@@ -127,9 +127,32 @@ Auth exchange endpoints return:
 ```json
 {
   "token": "...",
-  "user": {}
+  "user": {},
+  "consentRecorded": true
 }
 ```
+
+`consentRecorded` reports whether the user has accepted both the current
+Terms of Service and Privacy Policy. Public auth endpoints (`telegram`,
+`email/verify`, and the OAuth `start` endpoints) accept an optional
+`consent` object in the request body. It records the acceptance on user
+creation and refreshes it when the submitted document versions differ from
+the stored ones:
+
+```json
+{
+  "consent": {
+    "termsVersion": "1.0.0",
+    "privacyVersion": "1.0.0",
+    "acceptedAt": "2026-09-23T10:00:00.000Z"
+  }
+}
+```
+
+For OAuth flows the webapp submits `consent` to the `start` endpoint; the
+API persists it on the OAuth state token and applies it to the user in the
+callback. Version constants live in `@kupitnezabyt/shared` (`TERMS_VERSION`,
+`PRIVACY_VERSION`, `LEGAL_DOCUMENTS_UPDATED_AT`).
 
 All endpoints below require:
 
@@ -254,8 +277,19 @@ owner remains in the workspace as `EDITOR`.
 
 ```http
 GET    /api/me
+POST   /api/me/consent
 DELETE /api/me
 ```
+
+`POST /api/me/consent` records an explicit acceptance of the Terms of Service
+and Privacy Policy for the authenticated user. The body is the same `consent`
+object accepted by the auth endpoints (document versions plus `acceptedAt`);
+the stored `acceptedAt`/version pair overwrites the previous values, which is
+how an updated document revision gets re-accepted. The endpoint is
+rate-limited per authenticated user and returns `{ "recorded": true }`.
+`GET /api/me` includes the stored consent columns
+(`termsAcceptedAt`, `termsAcceptedVersion`, `privacyAcceptedAt`,
+`privacyAcceptedVersion`).
 
 `DELETE /api/me` deletes the authenticated user. Related user data is removed
 through database cascades and becomes inaccessible through the API. If the user

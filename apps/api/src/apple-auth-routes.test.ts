@@ -174,7 +174,8 @@ describe("apple auth routes", () => {
         emailVerified: true,
         displayName: null
       },
-      expect.any(Date)
+      expect.any(Date),
+      null
     );
 
     await app.close();

@@ -46,6 +46,7 @@ export type DevAuthBody = {
 
 export type TelegramAuthBody = {
   initData?: unknown;
+  consent?: unknown;
 };
 
 export type EmailAuthRequestBody = {
@@ -54,6 +55,11 @@ export type EmailAuthRequestBody = {
 
 export type EmailAuthVerifyBody = {
   token?: unknown;
+  consent?: unknown;
+};
+
+export type OAuthStartBody = {
+  consent?: unknown;
 };
 
 export type WorkspaceInvitationBody = {

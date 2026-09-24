@@ -8,6 +8,7 @@ const mockTx = vi.hoisted(() => ({
     updateMany: vi.fn()
   },
   user: {
+    findUnique: vi.fn(),
     upsert: vi.fn()
   },
   workspace: {
@@ -144,6 +145,118 @@ describe("email auth routes", () => {
         language: "ru",
         timezone: "Europe/Minsk"
       }
+    });
+
+    await app.close();
+  });
+
+  it("records legal consent when verifying a magic link for a new user", async () => {
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+
+    mockTx.magicLinkToken.findUnique.mockResolvedValue({
+      id: "magic-1",
+      email: "user@example.com",
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null
+    });
+    mockTx.magicLinkToken.updateMany.mockResolvedValue({ count: 1 });
+    mockTx.user.findUnique.mockResolvedValue(null);
+    mockTx.user.upsert.mockResolvedValue({
+      id: "user-1",
+      email: "user@example.com",
+      termsAcceptedAt: new Date("2026-09-23T10:00:00.000Z"),
+      privacyAcceptedAt: new Date("2026-09-23T10:00:00.000Z")
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/email/verify",
+      payload: {
+        token: "raw-token",
+        consent: {
+          termsVersion: "1.0.0",
+          privacyVersion: "1.0.0",
+          acceptedAt: "2026-09-23T10:00:00.000Z"
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().consentRecorded).toBe(true);
+    expect(mockTx.user.upsert).toHaveBeenCalledWith({
+      where: {
+        email: "user@example.com"
+      },
+      update: {
+        emailVerifiedAt: expect.any(Date),
+        termsAcceptedAt: expect.any(Date),
+        termsAcceptedVersion: "1.0.0",
+        privacyAcceptedAt: expect.any(Date),
+        privacyAcceptedVersion: "1.0.0"
+      },
+      create: {
+        email: "user@example.com",
+        emailVerifiedAt: expect.any(Date),
+        language: "ru",
+        timezone: "Europe/Minsk",
+        termsAcceptedAt: expect.any(Date),
+        termsAcceptedVersion: "1.0.0",
+        privacyAcceptedAt: expect.any(Date),
+        privacyAcceptedVersion: "1.0.0"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("does not overwrite existing consent when the versions match", async () => {
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+
+    mockTx.magicLinkToken.findUnique.mockResolvedValue({
+      id: "magic-1",
+      email: "user@example.com",
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null
+    });
+    mockTx.magicLinkToken.updateMany.mockResolvedValue({ count: 1 });
+    mockTx.user.findUnique.mockResolvedValue({
+      termsAcceptedAt: new Date("2026-09-20T10:00:00.000Z"),
+      termsAcceptedVersion: "1.0.0",
+      privacyAcceptedAt: new Date("2026-09-20T10:00:00.000Z"),
+      privacyAcceptedVersion: "1.0.0"
+    });
+    mockTx.user.upsert.mockResolvedValue({
+      id: "user-1",
+      email: "user@example.com",
+      termsAcceptedAt: new Date("2026-09-20T10:00:00.000Z"),
+      privacyAcceptedAt: new Date("2026-09-20T10:00:00.000Z")
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/email/verify",
+      payload: {
+        token: "raw-token",
+        consent: {
+          termsVersion: "1.0.0",
+          privacyVersion: "1.0.0",
+          acceptedAt: "2026-09-23T10:00:00.000Z"
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().consentRecorded).toBe(true);
+    expect(mockTx.user.upsert).toHaveBeenCalledWith({
+      where: {
+        email: "user@example.com"
+      },
+      update: {
+        emailVerifiedAt: expect.any(Date)
+      },
+      create: expect.any(Object)
     });
 
     await app.close();

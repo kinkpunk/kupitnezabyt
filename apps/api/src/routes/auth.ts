@@ -30,6 +30,13 @@ import {
   verifyGoogleIdToken
 } from "../google-auth.js";
 import { checkRateLimit, sendError } from "../lib/helpers.js";
+import {
+  buildConsentCreateData,
+  buildConsentUpdateData,
+  hasRecordedConsent,
+  readLegalConsent,
+  userConsentSelect
+} from "../lib/legal.js";
 import { upsertTelegramUser } from "../lib/telegram-user.js";
 import { resolveOAuthUser } from "../oauth.js";
 import { authRateLimiter } from "../lib/rate-limiters.js";
@@ -39,6 +46,7 @@ import type {
   EmailAuthRequestBody,
   EmailAuthVerifyBody,
   GoogleAuthCallbackQuery,
+  OAuthStartBody,
   TelegramAuthBody
 } from "../lib/types.js";
 
@@ -77,7 +85,8 @@ export default async function authRoutes(app: FastifyInstance) {
 
     return {
       token: signToken(user.id, config),
-      user
+      user,
+      consentRecorded: hasRecordedConsent(user)
     };
   });
 
@@ -98,14 +107,16 @@ export default async function authRoutes(app: FastifyInstance) {
       return;
     }
 
-    const user = await upsertTelegramUser(telegramUser);
+    const consent = readLegalConsent(request.body?.consent);
+    const user = await upsertTelegramUser(telegramUser, consent);
     await ensurePersonalWorkspace(prisma, {
       userId: user.id,
       name: user.firstName
     });
     return {
       token: signToken(user.id, config),
-      user
+      user,
+      consentRecorded: hasRecordedConsent(user)
     };
   });
 
@@ -161,6 +172,7 @@ export default async function authRoutes(app: FastifyInstance) {
     }
 
     const now = new Date();
+    const consent = readLegalConsent(request.body?.consent);
     const tokenHash = hashMagicLinkToken(request.body.token.trim(), config);
 
     const result = await prisma.$transaction(async (tx) => {
@@ -188,18 +200,27 @@ export default async function authRoutes(app: FastifyInstance) {
         return null;
       }
 
+      const existingUser = await tx.user.findUnique({
+        where: {
+          email: magicLinkToken.email
+        },
+        select: userConsentSelect
+      });
+
       const user = await tx.user.upsert({
         where: {
           email: magicLinkToken.email
         },
         update: {
-          emailVerifiedAt: now
+          emailVerifiedAt: now,
+          ...buildConsentUpdateData(existingUser, consent)
         },
         create: {
           email: magicLinkToken.email,
           emailVerifiedAt: now,
           language: "ru",
-          timezone: "Europe/Minsk"
+          timezone: "Europe/Minsk",
+          ...buildConsentCreateData(consent)
         }
       });
       await ensurePersonalWorkspace(tx, {
@@ -218,7 +239,8 @@ export default async function authRoutes(app: FastifyInstance) {
 
     return {
       token: signToken(result.id, config),
-      user: result
+      user: result,
+      consentRecorded: hasRecordedConsent(result)
     };
   });
 
@@ -227,7 +249,7 @@ export default async function authRoutes(app: FastifyInstance) {
     apple: isAppleAuthConfigured(config)
   }));
 
-  app.post("/api/auth/google/start", async (request, reply) => {
+  app.post<{ Body: OAuthStartBody }>("/api/auth/google/start", async (request, reply) => {
     if (!(await checkRateLimit(reply, authRateLimiter, `auth:google:${request.ip}`))) {
       return;
     }
@@ -237,6 +259,7 @@ export default async function authRoutes(app: FastifyInstance) {
       return;
     }
 
+    const consent = readLegalConsent(request.body?.consent);
     const state = generateOAuthSecret();
     const nonce = generateOAuthSecret();
     await prisma.oAuthStateToken.create({
@@ -244,7 +267,8 @@ export default async function authRoutes(app: FastifyInstance) {
         provider: "GOOGLE",
         stateHash: hashOAuthSecret(state, config),
         nonceHash: hashOAuthSecret(nonce, config),
-        expiresAt: calculateOAuthStateExpiresAt(new Date())
+        expiresAt: calculateOAuthStateExpiresAt(new Date()),
+        ...(consent ? { consent } : {})
       }
     });
 
@@ -321,7 +345,8 @@ export default async function authRoutes(app: FastifyInstance) {
               emailVerified: payload.email_verified === true,
               displayName: payload.name ?? null
             },
-            now
+            now,
+            readLegalConsent(stateToken.consent)
           )
         );
         const token = signToken(user.id, config);
@@ -333,7 +358,7 @@ export default async function authRoutes(app: FastifyInstance) {
     }
   );
 
-  app.post("/api/auth/apple/start", async (request, reply) => {
+  app.post<{ Body: OAuthStartBody }>("/api/auth/apple/start", async (request, reply) => {
     if (!(await checkRateLimit(reply, authRateLimiter, `auth:apple:${request.ip}`))) {
       return;
     }
@@ -343,6 +368,7 @@ export default async function authRoutes(app: FastifyInstance) {
       return;
     }
 
+    const consent = readLegalConsent(request.body?.consent);
     const state = generateOAuthSecret();
     const nonce = generateOAuthSecret();
     await prisma.oAuthStateToken.create({
@@ -350,7 +376,8 @@ export default async function authRoutes(app: FastifyInstance) {
         provider: "APPLE",
         stateHash: hashOAuthSecret(state, config),
         nonceHash: hashOAuthSecret(nonce, config),
-        expiresAt: calculateOAuthStateExpiresAt(new Date())
+        expiresAt: calculateOAuthStateExpiresAt(new Date()),
+        ...(consent ? { consent } : {})
       }
     });
 
@@ -427,7 +454,8 @@ export default async function authRoutes(app: FastifyInstance) {
               emailVerified: isAppleEmailVerified(payload.email_verified),
               displayName: null
             },
-            now
+            now,
+            readLegalConsent(stateToken.consent)
           )
         );
         const token = signToken(user.id, config);

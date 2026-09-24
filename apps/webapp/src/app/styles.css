@@ -1611,6 +1611,36 @@ select {
   gap: 8px;
 }
 
+.ds-legal-consent {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface-1);
+}
+
+.ds-legal-consent__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: var(--font-size-sm);
+  color: var(--ds-text-2);
+  cursor: pointer;
+}
+
+.ds-legal-consent__item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  accent-color: var(--ds-brand);
+  flex-shrink: 0;
+}
+
+.ds-legal-consent__item a {
+  color: var(--ds-brand);
+}
+
 .ds-auth-success {
   margin: 0;
   border: 1px solid color-mix(in srgb, var(--ds-status-ok) 35%, var(--ds-line));
@@ -1743,6 +1773,7 @@ select {
 .ds-login-footer {
   display: flex;
   justify-content: center;
+  gap: 16px;
   padding: 16px 0;
 }
 

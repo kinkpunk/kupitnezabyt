@@ -2,6 +2,7 @@ import { prisma } from "@kupitnezabyt/database";
 import type { FastifyInstance } from "fastify";
 
 import { checkRateLimit, requireUserId, sendError } from "../lib/helpers.js";
+import { hasRecordedConsent, readLegalConsent } from "../lib/legal.js";
 import { sensitiveRateLimiter } from "../lib/rate-limiters.js";
 
 export default async function meRoutes(app: FastifyInstance) {
@@ -11,6 +12,41 @@ export default async function meRoutes(app: FastifyInstance) {
         id: requireUserId(request.userId)
       }
     });
+  });
+
+  app.post("/api/me/consent", async (request, reply) => {
+    const userId = requireUserId(request.userId);
+    if (!(await checkRateLimit(reply, sensitiveRateLimiter, `sensitive:consent:${userId}`))) {
+      return;
+    }
+
+    const consent = readLegalConsent(request.body);
+    if (!consent) {
+      await sendError(reply, 400, "INVALID_LEGAL_CONSENT", "Legal consent payload is invalid.");
+      return;
+    }
+
+    const acceptedAt = new Date(consent.acceptedAt);
+    const user = await prisma.user.update({
+      where: {
+        id: userId
+      },
+      data: {
+        termsAcceptedAt: acceptedAt,
+        termsAcceptedVersion: consent.termsVersion,
+        privacyAcceptedAt: acceptedAt,
+        privacyAcceptedVersion: consent.privacyVersion
+      }
+    });
+
+    request.log.info(
+      { userId, termsVersion: consent.termsVersion, privacyVersion: consent.privacyVersion },
+      "Legal consent recorded"
+    );
+
+    return {
+      recorded: hasRecordedConsent(user)
+    };
   });
 
   app.patch("/api/me/onboarding", async (request) => {

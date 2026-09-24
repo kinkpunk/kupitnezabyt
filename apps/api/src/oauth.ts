@@ -1,5 +1,8 @@
 import { ensurePersonalWorkspace } from "@kupitnezabyt/database";
 import type { AuthProvider, Prisma } from "@kupitnezabyt/database";
+import type { LegalConsent } from "@kupitnezabyt/shared";
+
+import { buildConsentCreateData, buildConsentUpdateData, userConsentSelect } from "./lib/legal.js";
 
 export type OAuthProviderIdentity = {
   provider: AuthProvider;
@@ -12,11 +15,14 @@ export type OAuthProviderIdentity = {
 export async function resolveOAuthUser(
   tx: Prisma.TransactionClient,
   identity: OAuthProviderIdentity,
-  now = new Date()
+  now = new Date(),
+  consent: LegalConsent | null = null
 ): Promise<{
   id: string;
   email: string | null;
   displayName: string | null;
+  termsAcceptedAt: Date | null;
+  privacyAcceptedAt: Date | null;
 }> {
   const normalizedEmail = identity.email?.trim().toLowerCase() || null;
   const existingAccount = await tx.authAccount.findUnique({
@@ -40,15 +46,27 @@ export async function resolveOAuthUser(
       }
     });
 
+    const existingUser = await tx.user.findUnique({
+      where: {
+        id: existingAccount.userId
+      },
+      select: userConsentSelect
+    });
+
     const user = await tx.user.update({
       where: {
         id: existingAccount.userId
       },
-      data: buildUserUpdateFromVerifiedIdentity(identity, normalizedEmail, now),
+      data: {
+        ...buildUserUpdateFromVerifiedIdentity(identity, normalizedEmail, now),
+        ...buildConsentUpdateData(existingUser, consent)
+      },
       select: {
         id: true,
         email: true,
-        displayName: true
+        displayName: true,
+        termsAcceptedAt: true,
+        privacyAcceptedAt: true
       }
     });
 
@@ -69,7 +87,8 @@ export async function resolveOAuthUser(
           select: {
             id: true,
             email: true,
-            displayName: true
+            displayName: true,
+            ...userConsentSelect
           }
         })
       : null;
@@ -79,11 +98,16 @@ export async function resolveOAuthUser(
       where: {
         id: matchedUser.id
       },
-      data: buildUserUpdateFromVerifiedIdentity(identity, normalizedEmail, now),
+      data: {
+        ...buildUserUpdateFromVerifiedIdentity(identity, normalizedEmail, now),
+        ...buildConsentUpdateData(matchedUser, consent)
+      },
       select: {
         id: true,
         email: true,
-        displayName: true
+        displayName: true,
+        termsAcceptedAt: true,
+        privacyAcceptedAt: true
       }
     });
 
@@ -102,12 +126,15 @@ export async function resolveOAuthUser(
       emailVerifiedAt: identity.emailVerified && normalizedEmail ? now : null,
       displayName: identity.displayName,
       language: "ru",
-      timezone: "Europe/Minsk"
+      timezone: "Europe/Minsk",
+      ...buildConsentCreateData(consent)
     },
     select: {
       id: true,
       email: true,
-      displayName: true
+      displayName: true,
+      termsAcceptedAt: true,
+      privacyAcceptedAt: true
     }
   });
 

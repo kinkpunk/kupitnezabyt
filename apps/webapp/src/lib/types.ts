@@ -104,6 +104,7 @@ export type RecommendationSuggestion = {
 
 export type AuthResponse = {
   token: string;
+  consentRecorded?: boolean;
 };
 
 export type MagicLinkRequestResponse = {
@@ -131,6 +132,10 @@ export type UserProfile = {
   language: string;
   timezone: string;
   onboardingCompletedAt: string | null;
+  termsAcceptedAt: string | null;
+  termsAcceptedVersion: string | null;
+  privacyAcceptedAt: string | null;
+  privacyAcceptedVersion: string | null;
   createdAt: string;
   updatedAt: string;
 };

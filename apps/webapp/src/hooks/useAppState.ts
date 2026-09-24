@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
+import type { ItemImportance, ItemStatus, LegalConsent } from "@kupitnezabyt/shared";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -9,6 +9,7 @@ import {
   archiveCategory,
   archiveGroup,
   archiveItem,
+  buildLegalConsent,
   cancelCheckSession,
   clearActiveWorkspaceId,
   clearCompletedShoppingList,
@@ -40,6 +41,7 @@ import {
   getMe,
   getRecommendations,
   getShoppingList,
+  getStoredLegalConsent,
   getWorkspaceInvitations,
   getWorkspaces,
   hideSimilarRecommendations,
@@ -51,12 +53,15 @@ import {
   restoreCategory,
   restoreItem,
   revokeWorkspaceInvitation,
+  saveLegalConsent,
+  saveStoredLegalConsent,
   searchItems,
   setActiveWorkspaceId,
   setCategorySortMode,
   setCheckSessionItemStatus,
   setItemStatus,
   snoozeItemReminder,
+  stagePendingLoginConsent,
   startAppleSignIn,
   startCategoryCheckSession,
   startGoogleSignIn,
@@ -86,6 +91,7 @@ import type {
   ItemGroup,
   RecommendationSuggestion,
   ShoppingListEntry,
+  UserProfile,
   WorkspaceInvitation,
   WorkspaceMember,
   WorkspaceSummary
@@ -190,6 +196,14 @@ export function useAppState() {
   const [isRequestingMagicLink, setIsRequestingMagicLink] = useState(false);
   const [isStartingGoogleSignIn, setIsStartingGoogleSignIn] = useState(false);
   const [isStartingAppleSignIn, setIsStartingAppleSignIn] = useState(false);
+  const [isContinuingWithTelegram, setIsContinuingWithTelegram] = useState(false);
+  const [isSavingConsent, setIsSavingConsent] = useState(false);
+  const [showLegalConsent, setShowLegalConsent] = useState(
+    () => typeof window !== "undefined" && !getStoredLegalConsent()
+  );
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [consentRecorded, setConsentRecorded] = useState<boolean | null>(null);
   const [authProviders, setAuthProviders] = useState<{ google: boolean; apple: boolean } | null>(null);
   const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
   const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
@@ -323,6 +337,10 @@ export function useAppState() {
         ? "Тема: тёмная"
         : "Тема: светлая";
 
+  const telegramAvailable =
+    typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.initData);
+  const consentReady = !showLegalConsent || (termsAccepted && privacyAccepted);
+
   useEffect(() => {
     if (!toastMessage) {
       return;
@@ -384,7 +402,7 @@ export function useAppState() {
           setLoadingMessage("Возвращаемся ко входу...");
         }
 
-        const authToken = await login();
+        const loginResult = await login();
         if (!isMounted) {
           return;
         }
@@ -393,27 +411,11 @@ export function useAppState() {
           setToastMessage("Приглашение принято — вы переключены на общий список.");
         }
 
-        setToken(authToken);
-        const [userProfile] = await Promise.all([getMe(authToken), refreshWorkspaces(authToken)]);
-        const activeData = await refreshActiveData(authToken);
-        await refreshActiveCheckSession(authToken);
-        const hasCompletedOnboardingLocally =
-          window.localStorage.getItem(onboardingStorageKey) === "true";
-        const hasExistingProductData =
-          activeData.categories.length > 0 || activeData.items.length > 0;
-        const hasCompletedOnboarding =
-          Boolean(userProfile.onboardingCompletedAt) ||
-          hasCompletedOnboardingLocally ||
-          hasExistingProductData;
-
-        setShowOnboarding(!hasCompletedOnboarding);
-        if (hasCompletedOnboarding && !userProfile.onboardingCompletedAt) {
-          void completeOnboarding(authToken).catch(() => undefined);
-        }
+        await completeSignIn(loginResult.token, loginResult.consentRecorded);
       } catch (caughtError) {
         if (isMounted) {
           const message = formatError(caughtError);
-          if (message !== "EMAIL_AUTH_REQUIRED") {
+          if (message !== "EMAIL_AUTH_REQUIRED" && message !== "LEGAL_CONSENT_REQUIRED") {
             setError(message);
           }
         }
@@ -430,6 +432,29 @@ export function useAppState() {
       isMounted = false;
     };
   }, []);
+
+  async function completeSignIn(authToken: string, loginConsentRecorded: boolean | null) {
+    setToken(authToken);
+    const [userProfile] = await Promise.all([getMe(authToken), refreshWorkspaces(authToken)]);
+    const activeData = await refreshActiveData(authToken);
+    await refreshActiveCheckSession(authToken);
+    const hasCompletedOnboardingLocally =
+      window.localStorage.getItem(onboardingStorageKey) === "true";
+    const hasExistingProductData =
+      activeData.categories.length > 0 || activeData.items.length > 0;
+    const hasCompletedOnboarding =
+      Boolean(userProfile.onboardingCompletedAt) ||
+      hasCompletedOnboardingLocally ||
+      hasExistingProductData;
+
+    setConsentRecorded(
+      loginConsentRecorded ?? hasProfileConsent(userProfile)
+    );
+    setShowOnboarding(!hasCompletedOnboarding);
+    if (hasCompletedOnboarding && !userProfile.onboardingCompletedAt) {
+      void completeOnboarding(authToken).catch(() => undefined);
+    }
+  }
 
   useEffect(() => {
     if (!selectedCategoryId && categories[0]) {
@@ -1586,6 +1611,10 @@ export function useAppState() {
     setWorkspaceLoadFailed(false);
     setShowOnboarding(false);
     setOnboardingStep(0);
+    setConsentRecorded(null);
+    setTermsAccepted(false);
+    setPrivacyAccepted(false);
+    setShowLegalConsent(typeof window !== "undefined" && !getStoredLegalConsent());
     if (options.clearOnboarding) {
       window.localStorage.removeItem(onboardingStorageKey);
     }
@@ -1598,12 +1627,20 @@ export function useAppState() {
       return;
     }
 
+    if (!consentReady) {
+      setError(consentRequiredMessage);
+      return;
+    }
+
     setError(null);
     setEmailAuthMessage(null);
     setDevMagicLink(null);
     setIsRequestingMagicLink(true);
 
     try {
+      if (showLegalConsent) {
+        stagePendingLoginConsent(buildLegalConsent());
+      }
       const response = await requestMagicLink(email.trim());
       if (response.sent) {
         setEmailAuthMessage("Письмо для входа отправлено. Откройте ссылку в этом браузере.");
@@ -1615,13 +1652,22 @@ export function useAppState() {
   }
 
   async function handleStartGoogleSignIn() {
+    if (!consentReady) {
+      setError(consentRequiredMessage);
+      return;
+    }
+
     setError(null);
     setEmailAuthMessage(null);
     setDevMagicLink(null);
     setIsStartingGoogleSignIn(true);
 
     try {
-      const response = await startGoogleSignIn();
+      const consent = showLegalConsent ? buildLegalConsent() : undefined;
+      if (consent) {
+        stagePendingLoginConsent(consent);
+      }
+      const response = await startGoogleSignIn(consent);
       window.location.assign(response.authUrl);
     } finally {
       setIsStartingGoogleSignIn(false);
@@ -1629,16 +1675,69 @@ export function useAppState() {
   }
 
   async function handleStartAppleSignIn() {
+    if (!consentReady) {
+      setError(consentRequiredMessage);
+      return;
+    }
+
     setError(null);
     setEmailAuthMessage(null);
     setDevMagicLink(null);
     setIsStartingAppleSignIn(true);
 
     try {
-      const response = await startAppleSignIn();
+      const consent = showLegalConsent ? buildLegalConsent() : undefined;
+      if (consent) {
+        stagePendingLoginConsent(consent);
+      }
+      const response = await startAppleSignIn(consent);
       window.location.assign(response.authUrl);
     } finally {
       setIsStartingAppleSignIn(false);
+    }
+  }
+
+  async function handleContinueWithTelegram() {
+    if (!consentReady) {
+      setError(consentRequiredMessage);
+      return;
+    }
+
+    setError(null);
+    setIsContinuingWithTelegram(true);
+
+    try {
+      if (showLegalConsent) {
+        stagePendingLoginConsent(buildLegalConsent());
+      }
+      const loginResult = await login();
+      await completeSignIn(loginResult.token, loginResult.consentRecorded);
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+    } finally {
+      setIsContinuingWithTelegram(false);
+    }
+  }
+
+  async function handleAcceptLegalConsent(consent: LegalConsent) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    setIsSavingConsent(true);
+
+    try {
+      await saveLegalConsent(token, consent);
+      saveStoredLegalConsent(consent);
+      setTermsAccepted(true);
+      setPrivacyAccepted(true);
+      setShowLegalConsent(false);
+      setConsentRecorded(true);
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+    } finally {
+      setIsSavingConsent(false);
     }
   }
 
@@ -1656,12 +1755,24 @@ export function useAppState() {
     isRequestingMagicLink,
     isStartingGoogleSignIn,
     isStartingAppleSignIn,
+    isContinuingWithTelegram,
+    isSavingConsent,
+    showLegalConsent,
+    termsAccepted,
+    privacyAccepted,
+    setTermsAccepted,
+    setPrivacyAccepted,
+    consentRecorded,
+    consentReady,
+    telegramAvailable,
     authProviders,
     toastMessage,
     setToastMessage,
     handleRequestMagicLink,
     handleStartGoogleSignIn,
     handleStartAppleSignIn,
+    handleContinueWithTelegram,
+    handleAcceptLegalConsent,
     handleSignOut,
 
     // Data
@@ -1835,6 +1946,13 @@ export function useAppState() {
     handleDeleteAccount,
     resetClientSession
   };
+}
+
+const consentRequiredMessage =
+  "Чтобы войти, примите Условия использования и Политику конфиденциальности.";
+
+function hasProfileConsent(userProfile: UserProfile): boolean {
+  return Boolean(userProfile.termsAcceptedAt && userProfile.privacyAcceptedAt);
 }
 
 function isNotFoundError(error: unknown): boolean {

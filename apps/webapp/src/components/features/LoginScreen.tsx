@@ -7,6 +7,71 @@ import { ErrorNotice } from "../ui/ErrorNotice";
 import { BrandWord } from "../ui/BrandWord";
 import { Button } from "../ui/Button";
 
+export function openLegalDocument(path: string): void {
+  window.open(path, "_blank", "noopener,noreferrer");
+}
+
+export function LegalConsentCheckboxes({
+  show,
+  termsAccepted,
+  privacyAccepted,
+  onTermsAcceptedChange,
+  onPrivacyAcceptedChange
+}: {
+  show: boolean;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
+  onTermsAcceptedChange: (value: boolean) => void;
+  onPrivacyAcceptedChange: (value: boolean) => void;
+}) {
+  if (!show) {
+    return null;
+  }
+
+  return (
+    <div className="ds-legal-consent">
+      <label className="ds-legal-consent__item">
+        <input
+          checked={termsAccepted}
+          type="checkbox"
+          onChange={(event) => onTermsAcceptedChange(event.target.checked)}
+        />
+        <span>
+          Принимаю{" "}
+          <a
+            href="/terms"
+            onClick={(event) => {
+              event.preventDefault();
+              openLegalDocument("/terms");
+            }}
+          >
+            Условия использования
+          </a>
+        </span>
+      </label>
+      <label className="ds-legal-consent__item">
+        <input
+          checked={privacyAccepted}
+          type="checkbox"
+          onChange={(event) => onPrivacyAcceptedChange(event.target.checked)}
+        />
+        <span>
+          Согласен с обработкой персональных данных по{" "}
+          <a
+            href="/privacy"
+            onClick={(event) => {
+              event.preventDefault();
+              openLegalDocument("/privacy");
+            }}
+          >
+            Политике конфиденциальности
+          </a>
+        </span>
+      </label>
+    </div>
+  );
+}
+
 export function LoginScreen({
   error,
   onCloseError,
@@ -18,6 +83,14 @@ export function LoginScreen({
   onEmailChange,
   emailAuthMessage,
   devMagicLink,
+  showLegalConsent,
+  termsAccepted,
+  privacyAccepted,
+  onTermsAcceptedChange,
+  onPrivacyAcceptedChange,
+  telegramAvailable,
+  isContinuingWithTelegram,
+  onContinueWithTelegram,
   onStartGoogleSignIn,
   onStartAppleSignIn,
   onRequestMagicLink
@@ -32,11 +105,24 @@ export function LoginScreen({
   onEmailChange: (value: string) => void;
   emailAuthMessage: string | null;
   devMagicLink: string | null;
+  showLegalConsent: boolean;
+  termsAccepted: boolean;
+  privacyAccepted: boolean;
+  onTermsAcceptedChange: (value: boolean) => void;
+  onPrivacyAcceptedChange: (value: boolean) => void;
+  telegramAvailable: boolean;
+  isContinuingWithTelegram: boolean;
+  onContinueWithTelegram: () => Promise<void>;
   onStartGoogleSignIn: () => Promise<void>;
   onStartAppleSignIn: () => Promise<void>;
   onRequestMagicLink: () => Promise<void>;
 }) {
-  const isBusy = isStartingGoogleSignIn || isStartingAppleSignIn || isRequestingMagicLink;
+  const isBusy =
+    isStartingGoogleSignIn ||
+    isStartingAppleSignIn ||
+    isRequestingMagicLink ||
+    isContinuingWithTelegram;
+  const consentReady = !showLegalConsent || (termsAccepted && privacyAccepted);
 
   return (
     <main className="app-shell ds-onboarding-shell">
@@ -54,12 +140,22 @@ export function LoginScreen({
           </div>
           <p>Войдите один раз, чтобы ваши товары, проверки и покупки были под рукой.</p>
         </div>
+        {telegramAvailable ? (
+          <Button
+            className="ds-provider-button"
+            type="button"
+            disabled={isBusy || !consentReady}
+            onClick={() => void onContinueWithTelegram()}
+          >
+            {isContinuingWithTelegram ? "Открываем Telegram..." : "Продолжить через Telegram"}
+          </Button>
+        ) : null}
         {authProviders?.google !== false && (
           <Button
             className="ds-provider-button"
             variant="ghost"
             type="button"
-            disabled={isBusy}
+            disabled={isBusy || !consentReady}
             onClick={() => void onStartGoogleSignIn()}
           >
             <span aria-hidden="true" className="ds-provider-button__icon">
@@ -73,7 +169,7 @@ export function LoginScreen({
             className="ds-provider-button"
             variant="ghost"
             type="button"
-            disabled={isBusy}
+            disabled={isBusy || !consentReady}
             onClick={() => void onStartAppleSignIn()}
           >
             <span aria-hidden="true" className="ds-provider-button__icon">
@@ -102,7 +198,7 @@ export function LoginScreen({
             className="ds-provider-button"
             variant="ghost"
             type="button"
-            disabled={isBusy || !email.trim()}
+            disabled={isBusy || !email.trim() || !consentReady}
             onClick={() => void onRequestMagicLink()}
           >
             <Mail aria-hidden="true" size={18} />
@@ -115,8 +211,16 @@ export function LoginScreen({
             Открыть dev magic link
           </a>
         ) : null}
+        <LegalConsentCheckboxes
+          show={showLegalConsent}
+          termsAccepted={termsAccepted}
+          privacyAccepted={privacyAccepted}
+          onTermsAcceptedChange={onTermsAcceptedChange}
+          onPrivacyAcceptedChange={onPrivacyAcceptedChange}
+        />
       </section>
       <footer className="ds-login-footer">
+        <a href="/terms">Условия использования</a>
         <a href="/privacy">Политика конфиденциальности</a>
       </footer>
     </main>

@@ -2,12 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiError,
+  buildLegalConsent,
   completeOnboarding,
   consumeInvitationAcceptedToast,
   getActiveWorkspaceId,
   getCategorySortMode,
+  getStoredLegalConsent,
   login,
-  setCategorySortMode
+  saveStoredLegalConsent,
+  setCategorySortMode,
+  stagePendingLoginConsent
 } from "./api";
 
 function createLocalStorageMock() {
@@ -81,7 +85,7 @@ describe("webapp api auth", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(login()).resolves.toBe("session-token");
+    await expect(login()).resolves.toEqual({ token: "session-token", consentRecorded: null });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:3001/api/workspace-invitations/accept",
@@ -124,6 +128,108 @@ describe("webapp api auth", () => {
         method: "PATCH"
       })
     );
+  });
+});
+
+describe("legal consent storage", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("returns null when no consent is stored or the versions are outdated", () => {
+    const { localStorage } = stubWindow("");
+    expect(getStoredLegalConsent()).toBeNull();
+
+    localStorage.getItem.mockReturnValue(
+      JSON.stringify({ termsVersion: "0.9.0", privacyVersion: "1.0.0", acceptedAt: "2026-09-23T10:00:00.000Z" })
+    );
+    expect(getStoredLegalConsent()).toBeNull();
+  });
+
+  it("round-trips a consent accepted for the current document versions", () => {
+    stubWindow("");
+    const consent = buildLegalConsent();
+    saveStoredLegalConsent(consent);
+    expect(getStoredLegalConsent()).toEqual(consent);
+  });
+
+  it("sends staged consent to the Telegram auth request and clears it", async () => {
+    const { localStorage } = stubWindow("");
+    vi.stubGlobal("window", {
+      ...window,
+      Telegram: {
+        WebApp: {
+          initData: "telegram-init-data"
+        }
+      }
+    });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        token: "telegram-session-token",
+        consentRecorded: true
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    stagePendingLoginConsent(buildLegalConsent());
+    await expect(login()).resolves.toEqual({
+      token: "telegram-session-token",
+      consentRecorded: true
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:3001/api/auth/telegram",
+      expect.objectContaining({
+        body: expect.stringContaining('"initData":"telegram-init-data"'),
+        method: "POST"
+      })
+    );
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    const body = JSON.parse((requestInit?.body as string | undefined) ?? "{}");
+    expect(body.consent.termsVersion).toBe("1.0.0");
+    expect(body.consent.privacyVersion).toBe("1.0.0");
+    expect(typeof body.consent.acceptedAt).toBe("string");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("kupitnezabyt.pendingConsent");
+  });
+
+  it("blocks silent Telegram sign-in until consent is given", async () => {
+    stubWindow("");
+    vi.stubGlobal("window", {
+      ...window,
+      Telegram: {
+        WebApp: {
+          initData: "telegram-init-data"
+        }
+      }
+    });
+
+    await expect(login()).rejects.toEqual(new ApiError("LEGAL_CONSENT_REQUIRED"));
+  });
+
+  it("attaches stored pending consent when verifying a magic link", async () => {
+    const { localStorage } = stubWindow("?magic_token=raw-magic-token");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        token: "email-session-token",
+        consentRecorded: true
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    stagePendingLoginConsent(buildLegalConsent());
+    await expect(login()).resolves.toEqual({
+      token: "email-session-token",
+      consentRecorded: true
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    const body = JSON.parse((requestInit?.body as string | undefined) ?? "{}");
+    expect(body.token).toBe("raw-magic-token");
+    expect(body.consent.termsVersion).toBe("1.0.0");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("kupitnezabyt.pendingConsent");
   });
 });
 

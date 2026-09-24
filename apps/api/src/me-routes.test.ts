@@ -76,4 +76,106 @@ describe("me routes", () => {
 
     await app.close();
   });
+
+  it("records legal consent for the authenticated user", async () => {
+    const { signToken } = await import("./auth.js");
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+    const token = signToken("user-1", {
+      appBaseUrl: "http://localhost:3000",
+      emailFrom: undefined,
+      emailProviderApiKey: undefined,
+      jwtSecret: "test-secret",
+      magicLinkTokenTtlMinutes: 15,
+      nodeEnv: "test",
+      devAuthEnabled: false,
+      googleClientId: undefined,
+      googleClientSecret: undefined,
+      googleRedirectUri: undefined,
+      appleClientId: undefined,
+      appleTeamId: undefined,
+      appleKeyId: undefined,
+      applePrivateKey: undefined,
+      appleRedirectUri: undefined,
+      telegramBotToken: undefined,
+      port: 3001
+    });
+
+    mockPrisma.user.update.mockResolvedValue({
+      id: "user-1",
+      termsAcceptedAt: new Date("2026-09-23T10:00:00.000Z"),
+      privacyAcceptedAt: new Date("2026-09-23T10:00:00.000Z")
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/me/consent",
+      headers: {
+        authorization: `Bearer ${token}`
+      },
+      payload: {
+        termsVersion: "1.0.0",
+        privacyVersion: "1.0.0",
+        acceptedAt: "2026-09-23T10:00:00.000Z"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ recorded: true });
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: {
+        id: "user-1"
+      },
+      data: {
+        termsAcceptedAt: new Date("2026-09-23T10:00:00.000Z"),
+        termsAcceptedVersion: "1.0.0",
+        privacyAcceptedAt: new Date("2026-09-23T10:00:00.000Z"),
+        privacyAcceptedVersion: "1.0.0"
+      }
+    });
+
+    await app.close();
+  });
+
+  it("rejects a malformed legal consent payload", async () => {
+    const { signToken } = await import("./auth.js");
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+    const token = signToken("user-1", {
+      appBaseUrl: "http://localhost:3000",
+      emailFrom: undefined,
+      emailProviderApiKey: undefined,
+      jwtSecret: "test-secret",
+      magicLinkTokenTtlMinutes: 15,
+      nodeEnv: "test",
+      devAuthEnabled: false,
+      googleClientId: undefined,
+      googleClientSecret: undefined,
+      googleRedirectUri: undefined,
+      appleClientId: undefined,
+      appleTeamId: undefined,
+      appleKeyId: undefined,
+      applePrivateKey: undefined,
+      appleRedirectUri: undefined,
+      telegramBotToken: undefined,
+      port: 3001
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/me/consent",
+      headers: {
+        authorization: `Bearer ${token}`
+      },
+      payload: {
+        termsVersion: "1.0.0"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error.code).toBe("INVALID_LEGAL_CONSENT");
+    expect(mockPrisma.user.update).not.toHaveBeenCalled();
+
+    await app.close();
+  });
 });

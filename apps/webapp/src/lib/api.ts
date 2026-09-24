@@ -1,4 +1,11 @@
-import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
+import {
+  isLegalConsent,
+  PRIVACY_VERSION,
+  TERMS_VERSION,
+  type ItemImportance,
+  type ItemStatus,
+  type LegalConsent
+} from "@kupitnezabyt/shared";
 
 import type {
   AuthProvidersResponse,
@@ -43,6 +50,10 @@ const activeWorkspaceStorageKey = "kupitnezabyt.activeWorkspaceId";
 const pendingWorkspaceInvitationStorageKey = "kupitnezabyt.pendingWorkspaceInvitationToken";
 const invitationAcceptedStorageKey = "kupitnezabyt.invitationAccepted";
 const categorySortModeStorageKey = "kupitnezabyt.categorySortMode";
+const legalConsentStorageKey = "kupitnezabyt.legalConsent";
+const pendingConsentStorageKey = "kupitnezabyt.pendingConsent";
+
+let pendingLoginConsent: LegalConsent | null = null;
 
 type TelegramThemeParams = {
   bg_color?: string;
@@ -59,7 +70,12 @@ export class ApiError extends Error {
   }
 }
 
-export async function login(): Promise<string> {
+export type LoginResult = {
+  token: string;
+  consentRecorded: boolean | null;
+};
+
+export async function login(): Promise<LoginResult> {
   prepareTelegramWebApp();
 
   const searchParams = new URLSearchParams(window.location.search);
@@ -72,8 +88,9 @@ export async function login(): Promise<string> {
   if (oauthToken) {
     window.localStorage.setItem(tokenStorageKey, oauthToken);
     await acceptWorkspaceInvitationIfPresent(oauthToken, workspaceInvitationToken);
+    clearPendingLoginConsent();
     window.history.replaceState({}, "", window.location.pathname);
-    return oauthToken;
+    return { token: oauthToken, consentRecorded: null };
   }
 
   if (oauthError) {
@@ -82,13 +99,15 @@ export async function login(): Promise<string> {
   }
 
   if (magicToken) {
+    const consent = takePendingLoginConsent();
     const response = await post<AuthResponse>("/api/auth/email/verify", undefined, {
-      token: magicToken
+      token: magicToken,
+      ...(consent ? { consent } : {})
     });
     window.localStorage.setItem(tokenStorageKey, response.token);
     await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);
     window.history.replaceState({}, "", window.location.pathname);
-    return response.token;
+    return { token: response.token, consentRecorded: response.consentRecorded ?? null };
   }
 
   const savedToken = window.localStorage.getItem(tokenStorageKey);
@@ -97,21 +116,33 @@ export async function login(): Promise<string> {
     if (workspaceInvitationToken) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-    return savedToken;
+    return { token: savedToken, consentRecorded: null };
   }
 
   const initData = window.Telegram?.WebApp?.initData;
   if (initData) {
-    const response = await post<AuthResponse>("/api/auth/telegram", undefined, { initData });
+    const consent = takePendingLoginConsent();
+    if (!consent && !getStoredLegalConsent()) {
+      throw new ApiError("LEGAL_CONSENT_REQUIRED");
+    }
+
+    const response = await post<AuthResponse>("/api/auth/telegram", undefined, {
+      initData,
+      ...(consent ? { consent } : {})
+    });
     window.localStorage.setItem(tokenStorageKey, response.token);
     await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);
     if (workspaceInvitationToken) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-    return response.token;
+    return { token: response.token, consentRecorded: response.consentRecorded ?? null };
   }
 
   if (process.env.NODE_ENV === "development") {
+    if (!getStoredLegalConsent() && !pendingLoginConsent) {
+      throw new ApiError("LEGAL_CONSENT_REQUIRED");
+    }
+
     const response = await post<AuthResponse>("/api/auth/dev", undefined, {
       telegramUserId: "local",
       firstName: "Dev"
@@ -121,7 +152,7 @@ export async function login(): Promise<string> {
     if (workspaceInvitationToken) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-    return response.token;
+    return { token: response.token, consentRecorded: response.consentRecorded ?? null };
   }
 
   throw new ApiError("EMAIL_AUTH_REQUIRED");
@@ -131,6 +162,73 @@ export function clearSavedToken(): void {
   window.localStorage.removeItem(tokenStorageKey);
   clearPendingWorkspaceInvitation();
   clearActiveWorkspaceId();
+  clearPendingLoginConsent();
+}
+
+export function buildLegalConsent(): LegalConsent {
+  return {
+    termsVersion: TERMS_VERSION,
+    privacyVersion: PRIVACY_VERSION,
+    acceptedAt: new Date().toISOString()
+  };
+}
+
+export function getStoredLegalConsent(): LegalConsent | null {
+  const raw = window.localStorage.getItem(legalConsentStorageKey);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isLegalConsent(parsed)) {
+      return null;
+    }
+
+    return parsed.termsVersion === TERMS_VERSION && parsed.privacyVersion === PRIVACY_VERSION
+      ? parsed
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveStoredLegalConsent(consent: LegalConsent): void {
+  window.localStorage.setItem(legalConsentStorageKey, JSON.stringify(consent));
+}
+
+export function stagePendingLoginConsent(consent: LegalConsent): void {
+  pendingLoginConsent = consent;
+  window.localStorage.setItem(pendingConsentStorageKey, JSON.stringify(consent));
+}
+
+function takePendingLoginConsent(): LegalConsent | null {
+  const consent = pendingLoginConsent ?? readPendingLoginConsentFromStorage();
+  clearPendingLoginConsent();
+  return consent;
+}
+
+function readPendingLoginConsentFromStorage(): LegalConsent | null {
+  const raw = window.localStorage.getItem(pendingConsentStorageKey);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return isLegalConsent(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingLoginConsent(): void {
+  pendingLoginConsent = null;
+  window.localStorage.removeItem(pendingConsentStorageKey);
+}
+
+export function saveLegalConsent(token: string, consent: LegalConsent): Promise<{ recorded: boolean }> {
+  return post<{ recorded: boolean }>("/api/me/consent", token, consent);
 }
 
 export function requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
@@ -141,12 +239,16 @@ export function getAuthProviders(): Promise<AuthProvidersResponse> {
   return get<AuthProvidersResponse>("/api/auth/providers", undefined);
 }
 
-export function startGoogleSignIn(): Promise<OAuthStartResponse> {
-  return post<OAuthStartResponse>("/api/auth/google/start", undefined, {});
+export function startGoogleSignIn(consent?: LegalConsent): Promise<OAuthStartResponse> {
+  return post<OAuthStartResponse>("/api/auth/google/start", undefined, {
+    ...(consent ? { consent } : {})
+  });
 }
 
-export function startAppleSignIn(): Promise<OAuthStartResponse> {
-  return post<OAuthStartResponse>("/api/auth/apple/start", undefined, {});
+export function startAppleSignIn(consent?: LegalConsent): Promise<OAuthStartResponse> {
+  return post<OAuthStartResponse>("/api/auth/apple/start", undefined, {
+    ...(consent ? { consent } : {})
+  });
 }
 
 export function getMe(token: string): Promise<UserProfile> {

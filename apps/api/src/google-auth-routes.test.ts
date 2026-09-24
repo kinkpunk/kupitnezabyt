@@ -91,6 +91,121 @@ describe("google auth routes", () => {
     await app.close();
   });
 
+  it("stores legal consent on the OAuth state token when starting sign-in", async () => {
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+
+    mockPrisma.oAuthStateToken.create.mockResolvedValue({});
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/auth/google/start",
+      payload: {
+        consent: {
+          termsVersion: "1.0.0",
+          privacyVersion: "1.0.0",
+          acceptedAt: "2026-09-23T10:00:00.000Z"
+        }
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.oAuthStateToken.create).toHaveBeenCalledWith({
+      data: {
+        provider: "GOOGLE",
+        stateHash: expect.any(String),
+        nonceHash: expect.any(String),
+        expiresAt: expect.any(Date),
+        consent: {
+          termsVersion: "1.0.0",
+          privacyVersion: "1.0.0",
+          acceptedAt: "2026-09-23T10:00:00.000Z"
+        }
+      }
+    });
+
+    await app.close();
+  });
+
+  it("passes stored legal consent to the OAuth user resolution on callback", async () => {
+    const { hashOAuthSecret } = await import("./auth.js");
+    const { buildServer } = await import("./server.js");
+    const app = buildServer();
+
+    mockTx.oAuthStateToken.findUnique.mockResolvedValue({
+      id: "state-1",
+      provider: "GOOGLE",
+      nonceHash: hashOAuthSecret("nonce-1", {
+        appBaseUrl: "http://localhost:3000",
+        emailFrom: undefined,
+        emailProviderApiKey: undefined,
+        jwtSecret: "test-secret",
+        magicLinkTokenTtlMinutes: 15,
+        nodeEnv: "test",
+        devAuthEnabled: false,
+        googleClientId: "google-client-id",
+        googleClientSecret: "google-client-secret",
+        googleRedirectUri: "http://localhost:3001/api/auth/google/callback",
+        appleClientId: undefined,
+        appleTeamId: undefined,
+        appleKeyId: undefined,
+        applePrivateKey: undefined,
+        appleRedirectUri: undefined,
+        telegramBotToken: undefined,
+        port: 3001
+      }),
+      expiresAt: new Date(Date.now() + 60_000),
+      consumedAt: null,
+      consent: {
+        termsVersion: "1.1.0",
+        privacyVersion: "1.0.0",
+        acceptedAt: "2026-09-23T10:00:00.000Z"
+      }
+    });
+    mockTx.oAuthStateToken.updateMany.mockResolvedValue({ count: 1 });
+    mockGoogleAuth.exchangeGoogleCodeForIdToken.mockResolvedValue("id-token");
+    mockGoogleAuth.verifyGoogleIdToken.mockResolvedValue({
+      iss: "https://accounts.google.com",
+      aud: "google-client-id",
+      exp: Math.floor(Date.now() / 1000) + 60,
+      sub: "google-user-1",
+      email: "user@example.com",
+      email_verified: true,
+      name: "Alice",
+      nonce: "nonce-1"
+    });
+    mockResolveOAuthUser.mockResolvedValue({
+      id: "user-1",
+      email: "user@example.com",
+      displayName: "Alice"
+    });
+
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/auth/google/callback?code=code-1&state=state-raw"
+    });
+
+    expect(response.statusCode).toBe(302);
+    expect(mockResolveOAuthUser).toHaveBeenCalledWith(
+      mockTx,
+      {
+        provider: "GOOGLE",
+        providerAccountId: "google-user-1",
+        email: "user@example.com",
+        emailVerified: true,
+        displayName: "Alice"
+      },
+      expect.any(Date),
+      {
+        termsVersion: "1.1.0",
+        privacyVersion: "1.0.0",
+        acceptedAt: "2026-09-23T10:00:00.000Z"
+      }
+    );
+
+    await app.close();
+  });
+
   it("rate limits Google sign-in start requests and allows them after the window resets", async () => {
     vi.useFakeTimers({
       now: new Date("2026-06-23T10:00:00.000Z")
@@ -198,7 +313,8 @@ describe("google auth routes", () => {
         emailVerified: true,
         displayName: "Alice"
       },
-      expect.any(Date)
+      expect.any(Date),
+      null
     );
 
     await app.close();

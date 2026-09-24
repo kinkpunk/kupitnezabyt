@@ -57,7 +57,17 @@ describe("resolveOAuthUser", () => {
       displayName: "Alice"
     });
 
-    expect(mockTx.user.findUnique).not.toHaveBeenCalled();
+    expect(mockTx.user.findUnique).toHaveBeenCalledWith({
+      where: {
+        id: "user-1"
+      },
+      select: {
+        termsAcceptedAt: true,
+        termsAcceptedVersion: true,
+        privacyAcceptedAt: true,
+        privacyAcceptedVersion: true
+      }
+    });
     expect(mockTx.authAccount.update).toHaveBeenCalledWith({
       where: {
         id: "account-1"
@@ -102,7 +112,11 @@ describe("resolveOAuthUser", () => {
       select: {
         id: true,
         email: true,
-        displayName: true
+        displayName: true,
+        termsAcceptedAt: true,
+        termsAcceptedVersion: true,
+        privacyAcceptedAt: true,
+        privacyAcceptedVersion: true
       }
     });
     expect(mockTx.authAccount.create).toHaveBeenCalledWith({
@@ -149,7 +163,9 @@ describe("resolveOAuthUser", () => {
       select: {
         id: true,
         email: true,
-        displayName: true
+        displayName: true,
+        termsAcceptedAt: true,
+        privacyAcceptedAt: true
       }
     });
     expect(mockTx.authAccount.create).toHaveBeenCalledWith({

@@ -18,6 +18,10 @@ model User {
   language                String    @default("ru")
   timezone                String    @default("Europe/Minsk")
   onboardingCompletedAt   DateTime?
+  termsAcceptedAt         DateTime?
+  termsAcceptedVersion    String?
+  privacyAcceptedAt       DateTime?
+  privacyAcceptedVersion  String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
@@ -132,6 +136,7 @@ model OAuthStateToken {
   nonceHash  String
   expiresAt  DateTime
   consumedAt DateTime?
+  consent    Json?
   createdAt  DateTime     @default(now())
 
   @@index([provider, createdAt])
