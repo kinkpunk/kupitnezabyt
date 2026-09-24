@@ -42,6 +42,7 @@ export type SnoozeBody = {
 export type DevAuthBody = {
   telegramUserId?: unknown;
   firstName?: unknown;
+  consent?: unknown;
 };
 
 export type TelegramAuthBody = {

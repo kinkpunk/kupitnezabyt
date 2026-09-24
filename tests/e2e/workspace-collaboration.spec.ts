@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
+import { seedLegalConsent } from "./legal-consent";
+
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 const webBaseUrl = process.env.E2E_BASE_URL ?? `http://localhost:${process.env.E2E_WEB_PORT ?? 3000}`;
@@ -18,6 +20,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
 
   // Owner signs in via email magic link.
   const ownerContext = await browser.newContext();
+  await seedLegalConsent(ownerContext);
   const ownerPage = await ownerContext.newPage();
   const ownerToken = await signInWithEmail(ownerPage, request, ownerEmail);
   await finishOnboardingIfNeeded(ownerPage);
@@ -64,6 +67,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
 
   // Member signs in and accepts the invitation in one navigation.
   const memberContext = await browser.newContext();
+  await seedLegalConsent(memberContext);
   const memberPage = await memberContext.newPage();
   const memberMagicLink = await requestMagicLink(request, memberEmail);
   const memberMagicToken = extractQueryParam(memberMagicLink, "magic_token");
@@ -142,6 +146,7 @@ test("ownership transfer makes the invited member the workspace owner", async ({
 
   // Owner signs in via email magic link and creates a category.
   const ownerContext = await browser.newContext();
+  await seedLegalConsent(ownerContext);
   const ownerPage = await ownerContext.newPage();
   const ownerToken = await signInWithEmail(ownerPage, request, ownerEmail);
   await finishOnboardingIfNeeded(ownerPage);
@@ -178,6 +183,7 @@ test("ownership transfer makes the invited member the workspace owner", async ({
 
   // Member signs in and accepts the invitation in one navigation.
   const memberContext = await browser.newContext();
+  await seedLegalConsent(memberContext);
   const memberPage = await memberContext.newPage();
   const memberMagicLink = await requestMagicLink(request, memberEmail);
   const memberMagicToken = extractQueryParam(memberMagicLink, "magic_token");

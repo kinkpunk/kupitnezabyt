@@ -67,15 +67,21 @@ export default async function authRoutes(app: FastifyInstance) {
       typeof request.body?.firstName === "string" && request.body.firstName.trim()
         ? request.body.firstName.trim()
         : "Dev";
+    const consent = readLegalConsent(request.body?.consent);
+    const existingUser = await prisma.user.findUnique({
+      where: { telegramUserId },
+      select: userConsentSelect
+    });
 
     const user = await prisma.user.upsert({
       where: { telegramUserId },
-      update: { firstName },
+      update: { firstName, ...buildConsentUpdateData(existingUser, consent) },
       create: {
         telegramUserId,
         firstName,
         language: "ru",
-        timezone: "Europe/Minsk"
+        timezone: "Europe/Minsk",
+        ...buildConsentCreateData(consent)
       }
     });
     await ensurePersonalWorkspace(prisma, {

@@ -143,9 +143,11 @@ export async function login(): Promise<LoginResult> {
       throw new ApiError("LEGAL_CONSENT_REQUIRED");
     }
 
+    const consent = takePendingLoginConsent() ?? getStoredLegalConsent();
     const response = await post<AuthResponse>("/api/auth/dev", undefined, {
       telegramUserId: "local",
-      firstName: "Dev"
+      firstName: "Dev",
+      ...(consent ? { consent } : {})
     });
     window.localStorage.setItem(tokenStorageKey, response.token);
     await acceptWorkspaceInvitationIfPresent(response.token, workspaceInvitationToken);

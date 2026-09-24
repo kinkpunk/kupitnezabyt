@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
+import { seedLegalConsent } from "./legal-consent";
+
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
@@ -15,6 +17,7 @@ test("user can group items and run a group check session", async ({ page, reques
 
   await waitForApiHealth(request);
   await signInWithDevAuth(page, runId);
+  await seedLegalConsent(page.context());
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
@@ -80,6 +83,7 @@ test("user can run a step-by-step category check and search in different ways", 
 
   await waitForApiHealth(request);
   await signInWithDevAuth(page, runId);
+  await seedLegalConsent(page.context());
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
@@ -152,6 +156,7 @@ test("user can archive and restore an item and export their data as JSON", async
 
   await waitForApiHealth(request);
   await signInWithDevAuth(page, runId);
+  await seedLegalConsent(page.context());
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
@@ -221,6 +226,7 @@ async function signInWithDevAuth(page: Page, runId: string): Promise<void> {
         "content-type": "application/json"
       },
       postData: JSON.stringify({
+        ...JSON.parse(route.request().postData() ?? "{}"),
         telegramUserId: `e2e-${runId}`,
         firstName: "E2E"
       })

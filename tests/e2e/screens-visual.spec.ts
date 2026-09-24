@@ -1,6 +1,8 @@
 import { expect, request as playwrightRequest, test } from "@playwright/test";
 import type { APIRequestContext, BrowserContext, Page, TestInfo } from "@playwright/test";
 
+import { seedLegalConsent } from "./legal-consent";
+
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
@@ -15,6 +17,7 @@ test.describe("Screens visual regression", () => {
   test.beforeAll(async ({ browser }, testInfo: TestInfo) => {
     request = await playwrightRequest.newContext({ baseURL: apiBaseUrl });
     context = await browser.newContext();
+    await seedLegalConsent(context);
     page = await context.newPage();
     page.on("dialog", (dialog) => void dialog.accept());
 
@@ -60,6 +63,7 @@ test.describe("Screens visual regression", () => {
           "content-type": "application/json"
         },
         postData: JSON.stringify({
+          ...JSON.parse(route.request().postData() ?? "{}"),
           telegramUserId: devUserId,
           firstName: "E2E"
         })

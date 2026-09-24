@@ -1,6 +1,8 @@
 import { expect, request as playwrightRequest, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
+import { seedLegalConsent } from "./legal-consent";
+
 const apiBaseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
@@ -28,12 +30,14 @@ test.describe("Categories screen visual regression", () => {
           "content-type": "application/json"
         },
         postData: JSON.stringify({
+          ...JSON.parse(route.request().postData() ?? "{}"),
           telegramUserId: devUserId,
           firstName: "E2E"
         })
       });
     });
 
+    await seedLegalConsent(page.context());
     await page.goto("/", { waitUntil: "domcontentloaded" });
     await finishOnboardingIfNeeded(page);
 
