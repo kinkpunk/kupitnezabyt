@@ -475,8 +475,10 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  justify-content: center;
   height: 32px;
   min-height: 32px;
+  min-width: 78px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 9px;
@@ -542,6 +544,81 @@ select {
 
 .ds-status-chip--bad .ds-status-chip__dot {
   background: var(--ds-status-bad);
+}
+
+.ds-filter-chip {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    transform 80ms ease;
+}
+
+.ds-filter-chip:active {
+  transform: scale(0.97);
+}
+
+.ds-filter-chip__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.ds-filter-chip__label {
+  white-space: nowrap;
+}
+
+.ds-filter-chip__count {
+  color: var(--ds-text-3);
+  font-weight: var(--font-weight-medium);
+}
+
+.ds-filter-chip--ok .ds-filter-chip__dot {
+  background: var(--ds-status-ok);
+}
+
+.ds-filter-chip--warn .ds-filter-chip__dot {
+  background: var(--ds-status-warn);
+}
+
+.ds-filter-chip--bad .ds-filter-chip__dot {
+  background: var(--ds-status-bad);
+}
+
+.ds-filter-chip--active {
+  border-color: transparent;
+  background: var(--ds-surface-2);
+  color: var(--ds-text-1);
+}
+
+.ds-filter-chip--active.ds-filter-chip--ok {
+  background: var(--ds-status-ok-soft);
+  color: var(--ds-status-ok);
+}
+
+.ds-filter-chip--active.ds-filter-chip--warn {
+  background: var(--ds-status-warn-soft);
+  color: var(--ds-status-warn);
+}
+
+.ds-filter-chip--active.ds-filter-chip--bad {
+  background: var(--ds-status-bad-soft);
+  color: var(--ds-status-bad);
 }
 
 .ds-badge {
@@ -656,6 +733,44 @@ select {
   outline: none;
 }
 
+.ds-category-tabs-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+/* Динамические фейды: сигнал, что за краем ряда есть ещё табы.
+   Показываются только когда реально есть скрытые табы (модификаторы --start/--end). */
+.ds-category-tabs-wrap::before,
+.ds-category-tabs-wrap::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.ds-category-tabs-wrap::before {
+  left: 0;
+  background: linear-gradient(to right, var(--ds-bg-base), transparent);
+}
+
+.ds-category-tabs-wrap::after {
+  right: 0;
+  background: linear-gradient(to left, var(--ds-bg-base), transparent);
+}
+
+.ds-category-tabs-wrap--start::before {
+  opacity: 1;
+}
+
+.ds-category-tabs-wrap--end::after {
+  opacity: 1;
+}
+
 .ds-category-tabs {
   display: flex;
   align-items: center;
@@ -670,6 +785,13 @@ select {
   display: none;
 }
 
+.ds-category-tabs__trailing {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-left: 4px;
+}
+
 .ds-category-tab {
   position: relative;
   display: inline-flex;
@@ -678,15 +800,14 @@ select {
   gap: 6px;
   min-height: 32px;
   border: 0;
-  border-radius: 9px;
-  background: var(--ds-surface-2);
+  background: transparent;
   color: var(--ds-text-2);
   padding: 0 12px;
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   line-height: 1;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease;
+  transition: color 120ms ease;
 }
 
 .ds-category-tab::before {
@@ -699,8 +820,18 @@ select {
 }
 
 .ds-category-tab--active {
+  color: var(--ds-brand);
+}
+
+.ds-category-tab--active::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 2px;
+  left: 12px;
+  height: 3px;
+  border-radius: 999px;
   background: var(--ds-brand);
-  color: var(--ds-on-brand);
 }
 
 .ds-category-tab__warning {
@@ -775,32 +906,67 @@ select {
 }
 
 .ds-panel-header {
-  display: grid;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.ds-panel-header__top {
+.ds-panel-header__toggle {
+  align-self: flex-end;
+}
+
+.ds-panel-header__toggle-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--ds-bg-base);
+  border-radius: 999px;
+  background: var(--ds-brand);
+}
+
+.ds-panel-header__panel {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: ds-panel-header-in 160ms ease;
+}
+
+@keyframes ds-panel-header-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ds-panel-header__filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .ds-panel-header__actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 12px;
   margin-left: auto;
 }
 
-.ds-panel-header__label {
-  min-width: 0;
-  color: var(--ds-text-1);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-}
-
 .ds-panel-header__archive {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 12px;
   min-height: 32px;
   border: 0;
   border-radius: 9px;
@@ -958,6 +1124,12 @@ select {
   display: grid;
   gap: 16px;
   min-width: 0;
+}
+
+/* FAB (52px, bottom: 80px) перекрывает ~67px скролл-области над bottom-nav;
+   24px снизу уже даёт .main-content, здесь добираем остаток с запасом. */
+.ds-categories-view--with-fab {
+  padding-bottom: 60px;
 }
 
 .ds-categories-view__search {

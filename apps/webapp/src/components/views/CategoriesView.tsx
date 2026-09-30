@@ -31,7 +31,8 @@ import {
   PanelHeader,
   ProductRow,
   ProductRowMoreButton,
-  SearchField
+  SearchField,
+  type CategoryStatusFilter
 } from "../common";
 import { Button } from "../ui/Button";
 
@@ -122,6 +123,11 @@ export function CategoriesView({
 }) {
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<CategoryStatusFilter>("all");
+
+  React.useEffect(() => {
+    setStatusFilter("all");
+  }, [selectedCategory?.id]);
 
   const sheetItem = useMemo(
     () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
@@ -140,6 +146,18 @@ export function CategoriesView({
     }),
     [visibleItems]
   );
+
+  const filteredItems = useMemo(() => {
+    if (statusFilter === "all") {
+      return visibleItems;
+    }
+    const statusByFilter: Record<Exclude<CategoryStatusFilter, "all">, Item["status"]> = {
+      in_stock: "IN_STOCK",
+      low: "LOW",
+      need_buy: "NEED_BUY"
+    };
+    return visibleItems.filter((item) => item.status === statusByFilter[statusFilter]);
+  }, [statusFilter, visibleItems]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -230,7 +248,11 @@ export function CategoriesView({
   }
 
   return (
-    <section className="ds-categories-view">
+    <section
+      className={
+        selectedCategory ? "ds-categories-view ds-categories-view--with-fab" : "ds-categories-view"
+      }
+    >
       <form
         className="ds-categories-view__search"
         role="search"
@@ -258,15 +280,6 @@ export function CategoriesView({
               <Users aria-hidden="true" size={18} />
             </Button>
           ) : null}
-          <Button
-            aria-label="Новая категория"
-            size="compact"
-            title="Новая категория"
-            variant="ghost"
-            onClick={() => setShowCategoryForm(true)}
-          >
-            <Plus aria-hidden="true" size={18} />
-          </Button>
         </div>
       </div>
 
@@ -306,17 +319,31 @@ export function CategoriesView({
           warning: categoryTriggerItemStatus[category.aggregateStatus] !== null
         }))}
         selectedId={selectedCategory?.id ?? null}
+        trailing={
+          <Button
+            aria-label="Новая категория"
+            size="compact"
+            title="Новая категория"
+            variant="icon"
+            onClick={() => setShowCategoryForm(true)}
+          >
+            <Plus aria-hidden="true" size={18} />
+          </Button>
+        }
         onSelect={onSelectCategory}
       />
 
       {selectedCategory ? (
         <>
           <PanelHeader
+            key={selectedCategory.id}
             total={visibleItems.length}
             inStock={inStockCount}
             needBuy={needBuyCount}
             low={lowCount}
+            filter={statusFilter}
             disabled={selectedCategory.itemCount === 0}
+            onFilterChange={setStatusFilter}
             onArchive={() =>
               void onArchiveSelectedCategory().catch((caughtError) =>
                 setError(formatError(caughtError))
@@ -391,8 +418,8 @@ export function CategoriesView({
           ) : null}
 
           <div className="ds-product-list">
-            {visibleItems.length ? (
-              visibleItems.map((item) =>
+            {filteredItems.length ? (
+              filteredItems.map((item) =>
                 editingItemId === item.id ? (
                   <form
                     className="ds-product-row__edit"
@@ -444,7 +471,11 @@ export function CategoriesView({
                 )
               )
             ) : (
-              <p className="ds-empty">Добавьте первый товар в эту категорию.</p>
+              <p className="ds-empty">
+                {statusFilter === "all"
+                  ? "Добавьте первый товар в эту категорию."
+                  : "Нет товаров с таким статусом."}
+              </p>
             )}
           </div>
 

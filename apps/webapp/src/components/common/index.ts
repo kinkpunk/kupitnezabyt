@@ -2,7 +2,7 @@ export { AppHeader, type AppHeaderProps } from "./AppHeader";
 export { SearchField, type SearchFieldProps } from "./SearchField";
 export { BottomSheet, type BottomSheetProps } from "./BottomSheet";
 export { FAB, type FabProps } from "./FAB";
-export { PanelHeader, type PanelHeaderProps } from "./PanelHeader";
+export { PanelHeader, type CategoryStatusFilter, type PanelHeaderProps } from "./PanelHeader";
 export { ChipTabs, type ChipTabsProps, type ChipTabsItem } from "./ChipTabs";
 export {
   ProductRow,

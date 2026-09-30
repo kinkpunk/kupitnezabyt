@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -59,6 +59,25 @@ function clickFirstButton(name: string | RegExp) {
   fireEvent.click(first!);
 }
 
+function openFilterPanel() {
+  const toggle = screen.getByRole("button", { name: "Фильтры и действия" });
+  if (toggle.getAttribute("aria-expanded") !== "true") {
+    fireEvent.click(toggle);
+  }
+}
+
+function clickFilter(name: string | RegExp) {
+  openFilterPanel();
+  const group = screen.getByRole("group", { name: "Фильтр по статусу" });
+  fireEvent.click(within(group).getByRole("button", { name }));
+}
+
+function filterChip(name: string | RegExp) {
+  openFilterPanel();
+  const group = screen.getByRole("group", { name: "Фильтр по статусу" });
+  return within(group).getByRole("button", { name });
+}
+
 function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesView>> = {}) {
   return {
     categories: [category],
@@ -114,21 +133,66 @@ describe("CategoriesView", () => {
     expect(screen.getByText("1 активных")).toBeInTheDocument();
   });
 
+  it("adds bottom clearance for FAB only when a category is selected", () => {
+    const { container, rerender } = render(<CategoriesView {...createProps()} />);
+    expect(container.querySelector(".ds-categories-view--with-fab")).not.toBeNull();
+
+    rerender(<CategoriesView {...createProps({ selectedCategory: null })} />);
+    expect(container.querySelector(".ds-categories-view--with-fab")).toBeNull();
+  });
+
   it("renders category tabs", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("tab", { name: "Еда" })).toHaveAttribute("aria-selected", "true");
   });
 
-  it("renders panel header with low label when nothing needs to be bought", () => {
+  it("renders status filter chips with counts", () => {
     render(<CategoriesView {...createProps()} />);
-    expect(screen.getByText("Мало · 1 из 2")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "1");
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuemax", "2");
+    expect(filterChip(/Все/)).toHaveTextContent("2");
+    expect(filterChip(/Есть/)).toHaveTextContent("1");
+    expect(filterChip(/Мало/)).toHaveTextContent("1");
+    expect(screen.queryByRole("button", { name: /Нет/ })).not.toBeInTheDocument();
   });
 
-  it("renders need-buy label with count of items to buy", () => {
+  it("renders need-buy chip with count of items to buy", () => {
     render(<CategoriesView {...createProps({ visibleItems: [itemInStock, itemLow, itemNeedBuy] })} />);
-    expect(screen.getByText("Купить · 1 из 3")).toBeInTheDocument();
+    expect(filterChip(/Нет/)).toHaveTextContent("1");
+  });
+
+  it("filters item list by status chip", () => {
+    render(<CategoriesView {...createProps()} />);
+    clickFilter(/Мало/);
+    expect(screen.getByText("Молоко")).toBeInTheDocument();
+    expect(screen.queryByText("Кофе")).not.toBeInTheDocument();
+
+    clickFilter(/Все/);
+    expect(screen.getByText("Кофе")).toBeInTheDocument();
+    expect(screen.getByText("Молоко")).toBeInTheDocument();
+  });
+
+  it("shows empty message when filter matches no items", () => {
+    const { rerender } = render(
+      <CategoriesView {...createProps({ visibleItems: [itemLow] })} />
+    );
+    clickFilter(/Мало/);
+    expect(screen.getByText("Молоко")).toBeInTheDocument();
+
+    rerender(<CategoriesView {...createProps({ visibleItems: [itemInStock] })} />);
+    expect(screen.getByText("Нет товаров с таким статусом.")).toBeInTheDocument();
+  });
+
+  it("resets status filter when selected category changes", () => {
+    const { rerender } = render(<CategoriesView {...createProps()} />);
+    clickFilter(/Мало/);
+    expect(screen.queryByText("Кофе")).not.toBeInTheDocument();
+
+    rerender(
+      <CategoriesView
+        {...createProps({ selectedCategory: { ...category, id: "cat-2", name: "Дом" } })}
+      />
+    );
+    expect(screen.getByText("Кофе")).toBeInTheDocument();
+    expect(screen.getByText("Молоко")).toBeInTheDocument();
   });
 
   it("renders product rows for visible items", () => {
