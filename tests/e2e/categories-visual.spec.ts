@@ -1,10 +1,8 @@
 import { expect, request as playwrightRequest, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 
+import { apiBaseUrl, skipOnboardingIfNeeded, waitForApiHealth } from "./helpers";
 import { seedLegalConsent } from "./legal-consent";
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
 test.describe.configure({ mode: "serial" });
 
@@ -39,7 +37,7 @@ test.describe("Categories screen visual regression", () => {
 
     await seedLegalConsent(page.context());
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await finishOnboardingIfNeeded(page);
+    await skipOnboardingIfNeeded(page);
 
     cleanupToken = await page.evaluate(() =>
       window.localStorage.getItem("kupitnezabyt.token")
@@ -154,50 +152,4 @@ async function addItemWithStatus(page: Page, name: string, statusClicks: number)
       .poll(() => statusButton.getAttribute("aria-label"))
       .not.toBe(previousLabel);
   }
-}
-
-async function waitForApiHealth(request: APIRequestContext): Promise<void> {
-  const deadline = Date.now() + 15_000;
-  let lastStatus = 0;
-  let lastBody = "";
-
-  while (Date.now() < deadline) {
-    const response = await request
-      .get(`${apiBaseUrl}/health/detailed`, {
-        timeout: 3_000
-      })
-      .catch(() => null);
-
-    if (response?.status() === 200) {
-      return;
-    }
-
-    lastStatus = response?.status() ?? 0;
-    lastBody = response ? await response.text() : "API request failed";
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  throw new Error(
-    `E2E requires a migrated PostgreSQL database reachable by the API. ` +
-      `Run the local database and migrations before pnpm test:e2e. ` +
-      `Last /health/detailed response: ${lastStatus} ${lastBody}`
-  );
-}
-
-async function finishOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
-  const isOnboardingVisible = await startButton
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!isOnboardingVisible) {
-    return;
-  }
-
-  await startButton.click();
-  // Пропускаем выбор стартовых категорий, чтобы не создавать лишние данные в БД
-  await page.getByRole("button", { name: "Пропустить" }).click();
-  // Пропускаем добавление стартовых товаров
-  await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
 }

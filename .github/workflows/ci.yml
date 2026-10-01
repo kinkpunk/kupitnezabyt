@@ -122,6 +122,7 @@ jobs:
   e2e:
     name: Playwright E2E tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v1.61.1-jammy
     services:
@@ -167,3 +168,13 @@ jobs:
       - run: corepack pnpm --filter @kupitnezabyt/shared --filter @kupitnezabyt/database build
 
       - run: corepack pnpm test:e2e
+
+      - name: Upload Playwright traces and report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7

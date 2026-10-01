@@ -2,10 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
+import { apiBaseUrl, finishOnboardingIfNeeded, waitForApiHealth } from "./helpers";
 import { seedLegalConsent } from "./legal-consent";
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
 test("user can group items and run a group check session", async ({ page, request }, testInfo: TestInfo) => {
   test.setTimeout(120_000);
@@ -50,7 +48,8 @@ test("user can group items and run a group check session", async ({ page, reques
     .click();
   await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
 
-  // Run the group check session to completion.
+  // Run the group check session to completion. «Проверить» here belongs to the
+  // groups view, not the categories panel header.
   await page.getByRole("button", { name: "Проверить" }).click();
   await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
   const checkCard = page.locator(".ds-check-card");
@@ -99,6 +98,8 @@ test("user can run a step-by-step category check and search in different ways", 
   await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
 
   // Start the category check session from the category panel.
+  // Кнопка «Проверить» в свёрнутой панели действий — сначала раскрываем её.
+  await page.getByRole("button", { name: "Фильтры и действия" }).click();
   await page.getByRole("button", { name: "Проверить" }).click();
   await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
 
@@ -257,49 +258,4 @@ async function createCategory(page: Page, categoryName: string): Promise<void> {
   await page.getByLabel("Название категории").fill(categoryName);
   await page.getByRole("button", { name: "Создать" }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
-}
-
-async function waitForApiHealth(request: APIRequestContext): Promise<void> {
-  const deadline = Date.now() + 15_000;
-  let lastStatus = 0;
-  let lastBody = "";
-
-  while (Date.now() < deadline) {
-    const response = await request
-      .get(`${apiBaseUrl}/health/detailed`, {
-        timeout: 3_000
-      })
-      .catch(() => null);
-
-    if (response?.status() === 200) {
-      return;
-    }
-
-    lastStatus = response?.status() ?? 0;
-    lastBody = response ? await response.text() : "API request failed";
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  throw new Error(
-    `E2E requires a migrated PostgreSQL database reachable by the API. ` +
-      `Run the local database and migrations before pnpm test:e2e. ` +
-      `Last /health/detailed response: ${lastStatus} ${lastBody}`
-  );
-}
-
-async function finishOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
-  // locator.isVisible() does not wait, so use waitFor to survive cold dev compiles.
-  const isOnboardingVisible = await startButton
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!isOnboardingVisible) {
-    return;
-  }
-
-  await startButton.click();
-  await page.getByRole("button", { name: "Продолжить" }).click();
-  await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
 }

@@ -1,10 +1,8 @@
 import { expect, test } from "@playwright/test";
-import type { APIRequestContext, Page, TestInfo } from "@playwright/test";
+import type { TestInfo } from "@playwright/test";
 
+import { apiBaseUrl, finishOnboardingIfNeeded, waitForApiHealth } from "./helpers";
 import { seedLegalConsent } from "./legal-consent";
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
 test("browser user can complete the core web-first stock flow", async ({ page, request }, testInfo: TestInfo) => {
   test.setTimeout(90_000);
@@ -82,48 +80,3 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
     });
   }
 });
-
-async function waitForApiHealth(request: APIRequestContext): Promise<void> {
-  const deadline = Date.now() + 15_000;
-  let lastStatus = 0;
-  let lastBody = "";
-
-  while (Date.now() < deadline) {
-    const response = await request
-      .get(`${apiBaseUrl}/health/detailed`, {
-        timeout: 3_000
-      })
-      .catch(() => null);
-
-    if (response?.status() === 200) {
-      return;
-    }
-
-    lastStatus = response?.status() ?? 0;
-    lastBody = response ? await response.text() : "API request failed";
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  throw new Error(
-    `E2E requires a migrated PostgreSQL database reachable by the API. ` +
-      `Run the local database and migrations before pnpm test:e2e. ` +
-      `Last /health/detailed response: ${lastStatus} ${lastBody}`
-  );
-}
-
-async function finishOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
-  // locator.isVisible() does not wait, so use waitFor to survive cold dev compiles.
-  const isOnboardingVisible = await startButton
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!isOnboardingVisible) {
-    return;
-  }
-
-  await startButton.click();
-  await page.getByRole("button", { name: "Продолжить" }).click();
-  await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
-}

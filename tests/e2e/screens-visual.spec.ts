@@ -1,10 +1,8 @@
 import { expect, request as playwrightRequest, test } from "@playwright/test";
 import type { APIRequestContext, BrowserContext, Page, TestInfo } from "@playwright/test";
 
+import { apiBaseUrl, finishOnboardingIfNeeded, waitForApiHealth } from "./helpers";
 import { seedLegalConsent } from "./legal-consent";
-
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? `http://localhost:${process.env.E2E_API_PORT ?? 3001}`;
 
 test.describe.configure({ mode: "serial" });
 
@@ -163,6 +161,7 @@ test.describe("Screens visual regression", () => {
 
   test("check screen", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
+    await page.locator(".ds-panel-header").getByRole("button", { name: "Фильтры и действия" }).click();
     await page.locator(".ds-panel-header").getByRole("button", { name: "Проверить" }).click();
     await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Молоко" })).toBeVisible();
@@ -196,6 +195,7 @@ test.describe("Screens visual regression", () => {
 
   test("archive with category", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
+    await page.locator(".ds-panel-header").getByRole("button", { name: "Фильтры и действия" }).click();
     await page.locator(".ds-panel-header").getByRole("button", { name: "Архив" }).click();
     // Архивная вкладка загружает данные один раз при открытии. Дожидаемся,
     // пока архивация завершится на сервере, иначе вкладка может прочитать
@@ -226,48 +226,4 @@ async function addItem(page: Page, name: string) {
 
   const row = page.locator(".ds-product-row").filter({ hasText: name });
   await expect(row).toBeVisible();
-}
-
-async function waitForApiHealth(request: APIRequestContext): Promise<void> {
-  const deadline = Date.now() + 15_000;
-  let lastStatus = 0;
-  let lastBody = "";
-
-  while (Date.now() < deadline) {
-    const response = await request
-      .get(`${apiBaseUrl}/health/detailed`, {
-        timeout: 3_000
-      })
-      .catch(() => null);
-
-    if (response?.status() === 200) {
-      return;
-    }
-
-    lastStatus = response?.status() ?? 0;
-    lastBody = response ? await response.text() : "API request failed";
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  throw new Error(
-    `E2E requires a migrated PostgreSQL database reachable by the API. ` +
-      `Run the local database and migrations before pnpm test:e2e. ` +
-      `Last /health/detailed response: ${lastStatus} ${lastBody}`
-  );
-}
-
-async function finishOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
-  const isOnboardingVisible = await startButton
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!isOnboardingVisible) {
-    return;
-  }
-
-  await startButton.click();
-  await page.getByRole("button", { name: "Продолжить" }).click();
-  await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
 }
