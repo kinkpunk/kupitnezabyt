@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 import React, { useEffect, useRef } from "react";
 
 import { Badge } from "../ui/Badge";
@@ -9,10 +9,19 @@ import { Button } from "../ui/Button";
 
 export interface AppHeaderProps {
   notificationCount: number;
+  menuOpen: boolean;
+  menuActive: boolean;
   onBellClick: () => void;
+  onMenuClick: () => void;
 }
 
-export function AppHeader({ notificationCount, onBellClick }: AppHeaderProps) {
+export function AppHeader({
+  notificationCount,
+  menuOpen,
+  menuActive,
+  onBellClick,
+  onMenuClick
+}: AppHeaderProps) {
   const headerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -51,15 +60,28 @@ export function AppHeader({ notificationCount, onBellClick }: AppHeaderProps) {
           <BrandWord />
         </span>
       </div>
-      <Button
-        aria-label="Уведомления"
-        title="Уведомления"
-        variant="icon"
-        onClick={onBellClick}
-      >
-        <Bell aria-hidden="true" size={20} />
-        <Badge count={notificationCount} />
-      </Button>
+      <div className="ds-app-header__actions">
+        <Button
+          aria-label="Уведомления"
+          title="Уведомления"
+          variant="icon"
+          onClick={onBellClick}
+        >
+          <Bell aria-hidden="true" size={20} />
+          <Badge count={notificationCount} />
+        </Button>
+        <Button
+          aria-controls="menu-sheet"
+          aria-expanded={menuOpen}
+          aria-label="Меню"
+          className={menuActive ? "active" : ""}
+          title="Меню"
+          variant="icon"
+          onClick={onMenuClick}
+        >
+          <Menu aria-hidden="true" size={20} />
+        </Button>
+      </div>
     </header>
   );
 }

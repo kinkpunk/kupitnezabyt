@@ -30,11 +30,7 @@ test("user can group items and run a group check session", async ({ page, reques
   await expect(itemRow).toBeVisible();
 
   // Create a group and add the item to it.
-  await mainNavigation.getByRole("button", { name: "Меню" }).click();
-  await page
-    .getByRole("dialog", { name: "Разделы" })
-    .getByRole("button", { name: "Наборы" })
-    .click();
+  await mainNavigation.getByRole("button", { name: "Наборы" }).click();
 
   await page.getByLabel("Название набора").fill(groupName);
   await page.getByLabel("Название набора").press("Enter");
@@ -178,9 +174,9 @@ test("user can archive and restore an item and export their data as JSON", async
   await expect(itemRow).toHaveCount(0);
 
   const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
-  await mainNavigation.getByRole("button", { name: "Меню" }).click();
+  await page.getByRole("button", { name: "Меню", exact: true }).click();
   await page
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: "Архив" })
     .click();
   const archivedItem = page
@@ -196,9 +192,9 @@ test("user can archive and restore an item and export their data as JSON", async
   await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
 
   // Export user data and verify the downloaded JSON contains the item.
-  await mainNavigation.getByRole("button", { name: "Меню" }).click();
+  await page.getByRole("button", { name: "Меню", exact: true }).click();
   await page
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: "Настройки" })
     .click();
   const downloadPromise = page.waitForEvent("download");

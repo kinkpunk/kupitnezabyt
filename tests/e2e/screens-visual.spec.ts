@@ -98,13 +98,13 @@ test.describe("Screens visual regression", () => {
   });
 
   test("shopping empty", async () => {
-    await openMenuTab(page, "Покупки");
+    await page.getByRole("button", { name: "Покупки", exact: true }).click();
     await expect(page.getByText("Список покупок пуст")).toBeVisible();
     await expect(page).toHaveScreenshot("shopping-empty.png");
   });
 
   test("groups empty", async () => {
-    await openMenuTab(page, "Наборы");
+    await page.getByRole("button", { name: "Наборы", exact: true }).click();
     await expect(page.getByText("Нет выбранного набора")).toBeVisible();
     await expect(page).toHaveScreenshot("groups-empty.png");
   });
@@ -140,7 +140,7 @@ test.describe("Screens visual regression", () => {
   });
 
   test("shopping with item", async () => {
-    await openMenuTab(page, "Покупки");
+    await page.getByRole("button", { name: "Покупки", exact: true }).click();
     await page.getByLabel("Разовая покупка").fill("Сахар");
     await page.getByLabel("Категория покупки").selectOption("Еда");
     await page.locator(".ds-shopping-form").getByRole("button", { name: "Добавить" }).click();
@@ -149,7 +149,7 @@ test.describe("Screens visual regression", () => {
   });
 
   test("groups with group", async () => {
-    await openMenuTab(page, "Наборы");
+    await page.getByRole("button", { name: "Наборы", exact: true }).click();
     await page.getByLabel("Название набора").fill("Завтрак");
     await page.locator(".ds-groups-create-form").getByRole("button", { name: "Добавить" }).click();
     await page.getByRole("tab", { name: "Завтрак" }).click();
@@ -179,7 +179,7 @@ test.describe("Screens visual regression", () => {
 
   test("menu sheet", async () => {
     await page.getByRole("button", { name: "Меню", exact: true }).click();
-    await expect(page.getByRole("dialog", { name: "Разделы" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Меню" })).toBeVisible();
     await expect(page).toHaveScreenshot("menu-sheet.png");
     await page.getByRole("button", { name: "Закрыть" }).click();
   });
@@ -214,7 +214,7 @@ test.describe("Screens visual regression", () => {
 async function openMenuTab(page: Page, label: string) {
   await page.getByRole("button", { name: "Меню", exact: true }).click();
   await page
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: label })
     .click();
 }

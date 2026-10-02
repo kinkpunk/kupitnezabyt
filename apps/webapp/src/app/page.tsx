@@ -299,19 +299,21 @@ export default function Home() {
     <main className="app-shell">
       <AppHeader
         notificationCount={state.notificationCount}
+        menuOpen={state.showMenuSheet}
+        menuActive={
+          state.showMenuSheet ||
+          state.activeTab === "settings" ||
+          state.activeTab === "archive"
+        }
         onBellClick={state.handleBellClick}
+        onMenuClick={() => state.setShowMenuSheet((current) => !current)}
       />
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
       <ToastNotice message={state.toastMessage} onClose={() => state.setToastMessage(null)} />
 
       <div className="main-content">{renderActiveView()}</div>
 
-      <BottomNav
-        activeTab={state.activeTab}
-        showMenuSheet={state.showMenuSheet}
-        onSelectTab={state.handleSelectTab}
-        onToggleMenu={() => state.setShowMenuSheet((current) => !current)}
-      />
+      <BottomNav activeTab={state.activeTab} onSelectTab={state.handleSelectTab} />
 
       <MenuSheet
         show={state.showMenuSheet}

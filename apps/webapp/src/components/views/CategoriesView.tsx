@@ -9,7 +9,7 @@ import {
   ListOrdered,
   Pencil,
   Plus,
-  Users
+  Share2
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
@@ -268,19 +268,17 @@ export function CategoriesView({
             {categories.length ? `${categories.length} активных` : "Пока нет"}
           </p>
         </div>
-        <div className="ds-categories-view__actions">
-          {showShareEntryPoint ? (
-            <Button
-              aria-label="Поделиться списком"
-              size="compact"
-              title="Поделиться списком"
-              variant="ghost"
-              onClick={onSelectSettings}
-            >
-              <Users aria-hidden="true" size={18} />
-            </Button>
-          ) : null}
-        </div>
+        {showShareEntryPoint ? (
+          <Button
+            aria-label="Поделиться списком"
+            size="compact"
+            title="Поделиться списком"
+            variant="icon"
+            onClick={onSelectSettings}
+          >
+            <Share2 aria-hidden="true" size={18} />
+          </Button>
+        ) : null}
       </div>
 
       <BottomSheet

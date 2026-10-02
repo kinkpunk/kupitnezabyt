@@ -1358,8 +1358,8 @@ export function useAppState() {
     window.localStorage.setItem(onboardingStorageKey, "true");
     setShowOnboarding(false);
     setOnboardingStep(0);
-    await refreshActiveData(token);
     setActiveTab("home");
+    await refreshActiveData(token);
   }
 
   async function handleSearchItems() {

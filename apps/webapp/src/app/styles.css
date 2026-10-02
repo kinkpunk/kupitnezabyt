@@ -691,6 +691,17 @@ select {
   position: relative;
 }
 
+.ds-app-header__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.ds-app-header .ds-button--icon.active {
+  color: var(--ds-brand);
+}
+
 .ds-app-header .ds-badge {
   position: absolute;
   top: -2px;
@@ -1144,7 +1155,7 @@ select {
 .ds-categories-view__heading {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
 }
 
@@ -1159,13 +1170,6 @@ select {
   margin: 0;
   color: var(--ds-text-2);
   font-size: var(--font-size-sm);
-}
-
-.ds-categories-view__actions {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
 }
 
 .ds-product-list {

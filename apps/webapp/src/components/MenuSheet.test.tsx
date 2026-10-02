@@ -16,7 +16,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof MenuSheet>> 
     activeWorkspace: (activeWorkspace !== undefined ? activeWorkspace : workspaces[0]) as WorkspaceSummary | null,
     workspaces,
     showWorkspaceSwitcher: true,
-    activeTab: "shopping" as const,
+    activeTab: "settings" as const,
     onClose: vi.fn(),
     onSelectTab: vi.fn(),
     onSelectWorkspace: vi.fn().mockResolvedValue(undefined),
@@ -33,8 +33,10 @@ describe("MenuSheet", () => {
   it("renders workspace switcher and tabs", () => {
     render(<MenuSheet {...createProps()} />);
     expect(screen.getByLabelText("Активный список")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Покупки" })).toHaveClass("ds-bottom-sheet__action--active");
-    expect(screen.getByRole("button", { name: "Наборы" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Настройки" })).toHaveClass("ds-bottom-sheet__action--active");
+    expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Покупки" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Наборы" })).not.toBeInTheDocument();
   });
 
   it("calls onSelectTab when tab is clicked", () => {

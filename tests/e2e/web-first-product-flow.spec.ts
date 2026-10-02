@@ -54,11 +54,7 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   // A new item starts in the "Нет" (NEED_BUY) status chip.
   await expect(createdItem.getByRole("button", { name: /Статус: Нет/ })).toBeVisible();
 
-  await mainNavigation.getByRole("button", { name: "Меню" }).click();
-  await page
-    .getByRole("dialog", { name: "Разделы" })
-    .getByRole("button", { name: "Покупки" })
-    .click();
+  await mainNavigation.getByRole("button", { name: "Покупки" }).click();
   const shoppingRow = page.locator(".ds-product-row").filter({ hasText: itemName });
   await expect(shoppingRow).toBeVisible();
   await shoppingRow.getByRole("button", { name: "Куплено" }).click();

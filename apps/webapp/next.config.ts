@@ -37,7 +37,10 @@ function validateBuildEnv(): void {
 }
 
 const nextConfig: NextConfig = {
-  typedRoutes: true
+  typedRoutes: true,
+  // The floating indicator overlaps the first bottom-nav tab on narrow
+  // mobile viewports and blocks Playwright clicks in e2e runs.
+  devIndicators: false
 };
 
 export default nextConfig;

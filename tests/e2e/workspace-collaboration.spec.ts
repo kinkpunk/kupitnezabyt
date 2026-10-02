@@ -101,9 +101,9 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
   await expect(ownerItem.getByRole("button", { name: /Статус: Есть/ })).toBeVisible();
 
   // Owner removes the member from the workspace.
-  await ownerNavigation.getByRole("button", { name: "Меню" }).click();
+  await ownerPage.getByRole("button", { name: "Меню", exact: true }).click();
   await ownerPage
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: "Настройки" })
     .click();
   ownerPage.on("dialog", (dialog) => void dialog.accept());
@@ -205,9 +205,9 @@ test("ownership transfer makes the invited member the workspace owner", async ({
   }
 
   // Owner transfers ownership to the member from Settings.
-  await ownerNavigation.getByRole("button", { name: "Меню" }).click();
+  await ownerPage.getByRole("button", { name: "Меню", exact: true }).click();
   await ownerPage
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: "Настройки" })
     .click();
   ownerPage.on("dialog", (dialog) => void dialog.accept());
@@ -243,10 +243,9 @@ test("ownership transfer makes the invited member the workspace owner", async ({
 
   // The new owner sees member management for the shared workspace.
   await memberPage.reload({ waitUntil: "domcontentloaded" });
-  const memberNavigation = memberPage.getByRole("navigation", { name: "Основные разделы" });
-  await memberNavigation.getByRole("button", { name: "Меню" }).click();
+  await memberPage.getByRole("button", { name: "Меню", exact: true }).click();
   await memberPage
-    .getByRole("dialog", { name: "Разделы" })
+    .getByRole("dialog", { name: "Меню" })
     .getByRole("button", { name: "Настройки" })
     .click();
   await expect(memberPage.getByLabel("Email участника")).toBeVisible();

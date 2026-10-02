@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Archive, Boxes, Settings, ShoppingCart } from "lucide-react";
+import { Archive, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { BottomSheet } from "./common";
@@ -9,8 +9,6 @@ import type { ActiveTab } from "../hooks/useAppState";
 import type { WorkspaceSummary } from "../lib/types";
 
 const menuTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
-  { id: "shopping", icon: ShoppingCart, label: "Покупки" },
-  { id: "groups", icon: Boxes, label: "Наборы" },
   { id: "settings", icon: Settings, label: "Настройки" },
   { id: "archive", icon: Archive, label: "Архив" }
 ];
@@ -35,7 +33,7 @@ export function MenuSheet({
   onSelectWorkspace: (workspaceId: string) => Promise<void>;
 }) {
   return (
-    <BottomSheet show={show} title="Разделы" onClose={onClose}>
+    <BottomSheet show={show} title="Меню" id="menu-sheet" onClose={onClose}>
       {activeWorkspace && showWorkspaceSwitcher ? (
         <label className="ds-menu-workspace-switcher">
           <span>Список</span>
