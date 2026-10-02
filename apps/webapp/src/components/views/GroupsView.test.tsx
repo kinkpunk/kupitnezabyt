@@ -90,7 +90,7 @@ describe("GroupsView", () => {
         })}
       />
     );
-    expect(screen.getByRole("heading", { name: "Наборы" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Наборы" })).not.toBeInTheDocument();
     expect(screen.getByText("Нет выбранного набора")).toBeInTheDocument();
   });
 

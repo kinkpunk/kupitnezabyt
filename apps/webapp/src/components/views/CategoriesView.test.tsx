@@ -60,7 +60,7 @@ function clickFirstButton(name: string | RegExp) {
 }
 
 function openFilterPanel() {
-  const toggle = screen.getByRole("button", { name: "Фильтры и действия" });
+  const toggle = screen.getByRole("button", { name: "Фильтры" });
   if (toggle.getAttribute("aria-expanded") !== "true") {
     fireEvent.click(toggle);
   }
@@ -126,11 +126,11 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
 }
 
 describe("CategoriesView", () => {
-  it("renders search field and category heading", () => {
+  it("renders search field and category tabs without a screen heading", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("searchbox", { name: "Поиск" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Категории" })).toBeInTheDocument();
-    expect(screen.getByText("1 активных")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Категории" })).not.toBeInTheDocument();
+    expect(screen.queryByText("1 активных")).not.toBeInTheDocument();
   });
 
   it("adds bottom clearance for FAB only when a category is selected", () => {
@@ -284,7 +284,7 @@ describe("CategoriesView", () => {
     const onArchiveItem = vi.fn().mockResolvedValue(undefined);
     render(<CategoriesView {...createProps({ onArchiveItem })} />);
     clickFirstButton("Ещё");
-    fireEvent.click(screen.getByRole("button", { name: "В архив" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
   });
 

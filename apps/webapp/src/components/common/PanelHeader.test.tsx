@@ -19,26 +19,30 @@ function createProps(overrides: Partial<React.ComponentProps<typeof PanelHeader>
 }
 
 function expandPanel() {
-  fireEvent.click(screen.getByRole("button", { name: "Фильтры и действия" }));
+  fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 }
 
 describe("PanelHeader", () => {
-  it("renders collapsed by default with a toggle button", () => {
+  it("renders the action row with check and archive always visible", () => {
     render(<PanelHeader {...createProps()} />);
-    const toggle = screen.getByRole("button", { name: "Фильтры и действия" });
+    expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
+    const archiveButton = screen.getByRole("button", { name: "В архив" });
+    expect(archiveButton).toHaveTextContent("В архив");
+  });
+
+  it("renders collapsed by default with a filters toggle button", () => {
+    render(<PanelHeader {...createProps()} />);
+    const toggle = screen.getByRole("button", { name: "Фильтры" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Проверить" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Архив" })).not.toBeInTheDocument();
   });
 
   it("expands the panel on toggle click and collapses on second click", () => {
     render(<PanelHeader {...createProps()} />);
-    const toggle = screen.getByRole("button", { name: "Фильтры и действия" });
+    const toggle = screen.getByRole("button", { name: "Фильтры" });
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
@@ -75,7 +79,8 @@ describe("PanelHeader", () => {
     render(<PanelHeader {...createProps({ total: 0, inStock: 0, needBuy: 0, low: 0 })} />);
     expandPanel();
     expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
   });
 
   it("marks the active filter with aria-pressed", () => {
@@ -100,24 +105,36 @@ describe("PanelHeader", () => {
     expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
   });
 
-  it("collapses the panel and calls onArchive when archive link is pressed", () => {
+  it("calls onArchive when archive button is pressed without collapsing filters", () => {
     const handleArchive = vi.fn();
     render(<PanelHeader {...createProps({ onArchive: handleArchive })} />);
     expandPanel();
-    const archiveButton = screen.getByRole("button", { name: "Архив" });
-    expect(archiveButton).toHaveTextContent("В архив");
-    fireEvent.click(archiveButton);
+    fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     expect(handleArchive).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
   });
 
-  it("collapses the panel and calls onCheck when check button is pressed", () => {
+  it("calls onCheck when check button is pressed without collapsing filters", () => {
     const handleCheck = vi.fn();
     render(<PanelHeader {...createProps({ onCheck: handleCheck })} />);
     expandPanel();
     fireEvent.click(screen.getByRole("button", { name: "Проверить" }));
     expect(handleCheck).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
+  });
+
+  it("hides the share button when onShare is not provided", () => {
+    render(<PanelHeader {...createProps()} />);
+    expect(
+      screen.queryByRole("button", { name: "Экспорт и совместный доступ" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the share button and calls onShare when provided", () => {
+    const handleShare = vi.fn();
+    render(<PanelHeader {...createProps({ onShare: handleShare })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Экспорт и совместный доступ" }));
+    expect(handleShare).toHaveBeenCalledOnce();
   });
 
   it("disables actions when disabled is true", () => {
@@ -126,8 +143,7 @@ describe("PanelHeader", () => {
         {...createProps({ total: 0, inStock: 0, needBuy: 0, low: 0, disabled: true })}
       />
     );
-    expandPanel();
-    expect(screen.getByRole("button", { name: "Архив" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
   });
 });

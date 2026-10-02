@@ -94,8 +94,6 @@ test("user can run a step-by-step category check and search in different ways", 
   await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
 
   // Start the category check session from the category panel.
-  // Кнопка «Проверить» в свёрнутой панели действий — сначала раскрываем её.
-  await page.getByRole("button", { name: "Фильтры и действия" }).click();
   await page.getByRole("button", { name: "Проверить" }).click();
   await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
 

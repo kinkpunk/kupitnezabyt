@@ -100,17 +100,13 @@ export function ShoppingView({
 
   return (
     <section className="stack">
-      <SectionHeader
-        title="Покупки"
-        subtitle={shoppingList.length ? `${shoppingList.length} активных` : "Пусто"}
-        actions={
-          shoppingList.length ? (
-            <Button size="compact" variant="ghost" onClick={handleClearCompleted}>
-              Очистить
-            </Button>
-          ) : null
-        }
-      />
+      {shoppingList.length ? (
+        <div className="ds-shopping-toolbar">
+          <Button size="compact" variant="ghost" onClick={handleClearCompleted}>
+            Очистить купленное
+          </Button>
+        </div>
+      ) : null}
 
       <form className="ds-shopping-form" onSubmit={handleCreate}>
         <input

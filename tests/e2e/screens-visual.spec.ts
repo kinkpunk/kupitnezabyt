@@ -161,7 +161,6 @@ test.describe("Screens visual regression", () => {
 
   test("check screen", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
-    await page.locator(".ds-panel-header").getByRole("button", { name: "Фильтры и действия" }).click();
     await page.locator(".ds-panel-header").getByRole("button", { name: "Проверить" }).click();
     await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Молоко" })).toBeVisible();
@@ -195,8 +194,7 @@ test.describe("Screens visual regression", () => {
 
   test("archive with category", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
-    await page.locator(".ds-panel-header").getByRole("button", { name: "Фильтры и действия" }).click();
-    await page.locator(".ds-panel-header").getByRole("button", { name: "Архив" }).click();
+    await page.locator(".ds-panel-header").getByRole("button", { name: "В архив" }).click();
     // Архивная вкладка загружает данные один раз при открытии. Дожидаемся,
     // пока архивация завершится на сервере, иначе вкладка может прочитать
     // ещё не заархивированное состояние и не перечитать его повторно.

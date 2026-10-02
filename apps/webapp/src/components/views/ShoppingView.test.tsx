@@ -61,9 +61,9 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
 }
 
 describe("ShoppingView", () => {
-  it("renders header and empty state when list is empty", () => {
+  it("renders empty state when list is empty", () => {
     render(<ShoppingView {...createProps({ shoppingList: [], shoppingGroups: [] })} />);
-    expect(screen.getByRole("heading", { name: "Покупки" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Покупки" })).not.toBeInTheDocument();
     expect(screen.getByText("Список покупок пуст")).toBeInTheDocument();
   });
 
@@ -100,8 +100,15 @@ describe("ShoppingView", () => {
   it("shows clear completed button when list is not empty", () => {
     const onClearCompletedShoppingList = vi.fn().mockResolvedValue(undefined);
     render(<ShoppingView {...createProps({ onClearCompletedShoppingList })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Очистить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Очистить купленное" }));
     expect(onClearCompletedShoppingList).toHaveBeenCalledOnce();
+  });
+
+  it("hides clear completed button when list is empty", () => {
+    render(<ShoppingView {...createProps({ shoppingList: [], shoppingGroups: [] })} />);
+    expect(
+      screen.queryByRole("button", { name: "Очистить купленное" })
+    ).not.toBeInTheDocument();
   });
 
   it("opens entry actions sheet for manual entries", async () => {

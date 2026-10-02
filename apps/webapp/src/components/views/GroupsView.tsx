@@ -107,11 +107,6 @@ export function GroupsView({
 
   return (
     <section className="stack">
-      <SectionHeader
-        title="Наборы"
-        subtitle={groups.length ? `${groups.length} создано` : "Пока нет"}
-      />
-
       <form className="ds-groups-create-form" onSubmit={handleCreateGroup}>
         <input
           aria-label="Название набора"

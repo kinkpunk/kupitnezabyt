@@ -8,8 +8,7 @@ import {
   GripVertical,
   ListOrdered,
   Pencil,
-  Plus,
-  Share2
+  Plus
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
@@ -261,26 +260,6 @@ export function CategoriesView({
         <SearchField value={searchQuery} onChange={onSearchQueryChange} />
       </form>
 
-      <div className="ds-categories-view__heading">
-        <div>
-          <h2 className="ds-categories-view__title">Категории</h2>
-          <p className="ds-categories-view__meta">
-            {categories.length ? `${categories.length} активных` : "Пока нет"}
-          </p>
-        </div>
-        {showShareEntryPoint ? (
-          <Button
-            aria-label="Поделиться списком"
-            size="compact"
-            title="Поделиться списком"
-            variant="icon"
-            onClick={onSelectSettings}
-          >
-            <Share2 aria-hidden="true" size={18} />
-          </Button>
-        ) : null}
-      </div>
-
       <BottomSheet
         show={showCategoryForm}
         title="Новая категория"
@@ -352,6 +331,7 @@ export function CategoriesView({
                 setError(formatError(caughtError))
               )
             }
+            onShare={showShareEntryPoint ? onSelectSettings : undefined}
           />
 
           {visibleRecommendations.length ? (
