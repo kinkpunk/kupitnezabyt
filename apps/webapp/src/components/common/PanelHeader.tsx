@@ -18,6 +18,7 @@ export interface PanelHeaderProps {
   onCheck: () => void;
   onShare?: (() => void) | undefined;
   disabled?: boolean;
+  archiveDisabled?: boolean;
 }
 
 interface FilterChip {
@@ -37,7 +38,8 @@ export function PanelHeader({
   onArchive,
   onCheck,
   onShare,
-  disabled = false
+  disabled = false,
+  archiveDisabled = false
 }: PanelHeaderProps) {
   const [expanded, setExpanded] = React.useState(false);
   const allChips: FilterChip[] = [
@@ -63,7 +65,7 @@ export function PanelHeader({
           <button
             aria-label="В архив"
             className="ds-panel-header__archive"
-            disabled={disabled}
+            disabled={archiveDisabled}
             type="button"
             onClick={onArchive}
           >

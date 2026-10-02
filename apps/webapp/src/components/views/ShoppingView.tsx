@@ -1,11 +1,11 @@
 "use client";
 
-import { Pencil, ShoppingCart, Trash2 } from "lucide-react";
+import { Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 import { formatError } from "../../lib/format";
 import type { Category, ShoppingListEntry } from "../../lib/types";
-import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton, SectionHeader } from "../common";
+import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton } from "../common";
 import { Button } from "../ui/Button";
 
 export function ShoppingView({
@@ -16,6 +16,8 @@ export function ShoppingView({
   setManualShoppingTitle,
   manualShoppingCategoryId,
   setManualShoppingCategoryId,
+  showShoppingForm,
+  setShowShoppingForm,
   editingShoppingId,
   setEditingShoppingId,
   editingShoppingTitle,
@@ -24,7 +26,6 @@ export function ShoppingView({
   onUpdateManualShoppingItem,
   onDeleteManualShoppingItem,
   onCompleteShoppingListItem,
-  onClearCompletedShoppingList,
   setError,
   isActionPending
 }: {
@@ -35,6 +36,8 @@ export function ShoppingView({
   setManualShoppingTitle: (value: string) => void;
   manualShoppingCategoryId: string;
   setManualShoppingCategoryId: (value: string) => void;
+  showShoppingForm: boolean;
+  setShowShoppingForm: (value: boolean | ((current: boolean) => boolean)) => void;
   editingShoppingId: string | null;
   setEditingShoppingId: (value: string | null) => void;
   editingShoppingTitle: string;
@@ -43,7 +46,6 @@ export function ShoppingView({
   onUpdateManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onDeleteManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onCompleteShoppingListItem: (entry: ShoppingListEntry) => Promise<void>;
-  onClearCompletedShoppingList: () => Promise<void>;
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
 }) {
@@ -52,15 +54,6 @@ export function ShoppingView({
     () => shoppingList.find((entry) => entry.id === activeEntryId) ?? null,
     [shoppingList, activeEntryId]
   );
-
-  function handleClearCompleted() {
-    void onClearCompletedShoppingList().catch((caughtError) => setError(formatError(caughtError)));
-  }
-
-  function handleCreate(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void onCreateManualShoppingItem().catch((caughtError) => setError(formatError(caughtError)));
-  }
 
   function handleUpdate(entry: ShoppingListEntry, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,45 +93,53 @@ export function ShoppingView({
 
   return (
     <section className="stack">
-      {shoppingList.length ? (
-        <div className="ds-shopping-toolbar">
-          <Button size="compact" variant="ghost" onClick={handleClearCompleted}>
-            Очистить купленное
-          </Button>
-        </div>
-      ) : null}
-
-      <form className="ds-shopping-form" onSubmit={handleCreate}>
-        <input
-          aria-label="Разовая покупка"
-          placeholder="Разовая покупка"
-          value={manualShoppingTitle}
-          disabled={isActionPending("shopping:add")}
-          onChange={(event) => setManualShoppingTitle(event.target.value)}
-        />
-        <select
-          aria-label="Категория покупки"
-          value={manualShoppingCategoryId}
-          disabled={isActionPending("shopping:add")}
-          onChange={(event) => setManualShoppingCategoryId(event.target.value)}
+      <BottomSheet
+        show={showShoppingForm}
+        title="Новая покупка"
+        onClose={() => setShowShoppingForm(false)}
+      >
+        <form
+          className="ds-bottom-sheet__create-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onCreateManualShoppingItem().catch((caughtError) =>
+              setError(formatError(caughtError))
+            );
+          }}
         >
-          <option value="">Без категории</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </select>
-        <Button disabled={isActionPending("shopping:add") || !manualShoppingTitle.trim()} type="submit">
-          {isActionPending("shopping:add") ? "Добавляем..." : "Добавить"}
-        </Button>
-      </form>
+          <input
+            aria-label="Разовая покупка"
+            disabled={isActionPending("shopping:add")}
+            placeholder="Разовая покупка"
+            value={manualShoppingTitle}
+            onChange={(event) => setManualShoppingTitle(event.target.value)}
+          />
+          <select
+            aria-label="Категория покупки"
+            disabled={isActionPending("shopping:add")}
+            value={manualShoppingCategoryId}
+            onChange={(event) => setManualShoppingCategoryId(event.target.value)}
+          >
+            <option value="">Без категории</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="submit"
+            disabled={isActionPending("shopping:add") || !manualShoppingTitle.trim()}
+          >
+            {isActionPending("shopping:add") ? "Добавляем..." : "Добавить"}
+          </Button>
+        </form>
+      </BottomSheet>
 
       {shoppingGroups.length ? (
         <div className="ds-shopping-groups">
           {shoppingGroups.map((group) => (
             <section className="ds-shopping-group" key={group.id}>
-              <SectionHeader title={group.title} />
               <div className="ds-product-list">
                 {group.entries.map((entry) =>
                   editingShoppingId === entry.id ? (
@@ -176,6 +177,15 @@ export function ShoppingView({
           title="Список покупок пуст"
         />
       )}
+
+      <button
+        className="ds-add-item-row"
+        type="button"
+        onClick={() => setShowShoppingForm(true)}
+      >
+        <Plus aria-hidden="true" size={18} />
+        Добавить покупку
+      </button>
 
       <BottomSheet
         show={activeEntryId !== null}

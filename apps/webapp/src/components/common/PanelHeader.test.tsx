@@ -137,13 +137,19 @@ describe("PanelHeader", () => {
     expect(handleShare).toHaveBeenCalledOnce();
   });
 
-  it("disables actions when disabled is true", () => {
+  it("disables only check when disabled is true", () => {
     render(
       <PanelHeader
         {...createProps({ total: 0, inStock: 0, needBuy: 0, low: 0, disabled: true })}
       />
     );
-    expect(screen.getByRole("button", { name: "В архив" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeEnabled();
+  });
+
+  it("disables archive when archiveDisabled is true", () => {
+    render(<PanelHeader {...createProps({ archiveDisabled: true })} />);
+    expect(screen.getByRole("button", { name: "В архив" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Проверить" })).toBeEnabled();
   });
 });

@@ -45,6 +45,8 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
     setManualShoppingTitle: vi.fn(),
     manualShoppingCategoryId: "",
     setManualShoppingCategoryId: vi.fn(),
+    showShoppingForm: false,
+    setShowShoppingForm: vi.fn(),
     editingShoppingId: null,
     setEditingShoppingId: vi.fn(),
     editingShoppingTitle: "",
@@ -53,7 +55,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
     onUpdateManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onDeleteManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onCompleteShoppingListItem: vi.fn().mockResolvedValue(undefined),
-    onClearCompletedShoppingList: vi.fn().mockResolvedValue(undefined),
     setError: vi.fn(),
     isActionPending: vi.fn().mockReturnValue(false),
     ...overrides
@@ -69,9 +70,15 @@ describe("ShoppingView", () => {
 
   it("renders shopping groups and entries", () => {
     render(<ShoppingView {...createProps()} />);
-    expect(screen.getByRole("heading", { name: "Список" })).toBeInTheDocument();
     expect(screen.getByText("Хлеб")).toBeInTheDocument();
     expect(screen.getByText("Молоко")).toBeInTheDocument();
+  });
+
+  it("opens create shopping sheet via add item row", () => {
+    const setShowShoppingForm = vi.fn();
+    render(<ShoppingView {...createProps({ setShowShoppingForm })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Добавить покупку" }));
+    expect(setShowShoppingForm).toHaveBeenCalledWith(true);
   });
 
   it("submits create manual item form", () => {
@@ -79,13 +86,15 @@ describe("ShoppingView", () => {
     render(
       <ShoppingView
         {...createProps({
+          showShoppingForm: true,
           manualShoppingTitle: "Сыр",
           manualShoppingCategoryId: "cat-1",
           onCreateManualShoppingItem
         })}
       />
     );
-    fireEvent.submit(document.querySelector(".ds-shopping-form")!);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
     expect(onCreateManualShoppingItem).toHaveBeenCalledOnce();
   });
 
@@ -95,20 +104,6 @@ describe("ShoppingView", () => {
     const boughtButtons = screen.getAllByRole("button", { name: "Куплено" });
     fireEvent.click(boughtButtons[0]!);
     expect(onCompleteShoppingListItem).toHaveBeenCalledWith(manualEntry);
-  });
-
-  it("shows clear completed button when list is not empty", () => {
-    const onClearCompletedShoppingList = vi.fn().mockResolvedValue(undefined);
-    render(<ShoppingView {...createProps({ onClearCompletedShoppingList })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Очистить купленное" }));
-    expect(onClearCompletedShoppingList).toHaveBeenCalledOnce();
-  });
-
-  it("hides clear completed button when list is empty", () => {
-    render(<ShoppingView {...createProps({ shoppingList: [], shoppingGroups: [] })} />);
-    expect(
-      screen.queryByRole("button", { name: "Очистить купленное" })
-    ).not.toBeInTheDocument();
   });
 
   it("opens entry actions sheet for manual entries", async () => {

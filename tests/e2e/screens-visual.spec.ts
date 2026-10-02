@@ -141,20 +141,23 @@ test.describe("Screens visual regression", () => {
 
   test("shopping with item", async () => {
     await page.getByRole("button", { name: "Покупки", exact: true }).click();
+    await page.getByRole("button", { name: "Добавить покупку" }).click();
     await page.getByLabel("Разовая покупка").fill("Сахар");
     await page.getByLabel("Категория покупки").selectOption("Еда");
-    await page.locator(".ds-shopping-form").getByRole("button", { name: "Добавить" }).click();
+    await page.getByRole("button", { name: "Добавить" }).click();
     await expect(page.getByText("Сахар")).toBeVisible();
     await expect(page).toHaveScreenshot("shopping-with-item.png");
   });
 
   test("groups with group", async () => {
     await page.getByRole("button", { name: "Наборы", exact: true }).click();
+    await page.getByRole("button", { name: "Новый набор" }).click();
     await page.getByLabel("Название набора").fill("Завтрак");
-    await page.locator(".ds-groups-create-form").getByRole("button", { name: "Добавить" }).click();
+    await page.getByRole("button", { name: "Создать" }).click();
     await page.getByRole("tab", { name: "Завтрак" }).click();
+    await page.getByRole("button", { name: "Добавить товар" }).click();
     await page.getByLabel("Товар для набора").selectOption({ label: "Молоко" });
-    await page.locator(".ds-groups-add-form").getByRole("button", { name: "Добавить" }).click();
+    await page.getByRole("button", { name: "Добавить" }).click();
     await expect(page.getByText("Молоко")).toBeVisible();
     await expect(page).toHaveScreenshot("groups-with-group.png");
   });

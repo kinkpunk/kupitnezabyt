@@ -64,6 +64,10 @@ function createProps(overrides: Partial<React.ComponentProps<typeof GroupsView>>
     selectedGroup: group,
     groupName: "",
     setGroupName: vi.fn(),
+    showGroupForm: false,
+    setShowGroupForm: vi.fn(),
+    showGroupItemForm: false,
+    setShowGroupItemForm: vi.fn(),
     groupItemId: "",
     setGroupItemId: vi.fn(),
     items: [item],
@@ -94,11 +98,28 @@ describe("GroupsView", () => {
     expect(screen.getByText("Нет выбранного набора")).toBeInTheDocument();
   });
 
+  it("opens create group form on plus button click", () => {
+    const setShowGroupForm = vi.fn();
+    render(<GroupsView {...createProps({ setShowGroupForm })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Новый набор" }));
+    expect(setShowGroupForm).toHaveBeenCalledWith(true);
+  });
+
   it("submits create group form", () => {
     const onCreateGroup = vi.fn().mockResolvedValue(undefined);
-    render(<GroupsView {...createProps({ groupName: "Ужин", onCreateGroup })} />);
-    fireEvent.submit(document.querySelector(".ds-groups-create-form")!);
+    render(
+      <GroupsView {...createProps({ showGroupForm: true, groupName: "Ужин", onCreateGroup })} />
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Создать" }));
     expect(onCreateGroup).toHaveBeenCalledOnce();
+  });
+
+  it("closes create group bottom sheet on close button click", () => {
+    const setShowGroupForm = vi.fn();
+    render(<GroupsView {...createProps({ showGroupForm: true, setShowGroupForm })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    expect(setShowGroupForm).toHaveBeenCalledWith(false);
   });
 
   it("renders group tabs and selects group", () => {
@@ -112,14 +133,26 @@ describe("GroupsView", () => {
 
   it("renders selected group items", () => {
     render(<GroupsView {...createProps()} />);
-    expect(screen.getByRole("heading", { name: "Завтрак" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Завтрак" })).toBeInTheDocument();
     expect(screen.getByText("Кофе")).toBeInTheDocument();
+  });
+
+  it("opens add item sheet via add item row", () => {
+    const setShowGroupItemForm = vi.fn();
+    render(<GroupsView {...createProps({ setShowGroupItemForm })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Добавить товар" }));
+    expect(setShowGroupItemForm).toHaveBeenCalledWith(true);
   });
 
   it("submits add item form", () => {
     const onAddGroupItem = vi.fn().mockResolvedValue(undefined);
-    render(<GroupsView {...createProps({ groupItemId: item.id, onAddGroupItem })} />);
-    fireEvent.submit(document.querySelector(".ds-groups-add-form")!);
+    render(
+      <GroupsView
+        {...createProps({ showGroupItemForm: true, groupItemId: item.id, onAddGroupItem })}
+      />
+    );
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
     expect(onAddGroupItem).toHaveBeenCalledOnce();
   });
 
@@ -145,7 +178,7 @@ describe("GroupsView", () => {
   it("archives selected group", () => {
     const onArchiveSelectedGroup = vi.fn().mockResolvedValue(undefined);
     render(<GroupsView {...createProps({ onArchiveSelectedGroup })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Архив" }));
+    fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     expect(onArchiveSelectedGroup).toHaveBeenCalledOnce();
   });
 

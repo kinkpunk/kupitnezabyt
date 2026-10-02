@@ -1153,12 +1153,6 @@ select {
   min-width: 0;
 }
 
-/* FAB (52px, bottom: 80px) перекрывает ~67px скролл-области над bottom-nav;
-   24px снизу уже даёт .main-content, здесь добираем остаток с запасом. */
-.ds-categories-view--with-fab {
-  padding-bottom: 60px;
-}
-
 .ds-categories-view__search {
   display: block;
   margin: 0;
@@ -1192,6 +1186,33 @@ select {
   padding: 24px 0;
   color: var(--ds-text-3);
   text-align: center;
+}
+
+/* Inline-кнопка добавления товара — последняя строка списка (вместо FAB). */
+.ds-add-item-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--ds-text-3);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.ds-add-item-row:not(:disabled):hover {
+  background: var(--ds-surface-2);
+  color: var(--ds-text-1);
+}
+
+.ds-add-item-row:not(:disabled):active {
+  background: color-mix(in srgb, var(--ds-line) 50%, var(--ds-surface-2));
+  color: var(--ds-text-1);
 }
 
 .ds-empty-state {
@@ -1337,21 +1358,6 @@ select {
   color: var(--ds-status-bad);
 }
 
-.ds-shopping-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.ds-shopping-form {
-  display: grid;
-  gap: 8px;
-}
-
-.ds-shopping-form input,
-.ds-shopping-form select {
-  width: 100%;
-}
-
 .ds-shopping-groups {
   display: grid;
   gap: 14px;
@@ -1360,6 +1366,12 @@ select {
 .ds-shopping-group {
   display: grid;
   gap: 8px;
+}
+
+/* В «Покупках» нет строки добавления в конце списка, поэтому разделитель
+   последней строки (:last-child) здесь сохраняем. */
+.ds-shopping-group .ds-product-row:last-child {
+  border-bottom: 1px solid var(--ds-line);
 }
 
 .ds-shopping-actions {
@@ -1423,18 +1435,6 @@ select {
 
 .ds-check-status {
   min-height: 48px;
-}
-
-.ds-groups-create-form,
-.ds-groups-add-form {
-  display: flex;
-  gap: 8px;
-}
-
-.ds-groups-create-form input,
-.ds-groups-add-form select {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .ds-home-summary {

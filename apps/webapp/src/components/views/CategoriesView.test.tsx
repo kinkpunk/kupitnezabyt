@@ -133,14 +133,6 @@ describe("CategoriesView", () => {
     expect(screen.queryByText("1 активных")).not.toBeInTheDocument();
   });
 
-  it("adds bottom clearance for FAB only when a category is selected", () => {
-    const { container, rerender } = render(<CategoriesView {...createProps()} />);
-    expect(container.querySelector(".ds-categories-view--with-fab")).not.toBeNull();
-
-    rerender(<CategoriesView {...createProps({ selectedCategory: null })} />);
-    expect(container.querySelector(".ds-categories-view--with-fab")).toBeNull();
-  });
-
   it("renders category tabs", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("tab", { name: "Еда" })).toHaveAttribute("aria-selected", "true");
@@ -240,11 +232,20 @@ describe("CategoriesView", () => {
     expect(setShowCategoryForm).toHaveBeenCalledWith(false);
   });
 
-  it("opens create item sheet via FAB", () => {
+  it("opens create item sheet via add item row", () => {
     const setShowItemForm = vi.fn();
     render(<CategoriesView {...createProps({ setShowItemForm })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Новый товар" }));
+    fireEvent.click(screen.getByRole("button", { name: "Добавить товар" }));
     expect(setShowItemForm).toHaveBeenCalledWith(true);
+  });
+
+  it("hides add item row while reordering", () => {
+    render(<CategoriesView {...createProps()} />);
+    expect(screen.getByRole("button", { name: "Добавить товар" })).toBeInTheDocument();
+
+    clickFirstButton("Ещё");
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    expect(screen.queryByRole("button", { name: "Добавить товар" })).not.toBeInTheDocument();
   });
 
   it("submits create item form inside bottom sheet", () => {
@@ -286,6 +287,26 @@ describe("CategoriesView", () => {
     clickFirstButton("Ещё");
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+  });
+
+  it("allows archiving an empty category while check stays disabled", () => {
+    const onArchiveSelectedCategory = vi.fn().mockResolvedValue(undefined);
+    const emptyCategory = { ...category, itemCount: 0, aggregateStatus: "OK" as const };
+    render(
+      <CategoriesView
+        {...createProps({
+          categories: [emptyCategory],
+          selectedCategory: emptyCategory,
+          visibleItems: [],
+          onArchiveSelectedCategory
+        })}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
+    const archiveButton = screen.getByRole("button", { name: "В архив" });
+    expect(archiveButton).toBeEnabled();
+    fireEvent.click(archiveButton);
+    expect(onArchiveSelectedCategory).toHaveBeenCalledOnce();
   });
 
   it("enters reorder mode from actions sheet", async () => {

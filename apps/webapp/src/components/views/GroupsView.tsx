@@ -1,12 +1,12 @@
 "use client";
 
-import { Package, PackagePlus, Trash2 } from "lucide-react";
+import { Archive, Package, PackagePlus, Plus, Trash2 } from "lucide-react";
 import React from "react";
 
 import { formatError } from "../../lib/format";
 import type { Item, ItemGroup } from "../../lib/types";
 import { itemStatusToUiStatus } from "../../lib/ui";
-import { ChipTabs, EmptyState, ProductRow, SectionHeader } from "../common";
+import { BottomSheet, ChipTabs, EmptyState, ProductRow } from "../common";
 import { Button } from "../ui/Button";
 
 export function GroupsView({
@@ -14,6 +14,10 @@ export function GroupsView({
   selectedGroup,
   groupName,
   setGroupName,
+  showGroupForm,
+  setShowGroupForm,
+  showGroupItemForm,
+  setShowGroupItemForm,
   groupItemId,
   setGroupItemId,
   items,
@@ -31,6 +35,10 @@ export function GroupsView({
   selectedGroup: ItemGroup | null | undefined;
   groupName: string;
   setGroupName: (value: string) => void;
+  showGroupForm: boolean;
+  setShowGroupForm: (value: boolean | ((current: boolean) => boolean)) => void;
+  showGroupItemForm: boolean;
+  setShowGroupItemForm: (value: boolean | ((current: boolean) => boolean)) => void;
   groupItemId: string;
   setGroupItemId: (value: string) => void;
   items: Item[];
@@ -44,16 +52,6 @@ export function GroupsView({
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
 }) {
-  function handleCreateGroup(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void onCreateGroup().catch((caughtError) => setError(formatError(caughtError)));
-  }
-
-  function handleAddItem(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void onAddGroupItem().catch((caughtError) => setError(formatError(caughtError)));
-  }
-
   function handleStartCheck() {
     void onStartGroupCheck().catch((caughtError) => setError(formatError(caughtError)));
   }
@@ -74,51 +72,73 @@ export function GroupsView({
     return itemStatusToUiStatus(item.status) ?? "paused";
   }
 
-  function renderGroupActions() {
-    if (!selectedGroup) {
-      return null;
-    }
-
-    return (
-      <div className="ds-row-actions">
-        <Button
-          disabled={selectedGroupCheckItemCount === 0}
-          size="compact"
-          variant="primary"
-          onClick={handleStartCheck}
-        >
-          Проверить
-        </Button>
-        <Button
-          className="ds-button--danger"
-          size="compact"
-          variant="ghost"
-          onClick={handleArchiveGroup}
-        >
-          Архив
-        </Button>
-      </div>
-    );
-  }
-
   const availableItems = selectedGroup
     ? items.filter((item) => !selectedGroup.items.some((groupItem) => groupItem.itemId === item.id))
     : items;
 
   return (
     <section className="stack">
-      <form className="ds-groups-create-form" onSubmit={handleCreateGroup}>
-        <input
-          aria-label="Название набора"
-          disabled={isActionPending("group:create")}
-          placeholder="Новый набор"
-          value={groupName}
-          onChange={(event) => setGroupName(event.target.value)}
-        />
-        <Button disabled={isActionPending("group:create") || !groupName.trim()} type="submit">
-          {isActionPending("group:create") ? "Добавляем..." : "Добавить"}
-        </Button>
-      </form>
+      <BottomSheet
+        show={showGroupForm}
+        title="Новый набор"
+        onClose={() => setShowGroupForm(false)}
+      >
+        <form
+          className="ds-bottom-sheet__create-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onCreateGroup().catch((caughtError) => setError(formatError(caughtError)));
+          }}
+        >
+          <input
+            aria-label="Название набора"
+            disabled={isActionPending("group:create")}
+            placeholder="Название набора"
+            value={groupName}
+            onChange={(event) => setGroupName(event.target.value)}
+          />
+          <Button
+            type="submit"
+            disabled={isActionPending("group:create") || !groupName.trim()}
+          >
+            {isActionPending("group:create") ? "Создаем..." : "Создать"}
+          </Button>
+        </form>
+      </BottomSheet>
+
+      <BottomSheet
+        show={showGroupItemForm}
+        title="Добавить товар в набор"
+        onClose={() => setShowGroupItemForm(false)}
+      >
+        <form
+          className="ds-bottom-sheet__create-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onAddGroupItem().catch((caughtError) => setError(formatError(caughtError)));
+          }}
+        >
+          <select
+            aria-label="Товар для набора"
+            disabled={isActionPending("group:item:add")}
+            value={groupItemId}
+            onChange={(event) => setGroupItemId(event.target.value)}
+          >
+            <option value="">Выберите товар</option>
+            {availableItems.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="submit"
+            disabled={isActionPending("group:item:add") || !groupItemId}
+          >
+            {isActionPending("group:item:add") ? "Добавляем..." : "Добавить"}
+          </Button>
+        </form>
+      </BottomSheet>
 
       <ChipTabs
         ariaLabel="Наборы"
@@ -127,67 +147,83 @@ export function GroupsView({
           label: `${group.icon ? `${group.icon} ` : ""}${group.name}`
         }))}
         selectedId={selectedGroup?.id ?? null}
+        trailing={
+          <Button
+            aria-label="Новый набор"
+            size="compact"
+            title="Новый набор"
+            variant="icon"
+            onClick={() => setShowGroupForm(true)}
+          >
+            <Plus aria-hidden="true" size={18} />
+          </Button>
+        }
         onSelect={onSelectGroup}
       />
 
       {selectedGroup ? (
         <>
-          <SectionHeader
-            actions={renderGroupActions()}
-            subtitle={`${selectedGroup.items.length} поз.`}
-            title={selectedGroup.name}
-          />
+          <div className="ds-panel-header">
+            <div className="ds-panel-header__row">
+              <div className="ds-panel-header__row-actions">
+                <Button
+                  className="ds-button--compact"
+                  disabled={selectedGroupCheckItemCount === 0}
+                  variant="primary"
+                  onClick={handleStartCheck}
+                >
+                  Проверить
+                </Button>
+                <button
+                  aria-label="В архив"
+                  className="ds-panel-header__archive"
+                  type="button"
+                  onClick={handleArchiveGroup}
+                >
+                  <Archive aria-hidden="true" size={18} />
+                  В архив
+                </button>
+              </div>
+            </div>
+          </div>
 
-          <form className="ds-groups-add-form" onSubmit={handleAddItem}>
-            <select
-              aria-label="Товар для набора"
-              disabled={isActionPending("group:item:add")}
-              value={groupItemId}
-              onChange={(event) => setGroupItemId(event.target.value)}
-            >
-              <option value="">Выберите товар</option>
-              {availableItems.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-            <Button
-              disabled={isActionPending("group:item:add") || !groupItemId}
-              type="submit"
-            >
-              {isActionPending("group:item:add") ? "Добавляем..." : "Добавить"}
-            </Button>
-          </form>
-
-          {selectedGroup.items.length ? (
-            <div className="ds-product-list">
-              {selectedGroup.items.map((groupItem) => (
+          <div className="ds-product-list">
+            {selectedGroup.items.length ? (
+              selectedGroup.items.map((groupItem) => (
                 <ProductRow
                   key={groupItem.id}
                   actions={
                     <Button
+                      aria-label="Убрать"
                       className="ds-button--danger"
                       size="compact"
-                      variant="ghost"
+                      title="Убрать"
+                      variant="icon"
                       onClick={() => handleRemoveItem(groupItem.itemId)}
                     >
-                      <Trash2 aria-hidden="true" size={16} />
-                      Убрать
+                      <Trash2 aria-hidden="true" size={18} />
                     </Button>
                   }
                   status={getItemStatus(groupItem.item)}
                   title={groupItem.item.name}
                 />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              description="Добавьте товары в набор для совместной проверки"
-              icon={PackagePlus}
-              title="Набор пуст"
-            />
-          )}
+              ))
+            ) : (
+              <EmptyState
+                description="Добавьте товары в набор для совместной проверки"
+                icon={PackagePlus}
+                title="Набор пуст"
+              />
+            )}
+            <button
+              className="ds-add-item-row"
+              type="button"
+              onClick={() => setShowGroupItemForm(true)}
+            >
+              <Plus aria-hidden="true" size={18} />
+              Добавить товар
+            </button>
+          </div>
         </>
       ) : (
         <EmptyState

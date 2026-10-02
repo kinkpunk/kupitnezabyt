@@ -13,7 +13,6 @@ import type {
   Category,
   CheckSession,
   DeleteResponse,
-  DeletedCountResponse,
   InAppReminder,
   ItemGroup,
   Item,
@@ -625,10 +624,6 @@ export function deleteShoppingListItem(
   shoppingListItemId: string
 ): Promise<DeleteResponse> {
   return del<DeleteResponse>(`/api/shopping-list/${shoppingListItemId}`, token);
-}
-
-export function clearCompletedShoppingList(token: string): Promise<DeletedCountResponse> {
-  return del<DeletedCountResponse>("/api/shopping-list/completed", token);
 }
 
 export function getGroups(token: string): Promise<ItemGroup[]> {

@@ -176,6 +176,8 @@ export default function Home() {
             setManualShoppingTitle={state.setManualShoppingTitle}
             manualShoppingCategoryId={state.manualShoppingCategoryId}
             setManualShoppingCategoryId={state.setManualShoppingCategoryId}
+            showShoppingForm={state.showShoppingForm}
+            setShowShoppingForm={state.setShowShoppingForm}
             editingShoppingId={state.editingShoppingId}
             setEditingShoppingId={state.setEditingShoppingId}
             editingShoppingTitle={state.editingShoppingTitle}
@@ -184,7 +186,6 @@ export default function Home() {
             onUpdateManualShoppingItem={state.handleUpdateManualShoppingItem}
             onDeleteManualShoppingItem={state.handleDeleteManualShoppingItem}
             onCompleteShoppingListItem={state.handleCompleteShoppingListItem}
-            onClearCompletedShoppingList={state.handleClearCompletedShoppingList}
             setError={state.setError}
             isActionPending={state.isActionPending}
           />
@@ -196,6 +197,10 @@ export default function Home() {
             selectedGroup={state.selectedGroup}
             groupName={state.groupName}
             setGroupName={state.setGroupName}
+            showGroupForm={state.showGroupForm}
+            setShowGroupForm={state.setShowGroupForm}
+            showGroupItemForm={state.showGroupItemForm}
+            setShowGroupItemForm={state.setShowGroupItemForm}
             groupItemId={state.groupItemId}
             setGroupItemId={state.setGroupItemId}
             items={state.items}

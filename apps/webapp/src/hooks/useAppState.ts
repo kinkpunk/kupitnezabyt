@@ -12,7 +12,6 @@ import {
   buildLegalConsent,
   cancelCheckSession,
   clearActiveWorkspaceId,
-  clearCompletedShoppingList,
   completeCheckSession,
   completeOnboarding,
   completeShoppingListItem,
@@ -174,6 +173,9 @@ export function useAppState() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
+  const [showGroupForm, setShowGroupForm] = useState(false);
+  const [showGroupItemForm, setShowGroupItemForm] = useState(false);
+  const [showShoppingForm, setShowShoppingForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
   const [groupName, setGroupName] = useState("");
@@ -869,6 +871,7 @@ export function useAppState() {
       });
       setManualShoppingTitle("");
       setManualShoppingCategoryId("");
+      setShowShoppingForm(false);
       await refreshActiveData(token);
     } finally {
       setPendingAction(actionKey, false);
@@ -1165,16 +1168,6 @@ export function useAppState() {
     await refreshArchivedData(token);
   }
 
-  async function handleClearCompletedShoppingList() {
-    if (!token) {
-      return;
-    }
-
-    setError(null);
-    await clearCompletedShoppingList(token);
-    await refreshActiveData(token);
-  }
-
   async function handleStartCategoryCheck() {
     if (!token || !selectedCategory) {
       return;
@@ -1202,6 +1195,7 @@ export function useAppState() {
       setPendingAction(actionKey, true);
       const group = await createGroup(token, groupName.trim());
       setGroupName("");
+      setShowGroupForm(false);
       setGroups((current) => [...current, group]);
       setSelectedGroupId(group.id);
     } finally {
@@ -1234,6 +1228,7 @@ export function useAppState() {
         current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup))
       );
       setGroupItemId("");
+      setShowGroupItemForm(false);
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -1826,6 +1821,12 @@ export function useAppState() {
     setShowCategoryForm,
     showItemForm,
     setShowItemForm,
+    showGroupForm,
+    setShowGroupForm,
+    showGroupItemForm,
+    setShowGroupItemForm,
+    showShoppingForm,
+    setShowShoppingForm,
     categoryName,
     setCategoryName,
     itemName,
@@ -1926,7 +1927,6 @@ export function useAppState() {
     handleRestoreItem,
     handleDeleteArchivedCategory,
     handleDeleteArchivedItem,
-    handleClearCompletedShoppingList,
     handleStartCategoryCheck,
     handleCreateGroup,
     handleArchiveSelectedGroup,

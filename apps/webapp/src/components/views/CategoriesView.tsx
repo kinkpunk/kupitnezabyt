@@ -26,7 +26,6 @@ import {
 import {
   BottomSheet,
   ChipTabs,
-  FAB,
   PanelHeader,
   ProductRow,
   ProductRowMoreButton,
@@ -247,11 +246,7 @@ export function CategoriesView({
   }
 
   return (
-    <section
-      className={
-        selectedCategory ? "ds-categories-view ds-categories-view--with-fab" : "ds-categories-view"
-      }
-    >
+    <section className="ds-categories-view">
       <form
         className="ds-categories-view__search"
         role="search"
@@ -455,6 +450,16 @@ export function CategoriesView({
                   : "Нет товаров с таким статусом."}
               </p>
             )}
+            {isReordering ? null : (
+              <button
+                className="ds-add-item-row"
+                type="button"
+                onClick={() => setShowItemForm(true)}
+              >
+                <Plus aria-hidden="true" size={18} />
+                Добавить товар
+              </button>
+            )}
           </div>
 
           <BottomSheet
@@ -569,8 +574,6 @@ export function CategoriesView({
               )}
             </div>
           </BottomSheet>
-
-          <FAB label="Новый товар" onClick={() => setShowItemForm(true)} />
         </>
       ) : (
         <p className="ds-empty">Создайте категорию, чтобы добавить первый товар.</p>

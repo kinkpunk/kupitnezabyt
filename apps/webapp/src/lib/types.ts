@@ -217,10 +217,6 @@ export type WorkspaceOwnershipTransferResponse = {
   ownerId: string;
 };
 
-export type DeletedCountResponse = {
-  deletedCount: number;
-};
-
 export type DeleteResponse = {
   deleted: boolean;
 };
