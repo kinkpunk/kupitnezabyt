@@ -215,7 +215,6 @@ export function useAppState() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showMenuSheet, setShowMenuSheet] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notificationsViewed, setNotificationsViewed] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof document === "undefined") {
       return "system";
@@ -310,27 +309,9 @@ export function useAppState() {
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
-  const attentionItemsCount = useMemo(
-    () => items.filter((item) => item.status !== "IN_STOCK" && item.status !== "PAUSED").length,
-    [items]
-  );
-
   const needBuyItems = useMemo(
     () => items.filter((item) => item.status === "NEED_BUY").slice(0, 5),
     [items]
-  );
-  const notificationCount = shoppingList.length + inAppReminders.length;
-  const itemReminders = useMemo(
-    () => inAppReminders.filter((reminder) => reminder.entityType === "ITEM"),
-    [inAppReminders]
-  );
-  const categoryReminders = useMemo(
-    () => inAppReminders.filter((reminder) => reminder.entityType === "CATEGORY"),
-    [inAppReminders]
-  );
-  const groupReminders = useMemo(
-    () => inAppReminders.filter((reminder) => reminder.entityType === "GROUP"),
-    [inAppReminders]
   );
   const themeButtonLabel =
     theme === "system"
@@ -1406,10 +1387,9 @@ export function useAppState() {
     setShowMenuSheet(false);
   }
 
-  function handleBellClick() {
+  function handleOpenActivity() {
     setShowMenuSheet(false);
-    setNotificationsViewed(true);
-    setShowNotifications((current) => !current);
+    setShowNotifications(true);
   }
 
   function toggleTheme() {
@@ -1861,8 +1841,6 @@ export function useAppState() {
     setShowMenuSheet,
     showNotifications,
     setShowNotifications,
-    notificationsViewed,
-    setNotificationsViewed,
     theme,
     setTheme,
     systemPrefersDark,
@@ -1883,12 +1861,7 @@ export function useAppState() {
     shoppingGroups,
     currentCheckItem,
     checkedCount,
-    attentionItemsCount,
     needBuyItems,
-    notificationCount,
-    itemReminders,
-    categoryReminders,
-    groupReminders,
     themeButtonLabel,
 
     // Actions
@@ -1941,7 +1914,7 @@ export function useAppState() {
     clearWorkspaceScopedState,
     handleSelectTab,
     handleSelectMenuTab,
-    handleBellClick,
+    handleOpenActivity,
     toggleTheme,
     handleSelectCategory,
     handleSelectWorkspace,

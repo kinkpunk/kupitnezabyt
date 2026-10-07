@@ -186,12 +186,13 @@ test.describe("Screens visual regression", () => {
     await page.getByRole("button", { name: "Закрыть" }).click();
   });
 
-  test("notification sheet", async () => {
-    await page.getByRole("button", { name: "Уведомления" }).click();
-    const sheet = page.getByRole("dialog", { name: "Уведомления" });
+  test("activity sheet", async () => {
+    await page.getByRole("button", { name: "Меню", exact: true }).click();
+    await page.getByRole("dialog", { name: "Меню" }).getByRole("button", { name: "Активность" }).click();
+    const sheet = page.getByRole("dialog", { name: "Активность" });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole("button", { name: /Молоко/ })).toBeVisible();
-    await expect(page).toHaveScreenshot("notification-sheet.png");
+    await expect(page).toHaveScreenshot("activity-sheet.png");
     await page.getByRole("button", { name: "Закрыть" }).click();
   });
 

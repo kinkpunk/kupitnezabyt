@@ -54,10 +54,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof HomeView>> =
     inAppReminders: [categoryReminder],
     checkSession: null as CheckSession | null,
     needBuyItems: [itemNeedBuy],
-    attentionItemsCount: 1,
-    itemReminders: [] as InAppReminder[],
-    categoryReminders: [categoryReminder],
-    groupReminders: [] as InAppReminder[],
     onSelectTab: vi.fn(),
     onSelectCategory: vi.fn(),
     onSetStatus: vi.fn().mockResolvedValue(undefined),
@@ -70,40 +66,80 @@ function createProps(overrides: Partial<React.ComponentProps<typeof HomeView>> =
 }
 
 describe("HomeView", () => {
-  it("renders summary with attention count", () => {
+  it("renders summary as a static list with informative labels", () => {
     render(<HomeView {...createProps()} />);
-    expect(screen.getByText("Запасы")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
-    expect(screen.getByText("требуют внимания")).toBeInTheDocument();
+    const summary = document.querySelector(".ds-home-summary");
+    expect(summary).not.toBeNull();
+    expect(summary?.closest("button")).toBeNull();
+    expect(within(summary as HTMLElement).getByText("Купить сейчас")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("Мало осталось")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("Категории к проверке")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("Наборы к проверке")).toBeInTheDocument();
   });
 
-  it("renders summary ok state when nothing needs attention", () => {
-    render(<HomeView {...createProps({ attentionItemsCount: 0, needBuyItems: [] })} />);
-    expect(screen.getByText("Все запасы в порядке")).toBeInTheDocument();
-    expect(screen.getByText("1 отслеживается")).toBeInTheDocument();
+  it("renders metric counts from items and reminders", () => {
+    render(<HomeView {...createProps()} />);
+    const summary = document.querySelector(".ds-home-summary") as HTMLElement;
+
+    const metricValue = (label: string) =>
+      within(summary).getByText(label).parentElement?.querySelector(
+        ".ds-home-summary__metric-value"
+      )?.textContent;
+
+    expect(metricValue("Купить сейчас")).toBe("1");
+    expect(metricValue("Мало осталось")).toBe("0");
+    expect(metricValue("Категории к проверке")).toBe("1");
+    expect(metricValue("Наборы к проверке")).toBe("0");
   });
 
-  it("navigates to items tab when summary is clicked", () => {
+  it("renders «Всё в порядке» when all counters are zero", () => {
+    const itemInStock = { ...itemNeedBuy, status: "IN_STOCK" as const };
+    render(
+      <HomeView
+        {...createProps({
+          items: [itemInStock],
+          needBuyItems: [],
+          inAppReminders: []
+        })}
+      />
+    );
+    expect(screen.getByText("Всё в порядке")).toBeInTheDocument();
+    expect(document.querySelector(".ds-home-summary__list")).toBeNull();
+  });
+
+  it("does not navigate anywhere from the static summary", () => {
     const onSelectTab = vi.fn();
     render(<HomeView {...createProps({ onSelectTab })} />);
-    fireEvent.click(screen.getByRole("button", { name: /Запасы/ }));
-    expect(onSelectTab).toHaveBeenCalledWith("items");
+    fireEvent.click(document.querySelector(".ds-home-summary") as HTMLElement);
+    expect(onSelectTab).not.toHaveBeenCalled();
   });
 
   it("renders need-buy items and navigates on click", () => {
     const onSelectCategory = vi.fn();
     render(<HomeView {...createProps({ onSelectCategory })} />);
-    const row = screen.getByRole("button", { name: "Молоко Еда Нет" });
+    const row = screen.getByRole("button", { name: "Молоко Еда Куплено" });
     expect(row).toBeInTheDocument();
     fireEvent.click(row);
     expect(onSelectCategory).toHaveBeenCalledWith(itemNeedBuy.categoryId);
   });
 
-  it("marks need-buy item as bought via status chip", () => {
+  it("marks need-buy item as bought via Куплено button", () => {
     const onSetStatus = vi.fn().mockResolvedValue(undefined);
-    render(<HomeView {...createProps({ onSetStatus })} />);
-    fireEvent.click(screen.getByRole("button", { name: /Статус: Нет/ }));
+    const onSelectCategory = vi.fn();
+    render(<HomeView {...createProps({ onSetStatus, onSelectCategory })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Куплено" }));
     expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK");
+    expect(onSelectCategory).not.toHaveBeenCalled();
+  });
+
+  it("shows pending state on Куплено button while status update is in flight", () => {
+    render(
+      <HomeView
+        {...createProps({ isActionPending: (key: string) => key === "item:status:item-1" })}
+      />
+    );
+    const button = screen.getByRole("button", { name: "Отмечаем..." });
+    expect(button).toBeDisabled();
   });
 
   it("shows empty state when there are no need-buy items", () => {

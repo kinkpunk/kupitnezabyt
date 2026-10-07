@@ -103,10 +103,6 @@ export default function Home() {
             inAppReminders={state.inAppReminders}
             checkSession={state.checkSession}
             needBuyItems={state.needBuyItems}
-            attentionItemsCount={state.attentionItemsCount}
-            itemReminders={state.itemReminders}
-            categoryReminders={state.categoryReminders}
-            groupReminders={state.groupReminders}
             onSelectTab={state.handleSelectTab}
             onSelectCategory={state.handleSelectCategory}
             onSetStatus={state.handleSetStatus}
@@ -303,14 +299,12 @@ export default function Home() {
   return (
     <main className="app-shell">
       <AppHeader
-        notificationCount={state.notificationCount}
         menuOpen={state.showMenuSheet}
         menuActive={
           state.showMenuSheet ||
           state.activeTab === "settings" ||
           state.activeTab === "archive"
         }
-        onBellClick={state.handleBellClick}
         onMenuClick={() => state.setShowMenuSheet((current) => !current)}
       />
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
@@ -328,6 +322,7 @@ export default function Home() {
         activeTab={state.activeTab}
         onClose={() => state.setShowMenuSheet(false)}
         onSelectTab={state.handleSelectMenuTab}
+        onOpenActivity={state.handleOpenActivity}
         onSelectWorkspace={state.handleSelectWorkspace}
       />
 

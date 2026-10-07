@@ -102,35 +102,6 @@ export const reminderEntityLabels: Record<InAppReminder["entityType"], string> =
   ITEM: "Товар"
 };
 
-export function formatPositionCount(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) {
-    return `${count} позиция`;
-  }
-
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} позиции`;
-  }
-
-  return `${count} позиций`;
-}
-
-export function formatReminderCount(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) {
-    return `${count} напоминание`;
-  }
-
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return `${count} напоминания`;
-  }
-
-  return `${count} напоминаний`;
-}
 
 export const onboardingStorageKey = "kupitnezabyt.onboarding.completed";
 export const themeStorageKey = "kupitnezabyt.theme";

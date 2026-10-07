@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bell, ShoppingCart } from "lucide-react";
+import { Bell, ShoppingCart, Activity } from "lucide-react";
 
 import { BottomSheet, EmptyState } from "./common";
 import { formatDate } from "../lib/format";
@@ -30,7 +30,7 @@ export function NotificationSheet({
   const notificationCount = shoppingList.length + inAppReminders.length;
 
   return (
-    <BottomSheet show={show} title="Уведомления" onClose={onClose}>
+    <BottomSheet show={show} title="Активность" onClose={onClose}>
       {notificationCount ? (
         <>
           {shoppingList.length ? (
@@ -102,7 +102,7 @@ export function NotificationSheet({
           ) : null}
         </>
       ) : (
-        <EmptyState icon={Bell} title="Нет уведомлений" />
+        <EmptyState icon={Activity} title="Нет активности" />
       )}
     </BottomSheet>
   );

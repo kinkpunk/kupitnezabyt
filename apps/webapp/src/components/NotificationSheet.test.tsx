@@ -54,9 +54,10 @@ describe("NotificationSheet", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("renders empty state when no notifications", () => {
+  it("renders empty state when there is no activity", () => {
     render(<NotificationSheet {...createProps({ shoppingList: [], inAppReminders: [] })} />);
-    expect(screen.getByText("Нет уведомлений")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Активность" })).toBeInTheDocument();
+    expect(screen.getByText("Нет активности")).toBeInTheDocument();
   });
 
   it("renders shopping list and reminders", () => {

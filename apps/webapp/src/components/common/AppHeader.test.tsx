@@ -7,10 +7,8 @@ import { AppHeader } from "./AppHeader";
 function renderHeader(overrides: Partial<React.ComponentProps<typeof AppHeader>> = {}) {
   return render(
     <AppHeader
-      notificationCount={0}
       menuOpen={false}
       menuActive={false}
-      onBellClick={vi.fn()}
       onMenuClick={vi.fn()}
       {...overrides}
     />
@@ -25,27 +23,10 @@ describe("AppHeader", () => {
     expect(screen.getByText("nezabyt")).toBeInTheDocument();
   });
 
-  it("renders bell and menu buttons", () => {
+  it("renders menu button without notifications bell", () => {
     renderHeader();
-    expect(screen.getByRole("button", { name: "Уведомления" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Меню" })).toBeInTheDocument();
-  });
-
-  it("shows notification badge when count is greater than zero", () => {
-    renderHeader({ notificationCount: 3 });
-    expect(screen.getByLabelText("3 уведомлений")).toHaveTextContent("3");
-  });
-
-  it("hides notification badge when count is zero", () => {
-    renderHeader();
-    expect(screen.queryByLabelText(/уведомлений/)).not.toBeInTheDocument();
-  });
-
-  it("calls onBellClick when bell is pressed", () => {
-    const handleClick = vi.fn();
-    renderHeader({ onBellClick: handleClick });
-    fireEvent.click(screen.getByRole("button", { name: "Уведомления" }));
-    expect(handleClick).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Уведомления" })).not.toBeInTheDocument();
   });
 
   it("calls onMenuClick when menu is pressed", () => {

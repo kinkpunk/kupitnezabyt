@@ -1,15 +1,16 @@
 "use client";
 
 import React from "react";
-import { Archive, Settings } from "lucide-react";
+import { Activity, Archive, Settings } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { BottomSheet } from "./common";
 import type { ActiveTab } from "../hooks/useAppState";
 import type { WorkspaceSummary } from "../lib/types";
 
-const menuTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
+const menuItems: { id: ActiveTab | "activity"; icon: LucideIcon; label: string }[] = [
   { id: "settings", icon: Settings, label: "Настройки" },
+  { id: "activity", icon: Activity, label: "Активность" },
   { id: "archive", icon: Archive, label: "Архив" }
 ];
 
@@ -21,6 +22,7 @@ export function MenuSheet({
   activeTab,
   onClose,
   onSelectTab,
+  onOpenActivity,
   onSelectWorkspace
 }: {
   show: boolean;
@@ -30,6 +32,7 @@ export function MenuSheet({
   activeTab: ActiveTab;
   onClose: () => void;
   onSelectTab: (tab: ActiveTab) => void;
+  onOpenActivity: () => void;
   onSelectWorkspace: (workspaceId: string) => Promise<void>;
 }) {
   return (
@@ -51,23 +54,25 @@ export function MenuSheet({
         </label>
       ) : null}
       <div className="ds-bottom-sheet__actions">
-        {menuTabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.id !== "activity" && activeTab === item.id;
 
           return (
             <button
-              key={tab.id}
+              key={item.id}
               className={
                 isActive
                   ? "ds-bottom-sheet__action ds-bottom-sheet__action--active"
                   : "ds-bottom-sheet__action"
               }
               type="button"
-              onClick={() => onSelectTab(tab.id)}
+              onClick={() =>
+                item.id === "activity" ? onOpenActivity() : onSelectTab(item.id)
+              }
             >
               <Icon aria-hidden="true" size={18} strokeWidth={2.25} />
-              <span>{tab.label}</span>
+              <span>{item.label}</span>
             </button>
           );
         })}

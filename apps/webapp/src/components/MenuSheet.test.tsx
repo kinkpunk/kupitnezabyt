@@ -19,6 +19,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof MenuSheet>> 
     activeTab: "settings" as const,
     onClose: vi.fn(),
     onSelectTab: vi.fn(),
+    onOpenActivity: vi.fn(),
     onSelectWorkspace: vi.fn().mockResolvedValue(undefined),
     ...rest
   };
@@ -34,9 +35,25 @@ describe("MenuSheet", () => {
     render(<MenuSheet {...createProps()} />);
     expect(screen.getByLabelText("Активный список")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Настройки" })).toHaveClass("ds-bottom-sheet__action--active");
+    expect(screen.getByRole("button", { name: "Активность" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Покупки" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Наборы" })).not.toBeInTheDocument();
+  });
+
+  it("renders Активность between Настройки and Архив", () => {
+    render(<MenuSheet {...createProps()} />);
+    const actions = document.querySelector(".ds-bottom-sheet__actions");
+    expect(actions?.textContent).toBe("НастройкиАктивностьАрхив");
+  });
+
+  it("calls onOpenActivity when activity is clicked", () => {
+    const onOpenActivity = vi.fn();
+    const onSelectTab = vi.fn();
+    render(<MenuSheet {...createProps({ onOpenActivity, onSelectTab })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Активность" }));
+    expect(onOpenActivity).toHaveBeenCalledOnce();
+    expect(onSelectTab).not.toHaveBeenCalled();
   });
 
   it("calls onSelectTab when tab is clicked", () => {
