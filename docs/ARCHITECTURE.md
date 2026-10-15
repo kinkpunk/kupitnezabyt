@@ -34,7 +34,7 @@ Open webapp
 ```
 
 Out of scope for this slice: production browser auth, optional Telegram bot
-commands, worker, reminders, groups, check sessions, recommendations, search,
+commands, worker, reminders, check sessions, recommendations, search,
 export, onboarding, deployment, and CI.
 
 ## Workspace
@@ -97,7 +97,7 @@ updates one open shopping list entry per item. Returning an item to `IN_STOCK`,
 Slice 3 adds a minimal `apps/bot` service with grammY. It currently implements
 only `/start`, `/app`, and `/help`, plus an inline Mini App button. Slice 6 adds
 item reminder callback handling for `ITEM_CHECK` notifications. The MVP spec
-previously listed `/shopping`, `/check`, `/settings`, category/group reminder
+previously listed `/shopping`, `/check`, `/settings`, category reminder
 actions, and shopping reminder actions; those are now optional Telegram
 integration work.
 
@@ -128,7 +128,7 @@ Slice 27 introduces the collaboration foundation:
   membership timestamps.
 - Existing users receive a deterministic personal workspace during migration,
   and auth flows idempotently ensure that workspace for new or returning users.
-- Categories, items, shopping list rows, reminders, groups, check sessions, and
+- Categories, items, shopping list rows, reminders, check sessions, and
   recommendation dismissals carry `workspaceId` so data can later move from
   owner-only access to membership-based access.
 
@@ -158,8 +158,8 @@ Bot API, and updates reminder status to `SENT`, `FAILED`, or `CANCELLED`.
 Temporary failures are retried by moving `scheduledFor` forward with bounded
 backoff. User data mutations are not rolled back when Telegram delivery fails.
 
-The optional worker currently handles `ITEM_CHECK` reminders. `CATEGORY_CHECK`,
-`GROUP_CHECK`, and `SHOPPING_REMINDER` exist in the data model but are not yet
+The optional worker currently handles `ITEM_CHECK` reminders. `CATEGORY_CHECK`
+and `SHOPPING_REMINDER` exist in the data model but are not yet
 delivered by the worker.
 
 ```bash
@@ -186,18 +186,6 @@ used elsewhere, so shopping list sync and reminder sync remain centralized.
 The API can fetch a session by id, but the current webapp does not yet persist or
 discover unfinished sessions after reload. Continuing an unfinished session later
 is a product-spec follow-up.
-
-Group check sessions are implemented in Slice 8 after groups are introduced.
-
-## Groups
-
-Slice 8 adds user-defined item groups with `ItemGroup` and `ItemGroupItem`.
-Groups are owned by a single user and can include items from any category owned
-by that user. Membership is unique by `(groupId, itemId)`.
-
-Group check sessions reuse the same `CheckSession` and `CheckSessionItem`
-models introduced for category checks. Starting a group check snapshots active,
-non-archived, non-`PAUSED` group items.
 
 Slice 9 adds `RecommendationDismissal` for user-level suppression of dismissed
 rule-based suggestions. Recommendation rules are stored in code in
@@ -228,7 +216,7 @@ owned by the current user. It matches item name, brand, notes, and category
 name, and does not trust any user id from client input.
 
 JSON export returns a versioned envelope with the authenticated user's current
-data: user profile, categories, items, shopping list entries, reminders, groups,
+data: user profile, categories, items, shopping list entries, reminders,
 check sessions, and recommendation dismissals. The export is read-only and does
 not send data to third-party services.
 
@@ -246,8 +234,8 @@ authenticated API endpoints used by the main category screen.
 The webapp now opens on a home screen with readiness, active shopping count,
 urgent items, upcoming item checks, and quick category access. The main mobile
 navigation is limited to five product sections: home, categories, shopping,
-check, and settings. Search and groups remain available from quick actions so
-their existing flows are preserved without adding a shared UI package.
+check, and settings. Search remains available from quick actions so
+its existing flows are preserved without adding a shared UI package.
 
 ## UI Package Decision
 

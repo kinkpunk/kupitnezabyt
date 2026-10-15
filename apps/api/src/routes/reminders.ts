@@ -18,21 +18,8 @@ export default async function reminderRoutes(app: FastifyInstance) {
     }
     const now = new Date();
     const upcomingWindowDays = readOptionalPositiveInteger(request.query.days) ?? 7;
-    const [categories, groups, items] = await Promise.all([
+    const [categories, items] = await Promise.all([
       prisma.category.findMany({
-        where: {
-          workspaceId: workspaceAccess.workspaceId,
-          archivedAt: null
-        },
-        select: {
-          id: true,
-          name: true,
-          nextCheckAt: true,
-          reminderEnabled: true,
-          archivedAt: true
-        }
-      }),
-      prisma.itemGroup.findMany({
         where: {
           workspaceId: workspaceAccess.workspaceId,
           archivedAt: null
@@ -70,14 +57,6 @@ export default async function reminderRoutes(app: FastifyInstance) {
           nextCheckAt: category.nextCheckAt,
           reminderEnabled: category.reminderEnabled,
           archivedAt: category.archivedAt
-        })),
-        ...groups.map((group) => ({
-          id: group.id,
-          entityType: "GROUP" as const,
-          title: group.name,
-          nextCheckAt: group.nextCheckAt,
-          reminderEnabled: group.reminderEnabled,
-          archivedAt: group.archivedAt
         })),
         ...items.map((item) => ({
           id: item.id,

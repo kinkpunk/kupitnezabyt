@@ -56,40 +56,17 @@ export type CheckSessionItem = {
 export type CheckSession = {
   id: string;
   categoryId: string | null;
-  groupId: string | null;
   status: CheckSessionStatus;
   startedAt: string;
   completedAt: string | null;
   category: Category | null;
-  group: ItemGroup | null;
   items: CheckSessionItem[];
-};
-
-export type ItemGroupItem = {
-  id: string;
-  groupId: string;
-  itemId: string;
-  createdAt: string;
-  item: Item;
-};
-
-export type ItemGroup = {
-  id: string;
-  name: string;
-  icon: string | null;
-  usageCycleDays: number | null;
-  nextCheckAt: string | null;
-  reminderEnabled: boolean;
-  createdAt: string;
-  updatedAt: string;
-  archivedAt: string | null;
-  items: ItemGroupItem[];
 };
 
 export type InAppReminder = {
   id: string;
   entityId: string;
-  entityType: "CATEGORY" | "GROUP" | "ITEM";
+  entityType: "CATEGORY" | "ITEM";
   title: string;
   nextCheckAt: string;
   timing: "DUE" | "UPCOMING";

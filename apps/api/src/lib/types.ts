@@ -92,10 +92,6 @@ export type ShoppingListBody = {
   categoryId?: unknown;
 };
 
-export type GroupItemBody = {
-  itemId?: unknown;
-};
-
 export type AcceptRecommendationBody = {
   categoryId?: unknown;
 };

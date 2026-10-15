@@ -14,7 +14,6 @@ import type { StatusBody } from "../lib/types.js";
 
 const checkSessionInclude = {
   category: true,
-  group: true,
   items: {
     include: {
       item: true
@@ -192,20 +191,6 @@ export default async function checkSessionRoutes(app: FastifyInstance) {
           });
         }
 
-        if (completedSession.group) {
-          await tx.itemGroup.update({
-            where: {
-              id: completedSession.group.id
-            },
-            data: {
-              nextCheckAt: calculateConfiguredNextCheckAt(
-                now,
-                completedSession.group.usageCycleDays
-              )
-            }
-          });
-        }
-
         return completedSession;
       });
     }
@@ -301,65 +286,6 @@ export default async function checkSessionRoutes(app: FastifyInstance) {
           categoryId: category.id,
           items: {
             create: items.map((item, index) => ({
-              itemId: item.id,
-              sortOrder: index
-            }))
-          }
-        },
-        include: checkSessionInclude
-      });
-    }
-  );
-
-  app.post<{ Params: { groupId: string } }>(
-    "/api/check/group/:groupId/start",
-    async (request, reply) => {
-      const userId = requireUserId(request.userId);
-      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
-      if (!workspaceAccess) {
-        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
-        return;
-      }
-      if (!canWriteWorkspace(workspaceAccess)) {
-        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
-        return;
-      }
-      const group = await prisma.itemGroup.findFirst({
-        where: {
-          id: request.params.groupId,
-          workspaceId: workspaceAccess.workspaceId,
-          archivedAt: null
-        },
-        include: {
-          items: {
-            include: {
-              item: true
-            }
-          }
-        }
-      });
-
-      if (!group) {
-        await sendError(reply, 404, "GROUP_NOT_FOUND", "Group was not found.");
-        return;
-      }
-
-      const activeItems = group.items
-        .map((groupItem) => groupItem.item)
-        .filter((item) => item.archivedAt === null && item.status !== "PAUSED");
-
-      if (activeItems.length === 0) {
-        await sendError(reply, 400, "EMPTY_CHECK_GROUP", "Group has no items to check.");
-        return;
-      }
-
-      return prisma.checkSession.create({
-        data: {
-          userId,
-          workspaceId: workspaceAccess.workspaceId,
-          groupId: group.id,
-          items: {
-            create: activeItems.map((item, index) => ({
               itemId: item.id,
               sortOrder: index
             }))

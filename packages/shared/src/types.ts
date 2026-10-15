@@ -18,7 +18,6 @@ export type CategoryStatus = (typeof categoryStatuses)[number];
 export const reminderTypes = [
   "ITEM_CHECK",
   "CATEGORY_CHECK",
-  "GROUP_CHECK",
   "SHOPPING_REMINDER"
 ] as const;
 

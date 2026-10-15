@@ -46,7 +46,7 @@ test("browser user can sort category items by status", async ({ page, request },
   // chip UI only cycles Нет/Есть/Мало, so statuses are set through the API the
   // same way the webapp calls it; sorting itself is still exercised via UI.
   for (const name of [inStockItemName, lowItemName, needBuyItemName]) {
-    await page.getByRole("button", { name: "Новый товар" }).click();
+    await page.getByRole("button", { name: "Добавить товар" }).click();
     await page.getByLabel("Название товара").fill(name);
     await page.getByLabel("Название товара").press("Enter");
     await expect(page.locator(".ds-product-row").filter({ hasText: name })).toBeVisible();

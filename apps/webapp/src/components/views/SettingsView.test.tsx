@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Category, Item, ItemGroup, WorkspaceInvitation, WorkspaceMember, WorkspaceSummary } from "../../lib/types";
+import type { Category, Item, WorkspaceInvitation, WorkspaceMember, WorkspaceSummary } from "../../lib/types";
 import type { ReminderDraft } from "../../hooks/useAppState";
 import { SettingsView } from "./SettingsView";
 
@@ -43,7 +43,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof SettingsView
     workspaceMembers: [] as WorkspaceMember[],
     workspaceInvitations: [] as WorkspaceInvitation[],
     categories: [category],
-    groups: [] as ItemGroup[],
     items: [] as Item[],
     theme: "system" as const,
     onThemeChange: vi.fn(),

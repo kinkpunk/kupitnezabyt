@@ -14,10 +14,9 @@ export type ReminderKeyInput = {
   scheduledFor: Date;
   itemId?: string | null;
   categoryId?: string | null;
-  groupId?: string | null;
 };
 
-export type InAppReminderEntityType = "CATEGORY" | "GROUP" | "ITEM";
+export type InAppReminderEntityType = "CATEGORY" | "ITEM";
 
 export type InAppReminderCandidate = {
   id: string;
@@ -55,7 +54,7 @@ export function getDueReminderCandidates<TCandidate extends ReminderCandidate>(
 }
 
 export function createReminderIdempotencyKey(input: ReminderKeyInput): string {
-  const entityId = input.itemId ?? input.categoryId ?? input.groupId ?? "none";
+  const entityId = input.itemId ?? input.categoryId ?? "none";
   const scheduledDate = input.scheduledFor.toISOString().slice(0, 10);
 
   return [input.userId, input.type, entityId, scheduledDate].join(":");

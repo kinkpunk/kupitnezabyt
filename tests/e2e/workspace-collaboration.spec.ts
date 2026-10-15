@@ -33,7 +33,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
   await ownerPage.getByRole("button", { name: "Создать" }).click();
   await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
 
-  await ownerPage.getByRole("button", { name: "Новый товар" }).click();
+  await ownerPage.getByRole("button", { name: "Добавить товар" }).click();
   await ownerPage.getByLabel("Название товара").fill(itemName);
   await ownerPage.getByLabel("Название товара").press("Enter");
   const ownerItemRow = ownerPage.locator(".ds-product-row").filter({ hasText: itemName });

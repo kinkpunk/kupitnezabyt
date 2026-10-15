@@ -9,7 +9,6 @@ import authRoutes from "./routes/auth.js";
 import categoryRoutes from "./routes/categories.js";
 import checkSessionRoutes from "./routes/check-sessions.js";
 import exportRoutes from "./routes/export.js";
-import groupRoutes from "./routes/groups.js";
 import healthRoutes from "./routes/health.js";
 import itemRoutes from "./routes/items.js";
 import meRoutes from "./routes/me.js";
@@ -70,7 +69,6 @@ export function buildServer() {
   void app.register(meRoutes);
   void app.register(exportRoutes);
   void app.register(categoryRoutes);
-  void app.register(groupRoutes);
   void app.register(itemRoutes);
   void app.register(shoppingListRoutes);
   void app.register(reminderRoutes);

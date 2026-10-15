@@ -93,7 +93,7 @@ test.describe("Screens visual regression", () => {
 
   test("home empty", async () => {
     await page.getByRole("button", { name: "Главная", exact: true }).click();
-    await expect(page.getByText("Добавьте первые товары")).toBeVisible();
+    await expect(page.getByText("Всё в порядке")).toBeVisible();
     await expect(page).toHaveScreenshot("home-empty.png");
   });
 
@@ -101,12 +101,6 @@ test.describe("Screens visual regression", () => {
     await page.getByRole("button", { name: "Покупки", exact: true }).click();
     await expect(page.getByText("Список покупок пуст")).toBeVisible();
     await expect(page).toHaveScreenshot("shopping-empty.png");
-  });
-
-  test("groups empty", async () => {
-    await page.getByRole("button", { name: "Наборы", exact: true }).click();
-    await expect(page.getByText("Нет выбранного набора")).toBeVisible();
-    await expect(page).toHaveScreenshot("groups-empty.png");
   });
 
   test("archive empty", async () => {
@@ -135,7 +129,7 @@ test.describe("Screens visual regression", () => {
 
   test("home with data", async () => {
     await page.getByRole("button", { name: "Главная", exact: true }).click();
-    await expect(page.getByText("требуют внимания")).toBeVisible();
+    await expect(page.getByText("Молоко")).toBeVisible();
     await expect(page).toHaveScreenshot("home-with-data.png");
   });
 
@@ -144,22 +138,9 @@ test.describe("Screens visual regression", () => {
     await page.getByRole("button", { name: "Добавить покупку" }).click();
     await page.getByLabel("Разовая покупка").fill("Сахар");
     await page.getByLabel("Категория покупки").selectOption("Еда");
-    await page.getByRole("button", { name: "Добавить" }).click();
+    await page.getByRole("dialog", { name: "Новая покупка" }).getByRole("button", { name: "Добавить" }).click();
     await expect(page.getByText("Сахар")).toBeVisible();
     await expect(page).toHaveScreenshot("shopping-with-item.png");
-  });
-
-  test("groups with group", async () => {
-    await page.getByRole("button", { name: "Наборы", exact: true }).click();
-    await page.getByRole("button", { name: "Новый набор" }).click();
-    await page.getByLabel("Название набора").fill("Завтрак");
-    await page.getByRole("button", { name: "Создать" }).click();
-    await page.getByRole("tab", { name: "Завтрак" }).click();
-    await page.getByRole("button", { name: "Добавить товар" }).click();
-    await page.getByLabel("Товар для набора").selectOption({ label: "Молоко" });
-    await page.getByRole("button", { name: "Добавить" }).click();
-    await expect(page.getByText("Молоко")).toBeVisible();
-    await expect(page).toHaveScreenshot("groups-with-group.png");
   });
 
   test("check screen", async () => {
@@ -222,7 +203,7 @@ async function openMenuTab(page: Page, label: string) {
 }
 
 async function addItem(page: Page, name: string) {
-  await page.getByRole("button", { name: "Новый товар" }).click();
+  await page.getByRole("button", { name: "Добавить товар" }).click();
   await page.getByLabel("Название товара").fill(name);
   await page.getByLabel("Название товара").press("Enter");
 

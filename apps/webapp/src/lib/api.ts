@@ -14,7 +14,6 @@ import type {
   CheckSession,
   DeleteResponse,
   InAppReminder,
-  ItemGroup,
   Item,
   MagicLinkRequestResponse,
   OAuthStartResponse,
@@ -626,56 +625,11 @@ export function deleteShoppingListItem(
   return del<DeleteResponse>(`/api/shopping-list/${shoppingListItemId}`, token);
 }
 
-export function getGroups(token: string): Promise<ItemGroup[]> {
-  return get<ItemGroup[]>("/api/groups", token);
-}
-
-export function createGroup(token: string, name: string): Promise<ItemGroup> {
-  return post<ItemGroup>("/api/groups", token, { name });
-}
-
-export function archiveGroup(token: string, groupId: string): Promise<ItemGroup> {
-  return post<ItemGroup>(`/api/groups/${groupId}/archive`, token, {});
-}
-
-export function updateGroup(
-  token: string,
-  groupId: string,
-  input: {
-    name?: string;
-    usageCycleDays?: number | null;
-    nextCheckAt?: string | null;
-    reminderEnabled?: boolean;
-  }
-): Promise<ItemGroup> {
-  return patch<ItemGroup>(`/api/groups/${groupId}`, token, input);
-}
-
-export function addGroupItem(
-  token: string,
-  groupId: string,
-  itemId: string
-): Promise<ItemGroup> {
-  return post<ItemGroup>(`/api/groups/${groupId}/items`, token, { itemId });
-}
-
-export function removeGroupItem(
-  token: string,
-  groupId: string,
-  itemId: string
-): Promise<ItemGroup> {
-  return del<ItemGroup>(`/api/groups/${groupId}/items/${itemId}`, token);
-}
-
 export function startCategoryCheckSession(
   token: string,
   categoryId: string
 ): Promise<CheckSession> {
   return post<CheckSession>(`/api/check/category/${categoryId}/start`, token, {});
-}
-
-export function startGroupCheckSession(token: string, groupId: string): Promise<CheckSession> {
-  return post<CheckSession>(`/api/check/group/${groupId}/start`, token, {});
 }
 
 export function getActiveCheckSession(token: string): Promise<CheckSession | null> {

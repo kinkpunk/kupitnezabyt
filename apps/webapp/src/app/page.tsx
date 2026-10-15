@@ -12,7 +12,6 @@ import { NotificationSheet } from "../components/NotificationSheet";
 import { HomeView } from "../components/views/HomeView";
 import { CategoriesView } from "../components/views/CategoriesView";
 import { ShoppingView } from "../components/views/ShoppingView";
-import { GroupsView } from "../components/views/GroupsView";
 import { CheckView } from "../components/views/CheckView";
 import { SearchView } from "../components/views/SearchView";
 import { ArchiveView } from "../components/views/ArchiveView";
@@ -186,31 +185,6 @@ export default function Home() {
             isActionPending={state.isActionPending}
           />
         );
-      case "groups":
-        return (
-          <GroupsView
-            groups={state.groups}
-            selectedGroup={state.selectedGroup}
-            groupName={state.groupName}
-            setGroupName={state.setGroupName}
-            showGroupForm={state.showGroupForm}
-            setShowGroupForm={state.setShowGroupForm}
-            showGroupItemForm={state.showGroupItemForm}
-            setShowGroupItemForm={state.setShowGroupItemForm}
-            groupItemId={state.groupItemId}
-            setGroupItemId={state.setGroupItemId}
-            items={state.items}
-            selectedGroupCheckItemCount={state.selectedGroupCheckItemCount}
-            onCreateGroup={state.handleCreateGroup}
-            onArchiveSelectedGroup={state.handleArchiveSelectedGroup}
-            onAddGroupItem={state.handleAddGroupItem}
-            onRemoveGroupItem={state.handleRemoveGroupItem}
-            onStartGroupCheck={state.handleStartGroupCheck}
-            onSelectGroup={state.setSelectedGroupId}
-            setError={state.setError}
-            isActionPending={state.isActionPending}
-          />
-        );
       case "check":
         return (
           <CheckView
@@ -271,7 +245,6 @@ export default function Home() {
             workspaceMembers={state.workspaceMembers}
             workspaceInvitations={state.workspaceInvitations}
             categories={state.categories}
-            groups={state.groups}
             items={state.items}
             theme={state.theme}
             onThemeChange={state.setTheme}

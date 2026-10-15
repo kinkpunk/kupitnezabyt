@@ -11,7 +11,7 @@ that the backend is the source of truth for identity, status transitions,
 
 Core MVP slices are implemented enough to exercise the main product loop:
 Telegram-compatible auth, categories, tracked items, status transitions,
-shopping list sync, item reminders, check sessions, groups, recommendations,
+shopping list sync, item reminders, check sessions, recommendations,
 search, export, and account deletion.
 
 Product direction changed on 2026-06-21: the release target is now a
@@ -27,6 +27,11 @@ status and the shopping list `priority` were removed entirely (items now have
 below are historical and describe the behaviour at the time each slice was
 implemented. The current model is documented in `docs/PRODUCT_SPEC.md` and
 `docs/API.md`.
+
+Product direction changed on 2026-10-15: the user-defined item collections
+feature (roadmap Slice 8) was removed from the product along with its check
+sessions, API routes, data models, and UI. Mentions of it have been removed
+from the slices below; the removal itself is not part of any slice.
 
 This does not mean full compliance with `docs/PRODUCT_SPEC.md`. The product spec
 remains the source of the complete target. Existing Telegram slices are
@@ -891,8 +896,7 @@ family-account system.
 
 Implemented notes:
 
-- Sharing remains at the workspace/list level. Individual `ItemGroup` sharing is
-  not part of this slice.
+- Sharing remains at the workspace/list level.
 - Fixed roles are preserved: `OWNER` manages access, `EDITOR` can work with the
   shared list, and `VIEWER` remains API-supported/read-only if exposed later.
 - Backend still restricts invitations to existing verified email users and
@@ -1214,7 +1218,7 @@ Worker:
 
 - Create `apps/worker`. Done.
 - Implement due reminder polling. Done for `ITEM_CHECK`.
-- `CATEGORY_CHECK`, `GROUP_CHECK`, and `SHOPPING_REMINDER` remain follow-up work
+- `CATEGORY_CHECK` and `SHOPPING_REMINDER` remain follow-up work
   from `PRODUCT_SPEC`.
 - Send jobs through BullMQ/Redis or direct worker flow, depending on the simplest
   maintainable path at the time. Done with direct DB polling; BullMQ remains
@@ -1281,7 +1285,10 @@ Tests:
 
 ## Slice 8: Groups
 
-Status: implemented.
+Status: removed on 2026-10-15. User-defined sets effectively duplicated categories,
+so the feature was dropped after beta research. The `ItemGroup`/`ItemGroupItem`
+tables, `groupId` columns, `GROUP_CHECK` reminder type, and all groups endpoints
+were removed in migration `20261015120000_remove_item_groups`.
 
 Goal: add user-defined sets of items.
 

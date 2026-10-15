@@ -38,7 +38,6 @@ function getFriendlyErrorMessage(message: string): string {
     INVITEE_NOT_FOUND:
       "Пользователь с таким email пока не найден. Сейчас можно приглашать только тех, кто уже входил в сервис.",
     EMPTY_CHECK_CATEGORY: "В этой категории пока нечего проверять.",
-    EMPTY_CHECK_GROUP: "В этом наборе пока нечего проверять.",
     MEMBER_NOT_FOUND: "Участник не найден. Обновите список и попробуйте еще раз.",
     WORKSPACE_NOT_FOUND: "Список не найден или доступ к нему уже закрыт.",
     OWNED_SHARED_WORKSPACE_REQUIRES_TRANSFER:

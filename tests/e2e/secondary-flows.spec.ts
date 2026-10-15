@@ -5,66 +5,6 @@ import { readFile } from "node:fs/promises";
 import { apiBaseUrl, finishOnboardingIfNeeded, waitForApiHealth } from "./helpers";
 import { seedLegalConsent } from "./legal-consent";
 
-test("user can group items and run a group check session", async ({ page, request }, testInfo: TestInfo) => {
-  test.setTimeout(120_000);
-
-  const runId = `${Date.now().toString(36)}-${testInfo.workerIndex}`;
-  const categoryName = `E2E Наборы ${runId}`;
-  const itemName = `E2E Товар набора ${runId}`;
-  const groupName = `E2E Набор ${runId}`;
-
-  await waitForApiHealth(request);
-  await signInWithDevAuth(page, runId);
-  await seedLegalConsent(page.context());
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await finishOnboardingIfNeeded(page);
-
-  // Create a category and an item to put into the group.
-  await createCategory(page, categoryName);
-  const mainNavigation = page.getByRole("navigation", { name: "Основные разделы" });
-
-  await page.getByRole("button", { name: "Новый товар" }).click();
-  await page.getByLabel("Название товара").fill(itemName);
-  await page.getByLabel("Название товара").press("Enter");
-  const itemRow = page.locator(".ds-product-row").filter({ hasText: itemName });
-  await expect(itemRow).toBeVisible();
-
-  // Create a group and add the item to it.
-  await mainNavigation.getByRole("button", { name: "Наборы" }).click();
-
-  await page.getByLabel("Название набора").fill(groupName);
-  await page.getByLabel("Название набора").press("Enter");
-  await expect(page.getByRole("tab", { name: new RegExp(groupName) })).toBeVisible();
-
-  await page.getByLabel("Товар для набора").selectOption({ label: itemName });
-  await page
-    .locator("form")
-    .filter({ has: page.getByLabel("Товар для набора") })
-    .getByRole("button", { name: "Добавить" })
-    .click();
-  await expect(page.locator(".ds-product-row").filter({ hasText: itemName })).toBeVisible();
-
-  // Run the group check session to completion. «Проверить» here belongs to the
-  // groups view, not the categories panel header.
-  await page.getByRole("button", { name: "Проверить" }).click();
-  await expect(page.getByRole("heading", { name: "Проверка" })).toBeVisible();
-  const checkCard = page.locator(".ds-check-card");
-  await expect(checkCard.getByRole("heading", { name: itemName })).toBeVisible();
-  await checkCard.getByRole("button", { name: "Есть" }).click();
-  await expect(page.getByText("Проверка завершена")).toBeVisible();
-
-  // The item status is updated by the completed session.
-  await mainNavigation.getByRole("button", { name: "Категории" }).click();
-  await expect(
-    page
-      .locator(".ds-product-row")
-      .filter({ hasText: itemName })
-      .getByRole("button", { name: /Статус: Есть/ })
-  ).toBeVisible();
-
-  await cleanupUser(page, request);
-});
-
 test("user can run a step-by-step category check and search in different ways", async ({
   page,
   request
@@ -84,11 +24,11 @@ test("user can run a step-by-step category check and search in different ways", 
 
   await createCategory(page, categoryName);
 
-  await page.getByRole("button", { name: "Новый товар" }).click();
+  await page.getByRole("button", { name: "Добавить товар" }).click();
   await page.getByLabel("Название товара").fill(firstItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.locator(".ds-product-row").filter({ hasText: firstItemName })).toBeVisible();
-  await page.getByRole("button", { name: "Новый товар" }).click();
+  await page.getByRole("button", { name: "Добавить товар" }).click();
   await page.getByLabel("Название товара").fill(secondItemName);
   await page.getByLabel("Название товара").press("Enter");
   await expect(page.locator(".ds-product-row").filter({ hasText: secondItemName })).toBeVisible();
@@ -157,7 +97,7 @@ test("user can archive and restore an item and export their data as JSON", async
 
   await createCategory(page, categoryName);
 
-  await page.getByRole("button", { name: "Новый товар" }).click();
+  await page.getByRole("button", { name: "Добавить товар" }).click();
   await page.getByLabel("Название товара").fill(itemName);
   await page.getByLabel("Название товара").press("Enter");
   const itemRow = page.locator(".ds-product-row").filter({ hasText: itemName });

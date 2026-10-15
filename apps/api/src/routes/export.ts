@@ -18,7 +18,6 @@ export default async function exportRoutes(app: FastifyInstance) {
       items,
       shoppingListItems,
       reminders,
-      groups,
       checkSessions,
       recommendationDismissals,
       workspaceMemberships,
@@ -52,21 +51,6 @@ export default async function exportRoutes(app: FastifyInstance) {
       prisma.reminder.findMany({
         where: {
           userId
-        },
-        orderBy: {
-          createdAt: "asc"
-        }
-      }),
-      prisma.itemGroup.findMany({
-        where: {
-          userId
-        },
-        include: {
-          items: {
-            orderBy: {
-              createdAt: "asc"
-            }
-          }
         },
         orderBy: {
           createdAt: "asc"
@@ -143,7 +127,6 @@ export default async function exportRoutes(app: FastifyInstance) {
         items,
         shoppingListItems,
         reminders,
-        groups,
         checkSessions,
         recommendationDismissals,
         workspaceMemberships,

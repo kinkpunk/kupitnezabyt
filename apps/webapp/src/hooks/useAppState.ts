@@ -5,9 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   acceptRecommendation,
-  addGroupItem,
   archiveCategory,
-  archiveGroup,
   archiveItem,
   buildLegalConsent,
   cancelCheckSession,
@@ -17,7 +15,6 @@ import {
   completeShoppingListItem,
   consumeInvitationAcceptedToast,
   createCategory,
-  createGroup,
   createItem,
   createShoppingListItem,
   createWorkspaceInvitation,
@@ -34,7 +31,6 @@ import {
   getActiveWorkspaceId,
   getCategories,
   getCategorySortMode,
-  getGroups,
   getInAppReminders,
   getItems,
   getMe,
@@ -45,7 +41,6 @@ import {
   getWorkspaces,
   hideSimilarRecommendations,
   login,
-  removeGroupItem,
   removeWorkspaceMember,
   reorderItems,
   requestMagicLink,
@@ -64,10 +59,8 @@ import {
   startAppleSignIn,
   startCategoryCheckSession,
   startGoogleSignIn,
-  startGroupCheckSession,
   transferWorkspaceOwnership,
   updateCategory,
-  updateGroup,
   updateItem,
   updateShoppingListItem,
   clearSavedToken
@@ -87,7 +80,6 @@ import type {
   CheckSession,
   InAppReminder,
   Item,
-  ItemGroup,
   RecommendationSuggestion,
   ShoppingListEntry,
   UserProfile,
@@ -105,7 +97,6 @@ export type WorkspaceAction =
 export type ActiveTab =
   | "archive"
   | "check"
-  | "groups"
   | "home"
   | "items"
   | "search"
@@ -134,7 +125,6 @@ export function useAppState() {
   const [items, setItems] = useState<Item[]>([]);
   const [archivedCategories, setArchivedCategories] = useState<Category[]>([]);
   const [archivedItems, setArchivedItems] = useState<Item[]>([]);
-  const [groups, setGroups] = useState<ItemGroup[]>([]);
   const [shoppingList, setShoppingList] = useState<ShoppingListEntry[]>([]);
   const [inAppReminders, setInAppReminders] = useState<InAppReminder[]>([]);
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
@@ -169,17 +159,12 @@ export function useAppState() {
   const [categorySortMode, setCategorySortModeState] = useState<CategorySortMode>(() =>
     getCategorySortMode()
   );
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("home");
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
-  const [showGroupForm, setShowGroupForm] = useState(false);
-  const [showGroupItemForm, setShowGroupItemForm] = useState(false);
   const [showShoppingForm, setShowShoppingForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [itemName, setItemName] = useState("");
-  const [groupName, setGroupName] = useState("");
-  const [groupItemId, setGroupItemId] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
   const [editingItemImportance, setEditingItemImportance] = useState<ItemImportance>("NORMAL");
@@ -232,15 +217,6 @@ export function useAppState() {
     () => categories.find((category) => category.id === selectedCategoryId) ?? categories[0],
     [categories, selectedCategoryId]
   );
-
-  const selectedGroup = useMemo(
-    () => groups.find((group) => group.id === selectedGroupId) ?? groups[0],
-    [groups, selectedGroupId]
-  );
-  const selectedGroupCheckItemCount =
-    selectedGroup?.items.filter(
-      (groupItem) => groupItem.item.archivedAt === null && groupItem.item.status !== "PAUSED"
-    ).length ?? 0;
 
   const activeWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0] ?? null,
@@ -490,13 +466,6 @@ export function useAppState() {
       };
     }
 
-    for (const group of groups) {
-      nextDrafts[getReminderDraftKey("GROUP", group.id)] = {
-        usageCycleDays: String(group.usageCycleDays ?? ""),
-        reminderEnabled: group.reminderEnabled
-      };
-    }
-
     for (const item of items) {
       nextDrafts[getReminderDraftKey("ITEM", item.id)] = {
         usageCycleDays: String(item.usageCycleDays ?? ""),
@@ -505,7 +474,7 @@ export function useAppState() {
     }
 
     setReminderDrafts(nextDrafts);
-  }, [categories, groups, items]);
+  }, [categories, items]);
 
   async function refreshActiveData(authToken = token, sortMode: CategorySortMode = categorySortMode) {
     if (!authToken) {
@@ -513,31 +482,27 @@ export function useAppState() {
         categories: [],
         items: [],
         shoppingList: [],
-        groups: [],
         inAppReminders: []
       };
     }
 
-    const [nextCategories, nextItems, nextShoppingList, nextGroups, nextInAppReminders] =
+    const [nextCategories, nextItems, nextShoppingList, nextInAppReminders] =
       await Promise.all([
         getCategories(authToken),
         getItems(authToken, { sort: sortMode }),
         getShoppingList(authToken),
-        getGroups(authToken),
         getInAppReminders(authToken)
       ]);
 
     setCategories(nextCategories);
     setItems(nextItems);
     setShoppingList(nextShoppingList);
-    setGroups(nextGroups);
     setInAppReminders(nextInAppReminders);
 
     return {
       categories: nextCategories,
       items: nextItems,
       shoppingList: nextShoppingList,
-      groups: nextGroups,
       inAppReminders: nextInAppReminders
     };
   }
@@ -634,10 +599,6 @@ export function useAppState() {
     setCheckSession(session);
     if (session.categoryId) {
       setSelectedCategoryId(session.categoryId);
-    }
-
-    if (session.groupId) {
-      setSelectedGroupId(session.groupId);
     }
   }
 
@@ -956,12 +917,6 @@ export function useAppState() {
       return;
     }
 
-    if (reminder.entityType === "GROUP") {
-      setSelectedGroupId(reminder.entityId);
-      setActiveTab("groups");
-      return;
-    }
-
     const item = items.find((candidate) => candidate.id === reminder.entityId);
     if (item) {
       setSelectedCategoryId(item.categoryId);
@@ -984,10 +939,6 @@ export function useAppState() {
         await updateCategory(token, reminder.entityId, {
           nextCheckAt: calculateSnoozedAt(days)
         });
-      } else {
-        await updateGroup(token, reminder.entityId, {
-          nextCheckAt: calculateSnoozedAt(days)
-        });
       }
 
       await refreshActiveData(token);
@@ -1008,13 +959,6 @@ export function useAppState() {
       setCheckSession(session);
       setActiveTab("check");
       return;
-    }
-
-    if (reminder.entityType === "GROUP") {
-      const session = await startGroupCheckSession(token, reminder.entityId);
-      setSelectedGroupId(reminder.entityId);
-      setCheckSession(session);
-      setActiveTab("check");
     }
   }
 
@@ -1051,10 +995,6 @@ export function useAppState() {
             return updateCategory(token, entityId, input);
           }
 
-          if (entityType === "GROUP") {
-            return updateGroup(token, entityId, input);
-          }
-
           return updateItem(token, entityId, input);
         })
       );
@@ -1063,9 +1003,7 @@ export function useAppState() {
       setReminderSettingsMessage(
         entityType === "CATEGORY"
           ? "Настройки категорий сохранены."
-          : entityType === "ITEM"
-            ? "Настройки товаров сохранены."
-            : "Настройки наборов сохранены."
+          : "Настройки товаров сохранены."
       );
     } catch (caughtError) {
       setError(formatError(caughtError));
@@ -1161,82 +1099,6 @@ export function useAppState() {
     }
 
     const session = await startCategoryCheckSession(token, selectedCategory.id);
-    setCheckSession(session);
-    setActiveTab("check");
-  }
-
-  async function handleCreateGroup() {
-    if (!token || !groupName.trim()) {
-      return;
-    }
-
-    const actionKey = "group:create";
-    try {
-      setError(null);
-      setPendingAction(actionKey, true);
-      const group = await createGroup(token, groupName.trim());
-      setGroupName("");
-      setShowGroupForm(false);
-      setGroups((current) => [...current, group]);
-      setSelectedGroupId(group.id);
-    } finally {
-      setPendingAction(actionKey, false);
-    }
-  }
-
-  async function handleArchiveSelectedGroup() {
-    if (!token || !selectedGroup || !window.confirm(`Архивировать набор "${selectedGroup.name}"?`)) {
-      return;
-    }
-
-    setError(null);
-    await archiveGroup(token, selectedGroup.id);
-    setSelectedGroupId(null);
-    await refreshActiveData(token);
-  }
-
-  async function handleAddGroupItem() {
-    if (!token || !selectedGroup || !groupItemId) {
-      return;
-    }
-
-    const actionKey = "group:item:add";
-    try {
-      setError(null);
-      setPendingAction(actionKey, true);
-      const group = await addGroupItem(token, selectedGroup.id, groupItemId);
-      setGroups((current) =>
-        current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup))
-      );
-      setGroupItemId("");
-      setShowGroupItemForm(false);
-    } finally {
-      setPendingAction(actionKey, false);
-    }
-  }
-
-  async function handleRemoveGroupItem(itemId: string) {
-    if (!token || !selectedGroup) {
-      return;
-    }
-
-    setError(null);
-    const group = await removeGroupItem(token, selectedGroup.id, itemId);
-    setGroups((current) => current.map((itemGroup) => (itemGroup.id === group.id ? group : itemGroup)));
-  }
-
-  async function handleStartGroupCheck() {
-    if (!token || !selectedGroup) {
-      return;
-    }
-
-    setError(null);
-    if (selectedGroupCheckItemCount === 0) {
-      setError("В этом наборе пока нечего проверять.");
-      return;
-    }
-
-    const session = await startGroupCheckSession(token, selectedGroup.id);
     setCheckSession(session);
     setActiveTab("check");
   }
@@ -1361,14 +1223,12 @@ export function useAppState() {
     setItems([]);
     setArchivedCategories([]);
     setArchivedItems([]);
-    setGroups([]);
     setShoppingList([]);
     setInAppReminders([]);
     setRecommendations([]);
     setRecommendationSourceItemName(null);
     setRecommendationSourceCategoryId(null);
     setSelectedCategoryId(null);
-    setSelectedGroupId(null);
     setCheckSession(null);
     setPendingCheckItemName(null);
     clearSearchSession();
@@ -1579,7 +1439,6 @@ export function useAppState() {
     setToken(null);
     setCategories([]);
     setItems([]);
-    setGroups([]);
     setShoppingList([]);
     setRecommendations([]);
     setRecommendationSourceItemName(null);
@@ -1762,7 +1621,6 @@ export function useAppState() {
     items,
     archivedCategories,
     archivedItems,
-    groups,
     shoppingList,
     inAppReminders,
     workspaces,
@@ -1793,28 +1651,18 @@ export function useAppState() {
     selectedCategoryId,
     setSelectedCategoryId,
     categorySortMode,
-    selectedGroupId,
-    setSelectedGroupId,
     activeTab,
     setActiveTab,
     showCategoryForm,
     setShowCategoryForm,
     showItemForm,
     setShowItemForm,
-    showGroupForm,
-    setShowGroupForm,
-    showGroupItemForm,
-    setShowGroupItemForm,
     showShoppingForm,
     setShowShoppingForm,
     categoryName,
     setCategoryName,
     itemName,
     setItemName,
-    groupName,
-    setGroupName,
-    groupItemId,
-    setGroupItemId,
     editingItemId,
     setEditingItemId,
     editingItemName,
@@ -1847,8 +1695,6 @@ export function useAppState() {
 
     // Derived
     selectedCategory,
-    selectedGroup,
-    selectedGroupCheckItemCount,
     activeWorkspace,
     canManageActiveWorkspace,
     canWriteActiveWorkspace,
@@ -1901,11 +1747,6 @@ export function useAppState() {
     handleDeleteArchivedCategory,
     handleDeleteArchivedItem,
     handleStartCategoryCheck,
-    handleCreateGroup,
-    handleArchiveSelectedGroup,
-    handleAddGroupItem,
-    handleRemoveGroupItem,
-    handleStartGroupCheck,
     handleCheckStatus,
     handleCancelCheck,
     handleFinishOnboarding,

@@ -99,12 +99,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "IN_PROGRESS",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      group: null,
       items: [
         { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: null, checkedAt: null, item }
       ]
@@ -130,12 +128,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "IN_PROGRESS",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      group: null,
       items: [
         { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: null, checkedAt: null, item }
       ]
@@ -158,12 +154,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "IN_PROGRESS",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      group: null,
       items: []
     };
     render(<CheckView {...createProps({ onCancelCheck, checkSession })} />);
@@ -175,12 +169,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "COMPLETED",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: "2026-09-01T01:00:00Z",
       category,
-      group: null,
       items: []
     };
     render(<CheckView {...createProps({ checkSession })} />);
@@ -191,12 +183,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "COMPLETED",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: "2026-09-01T01:00:00Z",
       category,
-      group: null,
       items: [
         { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: "LOW", checkedAt: "2026-09-01T00:30:00Z", item },
         { id: "ci-2", sessionId: "check-1", itemId: "item-2", sortOrder: 1, selectedStatus: "IN_STOCK", checkedAt: "2026-09-01T01:00:00Z", item }
@@ -210,12 +200,10 @@ describe("CheckView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: category.id,
-      groupId: null,
       status: "CANCELLED",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      group: null,
       items: []
     };
     render(<CheckView {...createProps({ checkSession })} />);

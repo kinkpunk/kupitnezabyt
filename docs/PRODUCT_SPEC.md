@@ -29,14 +29,13 @@
 3. Добавлять регулярно покупаемые товары.
 4. Изменять состояние товара одним нажатием.
 5. Назначать периодические проверки.
-6. Видеть напоминания внутри приложения о товарах, категориях и наборах, которые пора
+6. Видеть напоминания внутри приложения о товарах и категориях, которые пора
    проверить.
 7. Автоматически формировать список покупок.
-8. Создавать наборы связанных товаров.
-9. Проходить пошаговую проверку категории или набора.
-10. Получать базовые rule-based рекомендации (если купил кофе, предложить молоко).
-11. Искать товары.
-12. Экспортировать свои данные в JSON.
+8. Проходить пошаговую проверку категории.
+9. Получать базовые rule-based рекомендации (если купил кофе, предложить молоко).
+10. Искать товары.
+11. Экспортировать свои данные в JSON.
 
 Telegram Mini App, Telegram Bot-команды и доставка Telegram напоминаний
 не входят в MVP. Они остаются опциональными после
@@ -362,7 +361,6 @@ Frontend может применять optimistic update, но backend оста�
 
 1. Для отдельного товара.
 2. Для категории.
-3. Для пользовательского набора.
 
 Все даты хранятся в UTC. Время отправки рассчитывается с учетом `User.timezone`.
 
@@ -428,33 +426,9 @@ Item.nextCheckAt = calculateNextCheckAt(...)
 Скрыть похожие
 ```
 
-### 7.9. Пользовательские наборы
-
-Набор объединяет товары, которые удобно проверять вместе.
-
-Примеры:
-
-```text
-Суши дома
-Аптечка
-Цикл
-Стирка
-```
-
-Пользователь может:
-
-1. Создать набор.
-2. Изменить название и иконку.
-3. Добавить или удалить товары.
-4. Настроить период проверки.
-5. Запустить проверку набора.
-6. Архивировать набор.
-
-Один товар может входить в несколько наборов.
-
 ### 7.10. Режим проверки
 
-Проверка - пошаговая сессия обновления статусов товаров категории или набора.
+Проверка - пошаговая сессия обновления статусов товаров категории.
 
 Сценарий:
 
@@ -477,7 +451,6 @@ Item.nextCheckAt = calculateNextCheckAt(...)
 ```text
 ITEM_CHECK
 CATEGORY_CHECK
-GROUP_CHECK
 SHOPPING_REMINDER
 ```
 
@@ -499,7 +472,7 @@ SHOPPING_REMINDER
 Открыть
 ```
 
-Кнопки reminder категории или набора:
+Кнопки reminder категории:
 
 ```text
 Начать проверку
@@ -917,37 +890,7 @@ enum ItemImportance {
 }
 ```
 
-### 11.4. ItemGroup
-
-```ts
-ItemGroup {
-  id: string
-  userId: string
-  name: string
-  icon?: string
-  usageCycleDays?: number
-  nextCheckAt?: Date
-  reminderEnabled: boolean
-  createdAt: Date
-  updatedAt: Date
-  archivedAt?: Date
-}
-```
-
-### 11.5. ItemGroupItem
-
-```ts
-ItemGroupItem {
-  id: string
-  groupId: string
-  itemId: string
-  createdAt: Date
-}
-```
-
-Пара `(groupId, itemId)` уникальна.
-
-### 11.6. ShoppingListItem
+### 11.4. ShoppingListItem
 
 ```ts
 ShoppingListItem {
@@ -965,7 +908,7 @@ ShoppingListItem {
 
 Для одного `itemId` допускается не более одной незавершенной позиции.
 
-### 11.7. Reminder
+### 11.5. Reminder
 
 ```ts
 Reminder {
@@ -974,7 +917,6 @@ Reminder {
   type: ReminderType
   itemId?: string
   categoryId?: string
-  groupId?: string
   scheduledFor: Date
   status: ReminderStatus
   attemptCount: number
@@ -986,7 +928,6 @@ Reminder {
 enum ReminderType {
   ITEM_CHECK
   CATEGORY_CHECK
-  GROUP_CHECK
   SHOPPING_REMINDER
 }
 
@@ -998,7 +939,7 @@ enum ReminderStatus {
 }
 ```
 
-### 11.8. RecommendationRule
+### 11.6. RecommendationRule
 
 ```ts
 RecommendationRule {
@@ -1012,7 +953,7 @@ RecommendationRule {
 
 Правила MVP могут храниться в коде или seed-данных.
 
-### 11.9. RecommendationDismissal
+### 11.7. RecommendationDismissal
 
 ```ts
 RecommendationDismissal {
@@ -1026,14 +967,13 @@ RecommendationDismissal {
 
 Сущность хранит отклоненные пользователем предложения.
 
-### 11.10. CheckSession
+### 11.8. CheckSession
 
 ```ts
 CheckSession {
   id: string
   userId: string
   categoryId?: string
-  groupId?: string
   status: CheckSessionStatus
   startedAt: Date
   completedAt?: Date
@@ -1046,9 +986,9 @@ enum CheckSessionStatus {
 }
 ```
 
-Ровно одно из полей `categoryId` и `groupId` должно быть заполнено.
+Поле `categoryId` обязательно.
 
-### 11.11. CheckSessionItem
+### 11.9. CheckSessionItem
 
 ```ts
 CheckSessionItem {
@@ -1125,30 +1065,17 @@ DELETE /api/shopping-list/:id
 DELETE /api/shopping-list/completed
 ```
 
-### 12.5. Groups
-
-```http
-GET    /api/groups
-POST   /api/groups
-GET    /api/groups/:id
-PATCH  /api/groups/:id
-DELETE /api/groups/:id
-POST   /api/groups/:id/items
-DELETE /api/groups/:id/items/:itemId
-```
-
-### 12.6. Check sessions
+### 12.5. Check sessions
 
 ```http
 POST /api/check/category/:categoryId/start
-POST /api/check/group/:groupId/start
 GET  /api/check/session/:sessionId
 POST /api/check/session/:sessionId/item/:itemId/status
 POST /api/check/session/:sessionId/complete
 POST /api/check/session/:sessionId/cancel
 ```
 
-### 12.7. Recommendations
+### 12.6. Recommendations
 
 ```http
 GET  /api/recommendations?itemId=...
@@ -1157,7 +1084,7 @@ POST /api/recommendations/:id/dismiss
 POST /api/recommendations/:id/hide-similar
 ```
 
-### 12.8. Service
+### 12.7. Service
 
 ```http
 GET /health
@@ -1189,7 +1116,7 @@ nextCheckAt = now + 3 days
 nextCheckAt = null
 ```
 
-После завершения проверки категории или набора:
+После завершения проверки категории:
 
 ```ts
 nextCheckAt = usageCycleDays
@@ -1375,16 +1302,14 @@ MVP готов, если:
 7. Пользователь может отметить товар купленным.
 8. Пользователь может настроить период проверки.
 9. In-app reminders показывают due/upcoming проверки без дублей.
-10. Пользователь может создать набор.
-11. Пользователь может пройти проверку категории или набора.
-12. Сервис показывает rule-based рекомендации.
-13. Пользователь может искать товары.
-14. Пользователь может экспортировать данные.
-15. Пользователь может удалить аккаунт.
-16. Данные сохраняются в PostgreSQL.
-17. Проект запускается по инструкции из README.
-18. Ключевая бизнес-логика покрыта тестами.
-19. Typecheck, lint и test suite проходят успешно.
+10. Сервис показывает rule-based рекомендации.
+11. Пользователь может искать товары.
+12. Пользователь может экспортировать данные.
+13. Пользователь может удалить аккаунт.
+14. Данные сохраняются в PostgreSQL.
+15. Проект запускается по инструкции из README.
+16. Ключевая бизнес-логика покрыта тестами.
+17. Typecheck, lint и test suite проходят успешно.
 
 ## 18. Что не входит в MVP
 

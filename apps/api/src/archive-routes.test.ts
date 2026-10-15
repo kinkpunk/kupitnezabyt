@@ -17,10 +17,6 @@ const mockPrisma = vi.hoisted(() => ({
     findFirst: vi.fn(),
     update: vi.fn()
   },
-  itemGroup: {
-    findFirst: vi.fn(),
-    update: vi.fn()
-  },
   shoppingListItem: {
     findUniqueOrThrow: vi.fn()
   }
@@ -47,9 +43,6 @@ const mockTx = vi.hoisted(() => ({
     updateMany: vi.fn()
   },
   checkSession: {
-    update: vi.fn()
-  },
-  itemGroup: {
     update: vi.fn()
   }
 }));
@@ -588,7 +581,6 @@ describe("check session routes", () => {
       id: "session-1",
       userId: "user-1",
       categoryId: "category-1",
-      groupId: null,
       status: "IN_PROGRESS",
       items: []
     };
@@ -651,38 +643,6 @@ describe("check session routes", () => {
     await app.close();
   });
 
-  it("does not start a group check when the group has no active items", async () => {
-    const { buildServer } = await import("./server.js");
-    const { signToken } = await import("./auth.js");
-    const app = buildServer();
-
-    mockPrisma.itemGroup.findFirst.mockResolvedValue({
-      id: "group-1",
-      workspaceId: "workspace_user-1",
-      archivedAt: null,
-      items: []
-    });
-
-    const response = await app.inject({
-      method: "POST",
-      url: "/api/check/group/group-1/start",
-      headers: {
-        authorization: `Bearer ${createToken(signToken)}`
-      }
-    });
-
-    expect(response.statusCode).toBe(400);
-    expect(response.json()).toEqual({
-      error: {
-        code: "EMPTY_CHECK_GROUP",
-        message: "Group has no items to check."
-      }
-    });
-    expect(mockPrisma.checkSession.create).not.toHaveBeenCalled();
-
-    await app.close();
-  });
-
   it("reschedules a category after completing its check session", async () => {
     vi.useFakeTimers({
       now: new Date("2026-06-24T10:00:00.000Z")
@@ -695,7 +655,6 @@ describe("check session routes", () => {
       id: "session-1",
       userId: "user-1",
       categoryId: "category-1",
-      groupId: null,
       status: "IN_PROGRESS"
     });
     mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
@@ -703,13 +662,11 @@ describe("check session routes", () => {
       id: "session-1",
       userId: "user-1",
       categoryId: "category-1",
-      groupId: null,
       status: "COMPLETED",
       category: {
         id: "category-1",
         usageCycleDays: 7
       },
-      group: null,
       items: []
     });
     mockTx.category.update.mockResolvedValue({});

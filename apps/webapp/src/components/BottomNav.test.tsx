@@ -5,12 +5,11 @@ import { describe, expect, it, vi } from "vitest";
 import { BottomNav } from "./BottomNav";
 
 describe("BottomNav", () => {
-  it("renders four navigation items", () => {
+  it("renders three navigation items", () => {
     render(<BottomNav activeTab="home" onSelectTab={vi.fn()} />);
     expect(screen.getByRole("button", { name: "Главная" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Категории" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Покупки" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Наборы" })).toBeInTheDocument();
   });
 
   it("does not render a menu button", () => {
@@ -35,7 +34,7 @@ describe("BottomNav", () => {
   it("calls onSelectTab with the tab id when a tab is pressed", () => {
     const handleSelect = vi.fn();
     render(<BottomNav activeTab="home" onSelectTab={handleSelect} />);
-    fireEvent.click(screen.getByRole("button", { name: "Наборы" }));
-    expect(handleSelect).toHaveBeenCalledWith("groups");
+    fireEvent.click(screen.getByRole("button", { name: "Покупки" }));
+    expect(handleSelect).toHaveBeenCalledWith("shopping");
   });
 });

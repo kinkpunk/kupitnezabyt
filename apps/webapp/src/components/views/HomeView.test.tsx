@@ -72,9 +72,8 @@ describe("HomeView", () => {
     expect(summary).not.toBeNull();
     expect(summary?.closest("button")).toBeNull();
     expect(within(summary as HTMLElement).getByText("Купить сейчас")).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText("Мало осталось")).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText("Категории к проверке")).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText("Наборы к проверке")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("Осталось мало")).toBeInTheDocument();
+    expect(within(summary as HTMLElement).getByText("Категории")).toBeInTheDocument();
   });
 
   it("renders metric counts from items and reminders", () => {
@@ -87,9 +86,8 @@ describe("HomeView", () => {
       )?.textContent;
 
     expect(metricValue("Купить сейчас")).toBe("1");
-    expect(metricValue("Мало осталось")).toBe("0");
-    expect(metricValue("Категории к проверке")).toBe("1");
-    expect(metricValue("Наборы к проверке")).toBe("0");
+    expect(metricValue("Осталось мало")).toBe("0");
+    expect(metricValue("Категории")).toBe("1");
   });
 
   it("renders «Всё в порядке» when all counters are zero", () => {
@@ -147,12 +145,11 @@ describe("HomeView", () => {
     expect(document.querySelector(".ds-empty-state")?.textContent).toContain("Пока спокойно");
   });
 
-  it("renders reminders grouped by entity type", () => {
+  it("renders reminders in the checks section", () => {
     render(<HomeView {...createProps()} />);
-    const group = screen.getByRole("region", { name: "Напоминания категорий" });
-    expect(group).toBeInTheDocument();
-    expect(within(group).getByRole("heading", { name: "Категории" })).toBeInTheDocument();
-    expect(within(group).getByText("Еда")).toBeInTheDocument();
+    const section = screen.getByRole("heading", { name: "Проверки" }).closest("section");
+    expect(section).not.toBeNull();
+    expect(within(section as HTMLElement).getByText("Еда")).toBeInTheDocument();
   });
 
   it("calls onOpenReminder when reminder row is clicked", () => {
@@ -181,12 +178,10 @@ describe("HomeView", () => {
     const checkSession: CheckSession = {
       id: "check-1",
       categoryId: "cat-1",
-      groupId: null,
       status: "IN_PROGRESS",
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      group: null,
       items: [
         { id: "ci-1", sessionId: "check-1", itemId: "item-1", sortOrder: 0, selectedStatus: null, checkedAt: null, item: itemNeedBuy }
       ]

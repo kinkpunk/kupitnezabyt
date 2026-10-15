@@ -28,7 +28,6 @@ model User {
   authAccounts             AuthAccount[]
   categories               Category[]
   checkSessions            CheckSession[]
-  groups                   ItemGroup[]
   items                    Item[]
   ownedWorkspaces          Workspace[]              @relation("WorkspaceOwner")
   recommendationDismissals RecommendationDismissal[]
@@ -48,7 +47,6 @@ model Workspace {
   owner                    User                       @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   categories               Category[]
   checkSessions            CheckSession[]
-  groups                   ItemGroup[]
   items                    Item[]
   invitations              WorkspaceInvitation[]
   members                  WorkspaceMember[]
@@ -194,7 +192,6 @@ model Item {
   workspace         Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   category          Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   checkSessionItems CheckSessionItem[]
-  groupItems        ItemGroupItem[]
   reminders         Reminder[]
   shoppingListItems ShoppingListItem[]
 
@@ -236,7 +233,6 @@ model Reminder {
   type           ReminderType
   itemId         String?
   categoryId     String?
-  groupId        String?
   scheduledFor   DateTime
   status         ReminderStatus @default(PENDING)
   attemptCount   Int            @default(0)
@@ -254,44 +250,6 @@ model Reminder {
   @@index([workspaceId, status, scheduledFor])
   @@index([itemId, scheduledFor])
   @@index([categoryId, scheduledFor])
-  @@index([groupId, scheduledFor])
-}
-
-model ItemGroup {
-  id              String    @id @default(cuid())
-  userId          String
-  workspaceId     String?
-  name            String
-  icon            String?
-  usageCycleDays  Int?
-  nextCheckAt     DateTime?
-  reminderEnabled Boolean   @default(true)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  archivedAt      DateTime?
-
-  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace     Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  checkSessions CheckSession[]
-  items         ItemGroupItem[]
-
-  @@index([userId, archivedAt])
-  @@index([userId, nextCheckAt])
-  @@index([workspaceId, archivedAt])
-  @@index([workspaceId, nextCheckAt])
-}
-
-model ItemGroupItem {
-  id        String   @id @default(cuid())
-  groupId   String
-  itemId    String
-  createdAt DateTime @default(now())
-
-  group ItemGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  item  Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
-
-  @@unique([groupId, itemId])
-  @@index([itemId])
 }
 
 model CheckSession {
@@ -299,7 +257,6 @@ model CheckSession {
   userId      String
   workspaceId String?
   categoryId  String?
-  groupId     String?
   status      CheckSessionStatus @default(IN_PROGRESS)
   startedAt   DateTime           @default(now())
   completedAt DateTime?
@@ -307,13 +264,11 @@ model CheckSession {
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   category  Category?          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  group     ItemGroup?         @relation(fields: [groupId], references: [id], onDelete: Cascade)
   items     CheckSessionItem[]
 
   @@index([userId, status, startedAt])
   @@index([workspaceId, status, startedAt])
   @@index([categoryId, status])
-  @@index([groupId, status])
 }
 
 model CheckSessionItem {
@@ -370,7 +325,6 @@ enum ItemImportance {
 enum ReminderType {
   ITEM_CHECK
   CATEGORY_CHECK
-  GROUP_CHECK
   SHOPPING_REMINDER
 }
 

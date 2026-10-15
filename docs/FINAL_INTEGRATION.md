@@ -86,9 +86,8 @@ Minimum browser smoke:
 6. Confirm the item appears in shopping list.
 7. Mark the shopping item bought.
 8. Confirm the tracked item returns to `IN_STOCK`.
-9. Create a group and start a group check.
-10. Search for an item.
-11. Export JSON from settings.
+9. Search for an item.
+10. Export JSON from settings.
 
 ## Release Smoke Checklist
 
@@ -132,7 +131,7 @@ Requires real Telegram credentials and deployed bot/worker services:
 ## Known Gaps
 
 - `pnpm test:e2e` now covers the primary dev-auth browser stock flow; broader
-  coverage for groups, check sessions, search variants, and export can be
+  coverage for check sessions, search variants, and export can be
   expanded as the release suite matures.
 - `pnpm test:integration` now provides a DB-backed API harness for user
   isolation and shopping-list sync; it requires a migrated PostgreSQL test

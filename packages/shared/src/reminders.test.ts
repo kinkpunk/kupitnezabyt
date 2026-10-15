@@ -101,7 +101,7 @@ describe("getInAppReminders", () => {
       [
         {
           id: "enabled",
-          entityType: "GROUP",
+          entityType: "ITEM",
           title: "Travel",
           nextCheckAt: new Date("2026-06-20T12:00:00.000Z"),
           reminderEnabled: true

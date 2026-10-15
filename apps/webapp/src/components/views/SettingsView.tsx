@@ -6,7 +6,7 @@ import { WorkspacePanel } from "../features/WorkspacePanel";
 import { ReminderSettingsSection } from "../ui/ReminderSettingsSection";
 import { Button } from "../ui/Button";
 import { SectionHeader, ThemeSwitcher } from "../common";
-import type { Category, Item, ItemGroup, WorkspaceSummary } from "../../lib/types";
+import type { Category, Item, WorkspaceSummary } from "../../lib/types";
 import type { ReminderDraft } from "../../hooks/useAppState";
 import type { ThemeMode } from "../../lib/ui";
 
@@ -23,7 +23,6 @@ export function SettingsView({
   workspaceMembers,
   workspaceInvitations,
   categories,
-  groups,
   items,
   theme,
   onThemeChange,
@@ -54,7 +53,6 @@ export function SettingsView({
   workspaceMembers: import("../../lib/types").WorkspaceMember[];
   workspaceInvitations: import("../../lib/types").WorkspaceInvitation[];
   categories: Category[];
-  groups: ItemGroup[];
   items: Item[];
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
@@ -70,7 +68,7 @@ export function SettingsView({
     member: import("../../lib/types").WorkspaceMember
   ) => Promise<void>;
   onRetryWorkspaceLoad: () => Promise<void>;
-  onSaveReminderSettingsGroup: (entityType: "CATEGORY" | "GROUP" | "ITEM", ids: string[]) => void;
+  onSaveReminderSettingsGroup: (entityType: "CATEGORY" | "ITEM", ids: string[]) => void;
   onUpdateReminderDraft: (key: string, draft: ReminderDraft) => void;
   onExportUserData: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
@@ -139,29 +137,6 @@ export function SettingsView({
             void onSaveReminderSettingsGroup(
               "CATEGORY",
               categories.map((category) => category.id)
-            )
-          }
-        />
-
-        <ReminderSettingsSection
-          title="Наборы"
-          emptyMessage="Создайте набор, чтобы настроить совместную проверку."
-          saveLabel="Сохранить наборы"
-          isSaving={savingReminderKeys.includes("GROUP:SECTION")}
-          rows={groups.map((group) => ({
-            id: group.id,
-            entityType: "GROUP" as const,
-            title: group.name,
-            subtitle: group.nextCheckAt
-              ? `Следующая: ${formatDate(group.nextCheckAt)}`
-              : "Дата не задана"
-          }))}
-          drafts={reminderDrafts}
-          onDraftChange={onUpdateReminderDraft}
-          onSave={() =>
-            void onSaveReminderSettingsGroup(
-              "GROUP",
-              groups.map((group) => group.id)
             )
           }
         />

@@ -105,9 +105,6 @@ export function HomeView({
   const categoryReminderCount = inAppReminders.filter(
     (reminder) => reminder.entityType === "CATEGORY"
   ).length;
-  const groupReminderCount = inAppReminders.filter(
-    (reminder) => reminder.entityType === "GROUP"
-  ).length;
 
   const summaryGroups = [
     {
@@ -127,8 +124,7 @@ export function HomeView({
           label: "Категории",
           count: categoryReminderCount,
           tone: "brand"
-        },
-        { key: "groups", label: "Наборы", count: groupReminderCount, tone: "brand" }
+        }
       ]
     }
   ] as const;
@@ -188,7 +184,7 @@ export function HomeView({
             }
             meta={`${checkedCount + 1} из ${checkSession.items.length}`}
             subtitle="Незавершенная проверка"
-            title={checkSession.category?.name ?? checkSession.group?.name ?? "Проверка"}
+            title={checkSession.category?.name ?? "Проверка"}
             onClick={() => onSelectTab("check")}
           />
         </section>

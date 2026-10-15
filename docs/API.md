@@ -170,7 +170,7 @@ X-Workspace-Id: <workspace-id>
 When this header is present, the backend verifies that the authenticated user is
 a joined workspace member. `OWNER` and `EDITOR` can write; `VIEWER` can read but
 cannot write. This contract applies to category, item, shopping-list, in-app
-reminder, group, check-session, and recommendation endpoints.
+reminder, check-session, and recommendation endpoints.
 
 Account-level privacy operations remain user-wide: `GET /api/export/json`
 exports the authenticated user's data, and `DELETE /api/me` deletes the
@@ -462,7 +462,7 @@ GET /api/reminders/in-app?days=7
 ```
 
 Returns due and upcoming in-app reminders scoped to the authenticated user.
-The response includes item, category, and group checks whose reminders are
+The response includes item and category checks whose reminders are
 enabled and whose `nextCheckAt` is due or falls inside the requested upcoming
 window.
 
@@ -479,7 +479,7 @@ window.
 ]
 ```
 
-`PATCH /api/categories/:id`, `PATCH /api/groups/:id`, and
+`PATCH /api/categories/:id` and
 `PATCH /api/items/:id` accept `usageCycleDays`, `nextCheckAt`, and
 `reminderEnabled` so the webapp can configure check settings without renaming
 the entity.
@@ -523,37 +523,6 @@ deleted through the shopping list endpoints.
 
 Deleting completed entries removes only completed shopping list rows for the
 current authenticated user.
-
-## Groups
-
-```http
-GET    /api/groups
-POST   /api/groups
-GET    /api/groups/:id
-PATCH  /api/groups/:id
-POST   /api/groups/:id/archive
-POST   /api/groups/:id/items
-DELETE /api/groups/:id/items/:itemId
-```
-
-Create/update body:
-
-```json
-{
-  "name": "Аптечка",
-  "icon": "optional"
-}
-```
-
-Add item body:
-
-```json
-{
-  "itemId": "..."
-}
-```
-
-Group membership is unique by `(groupId, itemId)`.
 
 ## Recommendations
 
@@ -639,7 +608,6 @@ included for context.
     "items": [],
     "shoppingListItems": [],
     "reminders": [],
-    "groups": [],
     "checkSessions": [],
     "recommendationDismissals": [],
     "workspaceMemberships": [],
@@ -655,7 +623,6 @@ always uses the bearer auth context.
 
 ```http
 POST /api/check/category/:categoryId/start
-POST /api/check/group/:groupId/start
 GET  /api/check/session/active
 GET  /api/check/session/:sessionId
 POST /api/check/session/:sessionId/item/:itemId/status
@@ -667,8 +634,7 @@ POST /api/check/session/:sessionId/cancel
 the authenticated user, or `null` when there is no active session.
 
 Starting a category check session snapshots active, non-archived, non-`PAUSED`
-items from the category. Starting a group check session snapshots active,
-non-archived, non-`PAUSED` items from that group. Updating an item status reuses
+items from the category. Updating an item status reuses
 the same backend item status workflow as the webapp cards and bot callbacks.
 
 Status body:

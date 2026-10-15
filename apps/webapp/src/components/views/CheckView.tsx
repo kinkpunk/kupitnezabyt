@@ -122,7 +122,7 @@ export function CheckView({
       ) : currentCheckItem ? (
         <div className="ds-check-card">
           <SectionHeader
-            subtitle={checkSession?.category?.name ?? checkSession?.group?.name ?? "Проверка"}
+            subtitle={checkSession?.category?.name ?? "Проверка"}
             title={currentCheckItem.item.name}
           />
           <ProgressBar done={checkedCount} total={checkSession?.items.length ?? 0} />

@@ -98,7 +98,6 @@ export const workspaceRoleLabels: Record<WorkspaceSummary["role"], string> = {
 
 export const reminderEntityLabels: Record<InAppReminder["entityType"], string> = {
   CATEGORY: "Категория",
-  GROUP: "Набор",
   ITEM: "Товар"
 };
 

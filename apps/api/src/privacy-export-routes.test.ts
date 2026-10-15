@@ -10,9 +10,6 @@ const mockPrisma = vi.hoisted(() => ({
   item: {
     findMany: vi.fn()
   },
-  itemGroup: {
-    findMany: vi.fn()
-  },
   recommendationDismissal: {
     findMany: vi.fn()
   },
@@ -59,7 +56,6 @@ describe("privacy export routes", () => {
     mockPrisma.item.findMany.mockResolvedValue([]);
     mockPrisma.shoppingListItem.findMany.mockResolvedValue([]);
     mockPrisma.reminder.findMany.mockResolvedValue([]);
-    mockPrisma.itemGroup.findMany.mockResolvedValue([]);
     mockPrisma.checkSession.findMany.mockResolvedValue([]);
     mockPrisma.recommendationDismissal.findMany.mockResolvedValue([]);
     mockPrisma.workspaceMember.findMany.mockResolvedValue([

@@ -133,7 +133,7 @@ test.describe("Categories screen visual regression", () => {
 });
 
 async function addItemWithStatus(page: Page, name: string, statusClicks: number) {
-  await page.getByRole("button", { name: "Новый товар" }).click();
+  await page.getByRole("button", { name: "Добавить товар" }).click();
   await page.getByLabel("Название товара").fill(name);
   await page.getByLabel("Название товара").press("Enter");
 

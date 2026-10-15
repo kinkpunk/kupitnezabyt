@@ -13,9 +13,6 @@ const mockPrisma = vi.hoisted(() => ({
     findFirst: vi.fn(),
     findMany: vi.fn()
   },
-  itemGroup: {
-    findMany: vi.fn()
-  },
   shoppingListItem: {
     create: vi.fn(),
     findFirst: vi.fn(),
@@ -690,7 +687,6 @@ describe("workspace access routes", () => {
         archivedAt: null
       }
     ]);
-    mockPrisma.itemGroup.findMany.mockResolvedValue([]);
     mockPrisma.item.findMany.mockResolvedValue([]);
 
     const response = await app.inject({
