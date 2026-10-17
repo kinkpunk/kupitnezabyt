@@ -4,9 +4,22 @@ import Script from "next/script";
 import "./styles.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"),
   title: "kupitnezabyt",
   description: "Учет регулярно заканчивающихся товаров",
   manifest: "/manifest.webmanifest",
+  openGraph: {
+    title: "kupitnezabyt",
+    description: "Учет регулярно заканчивающихся товаров",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        type: "image/png"
+      }
+    ]
+  },
   icons: {
     icon: [
       {
