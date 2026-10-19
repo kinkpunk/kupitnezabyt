@@ -942,6 +942,7 @@ export function useAppState() {
       }
 
       await refreshActiveData(token);
+      setToastMessage(`Проверка «${reminder.title}» отложена`);
     } finally {
       setPendingAction(actionKey, false);
     }

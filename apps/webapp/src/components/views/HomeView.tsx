@@ -45,6 +45,16 @@ export function HomeView({
     void onSetStatus(item, "IN_STOCK");
   }
 
+  function handleStartReminderCheck(event: MouseEvent<HTMLButtonElement>, reminder: InAppReminder) {
+    event.stopPropagation();
+    void onStartReminderCheck(reminder);
+  }
+
+  function handleSnoozeReminder(event: MouseEvent<HTMLButtonElement>, reminder: InAppReminder) {
+    event.stopPropagation();
+    void onSnoozeReminder(reminder);
+  }
+
   function renderReminderMeta(reminder: InAppReminder) {
     const isDue = reminder.timing === "DUE";
 
@@ -66,7 +76,7 @@ export function HomeView({
           <Button
             size="compact"
             variant="primary"
-            onClick={() => void onStartReminderCheck(reminder)}
+            onClick={(event) => handleStartReminderCheck(event, reminder)}
           >
             Проверить
           </Button>
@@ -75,7 +85,7 @@ export function HomeView({
           disabled={isActionPending(`reminder:snooze:${reminder.id}`)}
           size="compact"
           variant="ghost"
-          onClick={() => void onSnoozeReminder(reminder)}
+          onClick={(event) => handleSnoozeReminder(event, reminder)}
         >
           {isActionPending(`reminder:snooze:${reminder.id}`) ? "Откладываем..." : "Отложить"}
         </Button>

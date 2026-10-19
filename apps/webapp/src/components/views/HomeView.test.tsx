@@ -160,18 +160,22 @@ describe("HomeView", () => {
     expect(onOpenReminder).toHaveBeenCalledWith(categoryReminder);
   });
 
-  it("calls onStartReminderCheck for category reminder", () => {
+  it("calls onStartReminderCheck for category reminder without opening the reminder", () => {
     const onStartReminderCheck = vi.fn().mockResolvedValue(undefined);
-    render(<HomeView {...createProps({ onStartReminderCheck })} />);
+    const onOpenReminder = vi.fn();
+    render(<HomeView {...createProps({ onStartReminderCheck, onOpenReminder })} />);
     fireEvent.click(screen.getByRole("button", { name: "Проверить" }));
     expect(onStartReminderCheck).toHaveBeenCalledWith(categoryReminder);
+    expect(onOpenReminder).not.toHaveBeenCalled();
   });
 
-  it("calls onSnoozeReminder when snooze is clicked", () => {
+  it("calls onSnoozeReminder when snooze is clicked without opening the reminder", () => {
     const onSnoozeReminder = vi.fn().mockResolvedValue(undefined);
-    render(<HomeView {...createProps({ onSnoozeReminder })} />);
+    const onOpenReminder = vi.fn();
+    render(<HomeView {...createProps({ onSnoozeReminder, onOpenReminder })} />);
     fireEvent.click(screen.getByRole("button", { name: "Отложить" }));
     expect(onSnoozeReminder).toHaveBeenCalledWith(categoryReminder);
+    expect(onOpenReminder).not.toHaveBeenCalled();
   });
 
   it("renders in-progress check session section", () => {
