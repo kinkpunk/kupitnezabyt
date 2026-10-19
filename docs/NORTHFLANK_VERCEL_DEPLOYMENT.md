@@ -17,6 +17,11 @@ them on the Northflank Sandbox plan unless the team accepts either extra paid
 services or a later architecture change that folds Telegram delivery into the
 API/cron surface.
 
+> Note: as of the 2026-10-19 production cutover, the Northflank API connects
+> to the existing Neon database directly instead of the PostgreSQL addon
+> described below, and Google sign-in uses the temporary Render bridge. See
+> "Production Cutover (2026-10-19)" and "Temporary Google Bridge via Render".
+
 ## Why This Topology
 
 As of 2026-07-03, Northflank Sandbox is a good fit for the required MVP backend:
@@ -33,6 +38,46 @@ that usage is not charged while on the Developer Sandbox.
 The required MVP only needs the API and PostgreSQL on Northflank. Keeping the
 webapp on Vercel preserves one Northflank service slot and avoids moving a
 working static/Next.js deployment for no product benefit.
+
+## Production Cutover (2026-10-19)
+
+The production API moved from Render (`kupitnezabyt-api.onrender.com`,
+us-west) to Northflank (`p01--kupitnezabyt-api--rrnqxgknbkm9.code.run`,
+Netherlands). The database stayed on Neon (AWS eu-central-1, Frankfurt); no
+data migration was performed — the Northflank API connects to Neon directly.
+Vercel `NEXT_PUBLIC_API_BASE_URL` points to the Northflank URL.
+
+Measured from the browser (HAR exports of real product usage, warm
+connections):
+
+| Endpoint | Render p50 | Northflank p50 |
+|---|---|---|
+| OPTIONS roundtrip (no DB) | ~210 ms | ~46 ms |
+| GET /api/categories | ~1250 ms | ~122 ms |
+| GET /api/items | ~1240 ms | ~123 ms |
+| GET /api/shopping-list | ~1490 ms | ~148 ms |
+| GET /api/recommendations | ~1680 ms | ~157 ms |
+| POST /api/items/:id/status | ~2000 ms | ~210 ms |
+| GET /api/workspaces | ~4200 ms | ~360 ms |
+
+Root cause of the old latency: Render (US West) paid a transatlantic round
+trip to Neon (Frankfurt) for every sequential database query. With the API
+in Europe the same Neon database answers in ~15 ms per round trip. The
+webapp issues one OAuth call plus five list refetches per status change, so
+the per-query cost multiplied into 1–2 s perceived delays.
+
+Remaining work:
+
+1. Attach a custom domain to the Northflank API; `*.code.run` cannot be
+   used for Google/Apple OAuth (see below).
+2. Switch `GOOGLE_REDIRECT_URI` (and `APPLE_REDIRECT_URI`) to the custom
+   domain and register it with the providers.
+3. Consider the Neon pooled connection host (`-pooler`) in
+   `DATABASE_URL` to remove rare ~600 ms cold-connection spikes.
+4. Re-run `corepack pnpm smoke:deployment`, verify sign-in, then
+   decommission Render.
+
+Until then, Google sign-in runs through the temporary Render bridge below.
 
 ## Required Northflank Setup
 
@@ -204,6 +249,43 @@ Redeploy the webapp after changing `NEXT_PUBLIC_API_BASE_URL`, because this
 value is embedded at build time.
 
 ## OAuth Provider Updates
+
+### `code.run` Domains Cannot Be OAuth Redirect URIs
+
+Google rejects Northflank-generated `*.code.run` redirect URIs with
+`Invalid Redirect: must use a domain that is a valid top private domain`:
+`code.run` is a public suffix, and Google requires the redirect host to be a
+registrable (private) domain. A custom domain attached to the Northflank
+service is therefore mandatory for Google sign-in; the generated Sandbox
+URL only works for API traffic.
+
+### Temporary Google Bridge via Render
+
+Until a custom domain is attached, the Google callback can stay on Render
+while the rest of the API serves from Northflank. Both deployments must
+share the Neon database and the same `JWT_SECRET`: OAuth state tokens are
+stored in the database and JWTs are HMAC-signed with that secret
+(`apps/api/src/auth.ts`), so tokens issued by either API validate on both.
+
+1. Northflank `GOOGLE_REDIRECT_URI=https://kupitnezabyt-api.onrender.com/api/auth/google/callback`
+   (the Render callback, already registered with Google).
+2. Northflank `APP_BASE_URL=https://<vercel-webapp-host>` — required for CORS
+   (the API allows only this origin) and for the post-login redirect.
+3. Render keeps its own `GOOGLE_REDIRECT_URI` and `APP_BASE_URL` unchanged.
+4. The webapp calls Northflank `POST /api/auth/google/start`; Google
+   redirects the browser to the Render callback; Render consumes the state
+   from the shared database, issues a JWT, and redirects to the webapp with
+   `?oauth_token=`.
+
+Bridge behavior, verified 2026-10-19:
+
+- Existing sessions survive the cutover — the webapp stores the API-issued
+  JWT, which validates on Northflank as long as `JWT_SECRET` matches.
+- New Google logins work end-to-end. Render is on the free tier and sleeps,
+  so an occasional login pays a ~5 s cold start on the callback; product
+  traffic never touches Render.
+- Keep Render running while the bridge is in use; an external `/health`
+  ping every ~10 minutes keeps it warm if the cold start matters.
 
 For Google sign-in, add the exact Northflank callback URL to the Google OAuth
 client:
