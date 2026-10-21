@@ -84,9 +84,11 @@ export function ShoppingView({
         >
           {isActionPending(`shopping:bought:${entry.id}`) ? "Отмечаем..." : "Куплено"}
         </Button>
-        {!entry.itemId ? (
-          <ProductRowMoreButton onClick={() => setActiveEntryId(entry.id)} />
-        ) : null}
+        <span className="ds-shopping-actions__more">
+          {entry.itemId ? null : (
+            <ProductRowMoreButton onClick={() => setActiveEntryId(entry.id)} />
+          )}
+        </span>
       </div>
     );
   }

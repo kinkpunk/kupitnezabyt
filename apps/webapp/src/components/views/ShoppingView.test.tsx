@@ -169,4 +169,12 @@ describe("ShoppingView", () => {
     render(<ShoppingView {...createProps({ shoppingList: [trackedEntry], shoppingGroups: [{ id: "g1", title: "Список", entries: [trackedEntry] }] })} />);
     expect(screen.queryByRole("button", { name: "Ещё" })).not.toBeInTheDocument();
   });
+
+  it("reserves an empty more-button slot for tracked entries to keep the bought button aligned", () => {
+    const { container } = render(<ShoppingView {...createProps()} />);
+    const slots = container.querySelectorAll(".ds-shopping-actions__more");
+    expect(slots).toHaveLength(2);
+    expect(slots[0]!.querySelector("button")).not.toBeNull();
+    expect(slots[1]!.querySelector("button")).toBeNull();
+  });
 });

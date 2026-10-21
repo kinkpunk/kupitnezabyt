@@ -1371,6 +1371,17 @@ select {
   gap: 8px;
 }
 
+/* Резервный слот держит «Куплено» на одной оси у отслеживаемых
+   и разовых позиций; ширина равна ds-button--icon--small. */
+.ds-shopping-actions__more {
+  display: inline-flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+}
+
 .ds-product-row__actions {
   flex-wrap: wrap;
 }
