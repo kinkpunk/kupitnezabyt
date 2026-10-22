@@ -17,6 +17,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof OnboardingMo
     starterCategories: ["Еда", "Аптека"],
     starterItemHints: ["Кофе"],
     starterCategoryOptions: ["Еда", "Аптека"],
+    onAdvanceToStarterItems: vi.fn(),
     onFinish: vi.fn().mockResolvedValue(undefined),
     ...overrides
   };
@@ -63,6 +64,17 @@ describe("OnboardingModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Пропустить" }));
     expect(setSelectedStarterCategories).toHaveBeenCalledWith([]);
     expect(setOnboardingStep).toHaveBeenCalledWith(2);
+  });
+
+  it("advances to starter items through the category resolver", () => {
+    const onAdvanceToStarterItems = vi.fn();
+    render(
+      <OnboardingModal
+        {...createProps({ onboardingStep: 1, onAdvanceToStarterItems })}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+    expect(onAdvanceToStarterItems).toHaveBeenCalledOnce();
   });
 
   it("renders starter items step", () => {

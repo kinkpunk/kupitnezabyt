@@ -71,8 +71,10 @@ import { calculateSnoozedAt, formatDate, formatError } from "../lib/format";
 import {
   onboardingStorageKey,
   reminderSnoozeDays,
+  resolveStarterItemCategories,
   starterCategories,
   themeStorageKey,
+  type StarterItemDraft,
   type ThemeMode
 } from "../lib/ui";
 import { getReminderDraftKey } from "../lib/reminder-draft";
@@ -107,11 +109,6 @@ export type ActiveTab =
 export type ReminderDraft = {
   usageCycleDays: string;
   reminderEnabled: boolean;
-};
-
-type StarterItemDraft = {
-  name: string;
-  categoryName: string;
 };
 
 const defaultStarterItems: StarterItemDraft[] = [
@@ -251,6 +248,11 @@ export function useAppState() {
     const names = selectedStarterCategories.length ? selectedStarterCategories : starterCategories;
     return [...new Set(names)];
   }, [selectedStarterCategories]);
+
+  function handleAdvanceToStarterItems() {
+    setStarterItems((current) => resolveStarterItemCategories(current, starterCategoryOptions));
+    setOnboardingStep(2);
+  }
 
   const archivedStandaloneItems = useMemo(
     () => archivedItems.filter((item) => !item.category?.archivedAt),
@@ -1795,6 +1797,7 @@ export function useAppState() {
     handleCheckStatus,
     handleCancelCheck,
     handleFinishOnboarding,
+    handleAdvanceToStarterItems,
     handleSearchItems,
     clearSearchSession,
     clearWorkspaceScopedState,

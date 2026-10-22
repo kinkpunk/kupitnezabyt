@@ -44,6 +44,15 @@ describe("ChipTabs", () => {
     expect(tab.querySelector(".ds-category-tab__warning")).toBeInTheDocument();
   });
 
+  it("explains the warning dot with a tooltip on the tab", () => {
+    render(<ChipTabs items={items} selectedId="a" onSelect={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: "Аптека" })).toHaveAttribute(
+      "title",
+      "В категории есть товары, которых мало"
+    );
+    expect(screen.getByRole("tab", { name: "Еда" })).not.toHaveAttribute("title");
+  });
+
   it("renders trailing action after tabs", () => {
     render(
       <ChipTabs

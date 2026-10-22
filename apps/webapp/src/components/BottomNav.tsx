@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, ShoppingCart, Tags } from "lucide-react";
+import { Home, LayoutList, ShoppingBasket } from "lucide-react";
 import React from "react";
 import type { LucideIcon } from "lucide-react";
 
@@ -8,8 +8,8 @@ import type { ActiveTab } from "../hooks/useAppState";
 
 const navTabs: { id: ActiveTab; icon: LucideIcon; label: string }[] = [
   { id: "home", icon: Home, label: "Главная" },
-  { id: "items", icon: Tags, label: "Категории" },
-  { id: "shopping", icon: ShoppingCart, label: "Покупки" }
+  { id: "items", icon: LayoutList, label: "Категории" },
+  { id: "shopping", icon: ShoppingBasket, label: "Покупки" }
 ];
 
 export function BottomNav({

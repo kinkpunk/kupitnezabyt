@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Category, Item } from "../../lib/types";
+import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import { CategoriesView } from "./CategoriesView";
 
 const category: Category = {
@@ -52,11 +52,26 @@ const itemNeedBuy: Item = {
   lastCheckedAt: null
 };
 
+const recommendation: RecommendationSuggestion = {
+  id: "rec-1",
+  ruleId: "rule-1",
+  suggestedItem: "Сахар",
+  categoryHint: "Еда"
+};
+
 function clickFirstButton(name: string | RegExp) {
   const buttons = screen.getAllByRole("button", { name });
   const first = buttons[0];
   expect(first).toBeDefined();
   fireEvent.click(first!);
+}
+
+function clickItemActionsButton() {
+  const list = document.querySelector(".ds-product-list");
+  expect(list).not.toBeNull();
+  const button = within(list as HTMLElement).getAllByRole("button", { name: "Ещё" })[0];
+  expect(button).toBeDefined();
+  fireEvent.click(button!);
 }
 
 function openFilterPanel() {
@@ -243,7 +258,7 @@ describe("CategoriesView", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("button", { name: "Добавить товар" })).toBeInTheDocument();
 
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
     expect(screen.queryByRole("button", { name: "Добавить товар" })).not.toBeInTheDocument();
   });
@@ -273,7 +288,7 @@ describe("CategoriesView", () => {
         })}
       />
     );
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Редактировать" }));
     expect(setEditingItemId).toHaveBeenCalledWith(itemInStock.id);
@@ -284,7 +299,7 @@ describe("CategoriesView", () => {
   it("archives item from actions sheet", () => {
     const onArchiveItem = vi.fn().mockResolvedValue(undefined);
     render(<CategoriesView {...createProps({ onArchiveItem })} />);
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
   });
@@ -303,8 +318,12 @@ describe("CategoriesView", () => {
       />
     );
     expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
-    const archiveButton = screen.getByRole("button", { name: "В архив" });
-    expect(archiveButton).toBeEnabled();
+    const moreButton = screen.getByRole("button", { name: "Ещё" });
+    expect(moreButton).toBeEnabled();
+    fireEvent.click(moreButton);
+    const archiveButton = within(screen.getByRole("dialog")).getByRole("button", {
+      name: "В архив"
+    });
     fireEvent.click(archiveButton);
     expect(onArchiveSelectedCategory).toHaveBeenCalledOnce();
   });
@@ -319,7 +338,7 @@ describe("CategoriesView", () => {
         })}
       />
     );
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
     await waitFor(() => {
       expect(onCategorySortModeChange).toHaveBeenCalledWith("manual");
@@ -339,7 +358,7 @@ describe("CategoriesView", () => {
         })}
       />
     );
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
     await waitFor(() => {
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -365,7 +384,7 @@ describe("CategoriesView", () => {
         })}
       />
     );
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     fireEvent.click(screen.getByRole("button", { name: "Сортировать по статусу" }));
     await waitFor(() => {
       expect(onCategorySortModeChange).toHaveBeenCalledWith("status");
@@ -375,7 +394,7 @@ describe("CategoriesView", () => {
 
   it("does not show status sort option when already sorting by status", () => {
     render(<CategoriesView {...createProps({ categorySortMode: "status" })} />);
-    clickFirstButton("Ещё");
+    clickItemActionsButton();
     expect(
       screen.queryByRole("button", { name: "Сортировать по статусу" })
     ).not.toBeInTheDocument();
@@ -400,5 +419,45 @@ describe("CategoriesView", () => {
     render(<CategoriesView {...createProps({ onSelectCategory })} />);
     fireEvent.click(screen.getByRole("tab", { name: "Еда" }));
     expect(onSelectCategory).toHaveBeenCalledWith(category.id);
+  });
+
+  it("renders recommendations as compact cards with a single primary action", () => {
+    render(<CategoriesView {...createProps({ visibleRecommendations: [recommendation] })} />);
+    expect(screen.getByRole("button", { name: "Добавить" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Не нужно" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Скрыть похожие" })).not.toBeInTheDocument();
+  });
+
+  it("dismisses recommendation from the actions sheet", () => {
+    const onDismissRecommendation = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({ visibleRecommendations: [recommendation], onDismissRecommendation })}
+      />
+    );
+    const card = document.querySelector(".recommendation-row");
+    expect(card).not.toBeNull();
+    fireEvent.click(within(card as HTMLElement).getByRole("button", { name: "Ещё" }));
+    fireEvent.click(screen.getByRole("button", { name: "Не нужно" }));
+    expect(onDismissRecommendation).toHaveBeenCalledWith(recommendation);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides similar recommendations from the actions sheet", () => {
+    const onHideSimilarRecommendations = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({
+          visibleRecommendations: [recommendation],
+          onHideSimilarRecommendations
+        })}
+      />
+    );
+    const card = document.querySelector(".recommendation-row");
+    expect(card).not.toBeNull();
+    fireEvent.click(within(card as HTMLElement).getByRole("button", { name: "Ещё" }));
+    fireEvent.click(screen.getByRole("button", { name: "Скрыть похожие" }));
+    expect(onHideSimilarRecommendations).toHaveBeenCalledWith(recommendation);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

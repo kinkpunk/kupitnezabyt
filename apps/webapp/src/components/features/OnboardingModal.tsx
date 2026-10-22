@@ -17,6 +17,7 @@ export function OnboardingModal({
   starterCategories,
   starterItemHints,
   starterCategoryOptions,
+  onAdvanceToStarterItems,
   onFinish
 }: {
   error: string | null;
@@ -30,6 +31,7 @@ export function OnboardingModal({
   starterCategories: string[];
   starterItemHints: string[];
   starterCategoryOptions: string[];
+  onAdvanceToStarterItems: () => void;
   onFinish: (skipSetup?: boolean) => Promise<void>;
 }) {
   return (
@@ -80,7 +82,7 @@ export function OnboardingModal({
               })}
             </div>
             <div className="ds-onboarding-actions">
-              <Button type="button" onClick={() => setOnboardingStep(2)}>
+              <Button type="button" onClick={onAdvanceToStarterItems}>
                 Продолжить
               </Button>
               <Button

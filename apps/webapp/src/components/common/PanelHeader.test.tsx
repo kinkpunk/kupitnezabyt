@@ -22,12 +22,15 @@ function expandPanel() {
   fireEvent.click(screen.getByRole("button", { name: "Фильтры" }));
 }
 
+function openMenu() {
+  fireEvent.click(screen.getByRole("button", { name: "Ещё" }));
+}
+
 describe("PanelHeader", () => {
-  it("renders the action row with check and archive always visible", () => {
+  it("renders the action row with a single primary check action", () => {
     render(<PanelHeader {...createProps()} />);
     expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
-    const archiveButton = screen.getByRole("button", { name: "В архив" });
-    expect(archiveButton).toHaveTextContent("В архив");
+    expect(screen.queryByRole("button", { name: "В архив" })).not.toBeInTheDocument();
   });
 
   it("renders collapsed by default with a filters toggle button", () => {
@@ -79,7 +82,7 @@ describe("PanelHeader", () => {
     render(<PanelHeader {...createProps({ total: 0, inStock: 0, needBuy: 0, low: 0 })} />);
     expandPanel();
     expect(screen.queryByRole("group", { name: "Фильтр по статусу" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ещё" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
   });
 
@@ -105,12 +108,22 @@ describe("PanelHeader", () => {
     expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
   });
 
-  it("calls onArchive when archive button is pressed without collapsing filters", () => {
+  it("opens the menu sheet from the more button and hides archive until opened", () => {
+    render(<PanelHeader {...createProps()} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    openMenu();
+    expect(screen.getByRole("dialog", { name: "Действия с категорией" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+  });
+
+  it("calls onArchive when the sheet action is pressed and closes the sheet", () => {
     const handleArchive = vi.fn();
     render(<PanelHeader {...createProps({ onArchive: handleArchive })} />);
     expandPanel();
+    openMenu();
     fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     expect(handleArchive).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
   });
 
@@ -137,6 +150,12 @@ describe("PanelHeader", () => {
     expect(handleShare).toHaveBeenCalledOnce();
   });
 
+  it("gives icon-only buttons tooltip labels", () => {
+    render(<PanelHeader {...createProps()} />);
+    expect(screen.getByRole("button", { name: "Фильтры" })).toHaveAttribute("title", "Фильтры");
+    expect(screen.getByRole("button", { name: "Ещё" })).toHaveAttribute("title", "Ещё");
+  });
+
   it("disables only check when disabled is true", () => {
     render(
       <PanelHeader
@@ -144,12 +163,12 @@ describe("PanelHeader", () => {
       />
     );
     expect(screen.getByRole("button", { name: "Проверить" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "В архив" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Ещё" })).toBeEnabled();
   });
 
-  it("disables archive when archiveDisabled is true", () => {
+  it("disables the more button when archiveDisabled is true", () => {
     render(<PanelHeader {...createProps({ archiveDisabled: true })} />);
-    expect(screen.getByRole("button", { name: "В архив" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Ещё" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Проверить" })).toBeEnabled();
   });
 });

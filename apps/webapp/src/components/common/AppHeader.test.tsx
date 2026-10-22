@@ -23,6 +23,18 @@ describe("AppHeader", () => {
     expect(screen.getByText("nezabyt")).toBeInTheDocument();
   });
 
+  it("renders the screen title instead of the wordmark when provided", () => {
+    renderHeader({ title: "Главная" });
+    expect(screen.getByRole("heading", { level: 1, name: "Главная" })).toBeInTheDocument();
+    expect(screen.queryByText("kupit")).not.toBeInTheDocument();
+  });
+
+  it("keeps the wordmark when no screen title is provided", () => {
+    renderHeader({ title: undefined });
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(screen.getByText("kupit")).toBeInTheDocument();
+  });
+
   it("renders menu button without notifications bell", () => {
     renderHeader();
     expect(screen.getByRole("button", { name: "Меню" })).toBeInTheDocument();

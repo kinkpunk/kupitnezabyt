@@ -1,11 +1,11 @@
 "use client";
 
-import { Archive, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Archive, Pencil, Plus, Search, ShoppingBasket, Trash2 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 import { formatError } from "../../lib/format";
 import type { Category, Item, ShoppingListEntry } from "../../lib/types";
-import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton } from "../common";
+import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton, SearchField } from "../common";
 import { Button } from "../ui/Button";
 import { PurchaseCheckbox } from "../ui/PurchaseCheckbox";
 
@@ -55,10 +55,28 @@ export function ShoppingView({
   isActionPending: (key: string) => boolean;
 }) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const activeEntry = useMemo(
     () => shoppingList.find((entry) => entry.id === activeEntryId) ?? null,
     [shoppingList, activeEntryId]
   );
+
+  const visibleGroups = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) {
+      return shoppingGroups;
+    }
+    return shoppingGroups
+      .map((group) => ({
+        ...group,
+        entries: group.entries.filter(
+          (entry) =>
+            entry.title.toLowerCase().includes(query) ||
+            (entry.category?.name ?? "").toLowerCase().includes(query)
+        )
+      }))
+      .filter((group) => group.entries.length > 0);
+  }, [shoppingGroups, searchQuery]);
 
   function handleUpdate(entry: ShoppingListEntry, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -145,9 +163,22 @@ export function ShoppingView({
         </form>
       </BottomSheet>
 
-      {shoppingGroups.length ? (
+      <form
+        className="ds-shopping-view__search"
+        role="search"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <SearchField
+          label="Поиск по покупкам"
+          placeholder="Найти покупку"
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+      </form>
+
+      {visibleGroups.length ? (
         <div className="ds-shopping-groups">
-          {shoppingGroups.map((group) => (
+          {visibleGroups.map((group) => (
             <section className="ds-shopping-group" key={group.id}>
               <div className="ds-product-list">
                 {group.entries.map((entry) =>
@@ -179,10 +210,16 @@ export function ShoppingView({
             </section>
           ))}
         </div>
+      ) : searchQuery.trim() ? (
+        <EmptyState
+          description="Попробуйте изменить запрос"
+          icon={Search}
+          title="Ничего не найдено"
+        />
       ) : (
         <EmptyState
           description="Добавьте разовые покупки или отметьте товары для покупки в категориях"
-          icon={ShoppingCart}
+          icon={ShoppingBasket}
           title="Список покупок пуст"
         />
       )}

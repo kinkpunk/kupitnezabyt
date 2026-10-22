@@ -9,10 +9,11 @@ import { Button } from "../ui/Button";
 export interface AppHeaderProps {
   menuOpen: boolean;
   menuActive: boolean;
+  title?: string | undefined;
   onMenuClick: () => void;
 }
 
-export function AppHeader({ menuOpen, menuActive, onMenuClick }: AppHeaderProps) {
+export function AppHeader({ menuOpen, menuActive, title, onMenuClick }: AppHeaderProps) {
   const headerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -47,9 +48,13 @@ export function AppHeader({ menuOpen, menuActive, onMenuClick }: AppHeaderProps)
     <header ref={headerRef} className="ds-app-header">
       <div className="ds-app-header__brand">
         <img alt="" className="ds-app-header__logo" src="/logo.png" />
-        <span className="ds-app-header__wordmark">
-          <BrandWord />
-        </span>
+        {title ? (
+          <h1 className="ds-app-header__title">{title}</h1>
+        ) : (
+          <span className="ds-app-header__wordmark">
+            <BrandWord />
+          </span>
+        )}
       </div>
       <div className="ds-app-header__actions">
         <Button

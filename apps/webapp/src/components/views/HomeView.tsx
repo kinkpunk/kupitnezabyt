@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, ShoppingCart } from "lucide-react";
+import { Calendar, ShoppingBasket } from "lucide-react";
 import React, { type MouseEvent } from "react";
 
 import { formatDate } from "../../lib/format";
@@ -222,7 +222,7 @@ export function HomeView({
         ) : (
           <EmptyState
             description="Нет товаров, которые нужно купить прямо сейчас"
-            icon={ShoppingCart}
+            icon={ShoppingBasket}
             title="Пока спокойно"
           />
         )}

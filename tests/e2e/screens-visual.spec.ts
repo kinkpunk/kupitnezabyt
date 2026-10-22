@@ -179,7 +179,11 @@ test.describe("Screens visual regression", () => {
 
   test("archive with category", async () => {
     await page.getByRole("button", { name: "Категории", exact: true }).click();
-    await page.locator(".ds-panel-header").getByRole("button", { name: "В архив" }).click();
+    await page.locator(".ds-panel-header").getByRole("button", { name: "Ещё" }).click();
+    await page
+      .getByRole("dialog", { name: "Действия с категорией" })
+      .getByRole("button", { name: "В архив" })
+      .click();
     // Архивная вкладка загружает данные один раз при открытии. Дожидаемся,
     // пока архивация завершится на сервере, иначе вкладка может прочитать
     // ещё не заархивированное состояние и не перечитать его повторно.

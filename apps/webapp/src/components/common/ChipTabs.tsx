@@ -91,6 +91,7 @@ export function ChipTabs({
               }
               key={item.id}
               role="tab"
+              title={item.warning ? "В категории есть товары, которых мало" : undefined}
               type="button"
               onClick={() => onSelect(item.id)}
             >

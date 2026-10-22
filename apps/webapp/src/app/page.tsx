@@ -78,6 +78,7 @@ export default function Home() {
         starterCategories={starterCategories}
         starterItemHints={starterItemHints}
         starterCategoryOptions={state.starterCategoryOptions}
+        onAdvanceToStarterItems={state.handleAdvanceToStarterItems}
         onFinish={state.handleFinishOnboarding}
       />
     );
@@ -271,6 +272,12 @@ export default function Home() {
     }
   }
 
+  const screenTitles: Partial<Record<typeof state.activeTab, string>> = {
+    home: "Главная",
+    items: "Категории",
+    shopping: "Покупки"
+  };
+
   return (
     <main className="app-shell">
       <AppHeader
@@ -280,6 +287,7 @@ export default function Home() {
           state.activeTab === "settings" ||
           state.activeTab === "archive"
         }
+        title={screenTitles[state.activeTab]}
         onMenuClick={() => state.setShowMenuSheet((current) => !current)}
       />
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />

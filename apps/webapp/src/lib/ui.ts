@@ -109,6 +109,39 @@ export const reminderSnoozeDays = 3;
 export const starterCategories = ["Еда", "Аптека", "Косметика", "Бытовая химия", "Дом"];
 export const starterItemHints = ["Кофе", "Ибупрофен", "Шампунь", "Стиральный порошок", "Рис"];
 
+export const starterItemPreferredCategories: Record<string, string> = {
+  Кофе: "Еда",
+  Ибупрофен: "Аптека",
+  Шампунь: "Косметика",
+  "Стиральный порошок": "Бытовая химия",
+  Рис: "Еда"
+};
+
+export type StarterItemDraft = { name: string; categoryName: string };
+
+export function resolveStarterItemCategories(
+  items: StarterItemDraft[],
+  options: string[]
+): StarterItemDraft[] {
+  if (!options.length) {
+    return items;
+  }
+
+  const used = new Set<string>();
+
+  return items.map((item) => {
+    const preferred =
+      starterItemPreferredCategories[item.name] ?? item.categoryName;
+    const fallback =
+      options.find((option) => !used.has(option)) ??
+      (options.includes(preferred) ? preferred : (options[0] ?? preferred));
+    const categoryName =
+      options.includes(preferred) && !used.has(preferred) ? preferred : fallback;
+    used.add(categoryName);
+    return { ...item, categoryName };
+  });
+}
+
 export type ThemeMode = "dark" | "light" | "system";
 
 export const themeModeLabels: Record<ThemeMode, string> = {

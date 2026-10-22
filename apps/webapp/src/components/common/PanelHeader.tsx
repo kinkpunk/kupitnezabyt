@@ -1,9 +1,10 @@
 "use client";
 
-import { Archive, Share2, SlidersHorizontal } from "lucide-react";
+import { Archive, MoreVertical, Share2, SlidersHorizontal } from "lucide-react";
 import React from "react";
 
 import { Button } from "../ui/Button";
+import { BottomSheet } from "./BottomSheet";
 
 export type CategoryStatusFilter = "all" | "in_stock" | "low" | "need_buy";
 
@@ -42,6 +43,7 @@ export function PanelHeader({
   archiveDisabled = false
 }: PanelHeaderProps) {
   const [expanded, setExpanded] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const allChips: FilterChip[] = [
     { id: "all", label: "Все", count: total },
     { id: "in_stock", label: "Есть", count: inStock, dot: "ok" },
@@ -62,16 +64,6 @@ export function PanelHeader({
           >
             Проверить
           </Button>
-          <button
-            aria-label="В архив"
-            className="ds-panel-header__archive"
-            disabled={archiveDisabled}
-            type="button"
-            onClick={onArchive}
-          >
-            <Archive aria-hidden="true" size={18} />
-            В архив
-          </button>
         </div>
         <div className="ds-panel-header__row-tools">
           {onShare ? (
@@ -90,6 +82,7 @@ export function PanelHeader({
             aria-label="Фильтры"
             className="ds-panel-header__toggle"
             size="compact"
+            title="Фильтры"
             variant="icon"
             onClick={() => setExpanded((current) => !current)}
           >
@@ -97,6 +90,17 @@ export function PanelHeader({
             {filter !== "all" ? (
               <span aria-hidden="true" className="ds-panel-header__toggle-dot" />
             ) : null}
+          </Button>
+          <Button
+            aria-expanded={menuOpen}
+            aria-label="Ещё"
+            disabled={archiveDisabled}
+            size="compact"
+            title="Ещё"
+            variant="icon"
+            onClick={() => setMenuOpen(true)}
+          >
+            <MoreVertical aria-hidden="true" size={18} />
           </Button>
         </div>
       </div>
@@ -129,6 +133,25 @@ export function PanelHeader({
           </div>
         </div>
       ) : null}
+      <BottomSheet
+        show={menuOpen}
+        title="Действия с категорией"
+        onClose={() => setMenuOpen(false)}
+      >
+        <div className="ds-bottom-sheet__actions">
+          <button
+            className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
+            type="button"
+            onClick={() => {
+              setMenuOpen(false);
+              onArchive();
+            }}
+          >
+            <Archive aria-hidden="true" size={18} />
+            В архив
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

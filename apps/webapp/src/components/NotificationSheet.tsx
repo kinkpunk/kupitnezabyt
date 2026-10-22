@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bell, ShoppingCart, Activity } from "lucide-react";
+import { Bell, ShoppingBasket, Activity } from "lucide-react";
 
 import { BottomSheet, EmptyState } from "./common";
 import { formatDate } from "../lib/format";
@@ -47,7 +47,7 @@ export function NotificationSheet({
                       onOpenShoppingEntry(entry);
                     }}
                   >
-                    <ShoppingCart aria-hidden="true" size={18} strokeWidth={2.25} />
+                    <ShoppingBasket aria-hidden="true" size={18} strokeWidth={2.25} />
                     <span className="ds-notification-action__text">
                       <span className="ds-notification-action__title">{entry.title}</span>
                       {entry.category?.name ? (

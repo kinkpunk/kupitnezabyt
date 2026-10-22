@@ -159,4 +159,22 @@ describe("LoginScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: "Продолжить через Telegram" }));
     expect(onContinueWithTelegram).toHaveBeenCalledOnce();
   });
+
+  it("shows the email divider when a provider button is present", () => {
+    render(<LoginScreen {...createProps()} />);
+    expect(screen.getByText("или email")).toBeInTheDocument();
+  });
+
+  it("hides the email divider when no alternative sign-in methods exist", () => {
+    render(
+      <LoginScreen
+        {...createProps({
+          telegramAvailable: false,
+          authProviders: { google: false, apple: false }
+        })}
+      />
+    );
+    expect(screen.queryByText("или email")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Получить ссылку" })).toBeInTheDocument();
+  });
 });

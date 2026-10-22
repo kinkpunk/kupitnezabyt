@@ -214,4 +214,34 @@ describe("ShoppingView", () => {
     fireEvent.click(screen.getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(trackedItem);
   });
+
+  it("renders a search field filtering entries by title", () => {
+    render(<ShoppingView {...createProps()} />);
+    const searchInput = screen.getByRole("searchbox", { name: "Поиск по покупкам" });
+    fireEvent.change(searchInput, { target: { value: "Хлеб" } });
+    expect(screen.getByText("Хлеб")).toBeInTheDocument();
+    expect(screen.queryByText("Молоко")).not.toBeInTheDocument();
+  });
+
+  it("filters entries by category name", () => {
+    render(<ShoppingView {...createProps()} />);
+    const searchInput = screen.getByRole("searchbox", { name: "Поиск по покупкам" });
+    fireEvent.change(searchInput, { target: { value: "еда" } });
+    expect(screen.getByText("Хлеб")).toBeInTheDocument();
+    expect(screen.getByText("Молоко")).toBeInTheDocument();
+  });
+
+  it("shows empty state when nothing matches the search query", () => {
+    render(<ShoppingView {...createProps()} />);
+    const searchInput = screen.getByRole("searchbox", { name: "Поиск по покупкам" });
+    fireEvent.change(searchInput, { target: { value: "несуществующее" } });
+    expect(screen.getByText("Ничего не найдено")).toBeInTheDocument();
+    expect(screen.queryByText("Хлеб")).not.toBeInTheDocument();
+  });
+
+  it("keeps empty list state when search query is empty", () => {
+    render(<ShoppingView {...createProps({ shoppingList: [], shoppingGroups: [] })} />);
+    expect(screen.getByText("Список покупок пуст")).toBeInTheDocument();
+    expect(screen.queryByText("Ничего не найдено")).not.toBeInTheDocument();
+  });
 });

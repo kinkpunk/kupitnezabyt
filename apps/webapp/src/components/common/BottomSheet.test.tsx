@@ -47,6 +47,28 @@ describe("BottomSheet", () => {
     expect(handleClose).toHaveBeenCalledOnce();
   });
 
+  it("calls onClose when Escape is pressed", () => {
+    const handleClose = vi.fn();
+    render(
+      <BottomSheet show title="Действия" onClose={handleClose}>
+        <p>Содержимое</p>
+      </BottomSheet>
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(handleClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not listen for Escape when hidden", () => {
+    const handleClose = vi.fn();
+    render(
+      <BottomSheet show={false} onClose={handleClose}>
+        <p>Содержимое</p>
+      </BottomSheet>
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(handleClose).not.toHaveBeenCalled();
+  });
+
   it("does not close when sheet content is clicked", () => {
     const handleClose = vi.fn();
     render(

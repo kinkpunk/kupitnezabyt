@@ -123,6 +123,8 @@ export function LoginScreen({
     isRequestingMagicLink ||
     isContinuingWithTelegram;
   const consentReady = !showLegalConsent || (termsAccepted && privacyAccepted);
+  const hasProviderButtons =
+    telegramAvailable || authProviders?.google !== false || authProviders?.apple !== false;
 
   return (
     <main className="app-shell ds-onboarding-shell">
@@ -178,11 +180,13 @@ export function LoginScreen({
             {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
           </Button>
         )}
-        <div className="ds-auth-divider">
-          <span />
-          <p className="eyebrow">или email</p>
-          <span />
-        </div>
+        {hasProviderButtons ? (
+          <div className="ds-auth-divider">
+            <span />
+            <p className="eyebrow">или email</p>
+            <span />
+          </div>
+        ) : null}
         <div className="ds-email-auth-box">
           <input
             aria-label="Email"

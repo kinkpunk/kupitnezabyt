@@ -5,10 +5,12 @@ import {
   Archive,
   ArrowDown,
   ArrowUp,
+  EyeOff,
   GripVertical,
   ListOrdered,
   Pencil,
-  Plus
+  Plus,
+  X
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
@@ -120,6 +122,7 @@ export function CategoriesView({
   isActionPending: (key: string) => boolean;
 }) {
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
+  const [activeRecommendationId, setActiveRecommendationId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [statusFilter, setStatusFilter] = useState<CategoryStatusFilter>("all");
 
@@ -134,6 +137,12 @@ export function CategoriesView({
   const sheetItemIndex = useMemo(
     () => (sheetItem ? visibleItems.findIndex((item) => item.id === sheetItem.id) : -1),
     [visibleItems, sheetItem]
+  );
+  const activeRecommendation = useMemo(
+    () =>
+      visibleRecommendations.find((recommendation) => recommendation.id === activeRecommendationId) ??
+      null,
+    [visibleRecommendations, activeRecommendationId]
   );
 
   const { inStockCount, needBuyCount, lowCount } = useMemo(
@@ -342,37 +351,15 @@ export function CategoriesView({
               <div className="recommendation-list">
                 {visibleRecommendations.map((recommendation) => (
                   <article className="recommendation-row" key={recommendation.id}>
-                    <div>
+                    <div className="recommendation-row__body">
                       <h3>{recommendation.suggestedItem}</h3>
                       <span>{recommendation.categoryHint ?? "Категория исходного товара"}</span>
                     </div>
-                    <div className="ds-shopping-actions">
-                      <button
-                        className="ds-button ds-button--ghost ds-button--compact"
-                        type="button"
-                        onClick={() =>
-                          void onDismissRecommendation(recommendation).catch((caughtError) =>
-                            setError(formatError(caughtError))
-                          )
-                        }
-                      >
-                        Не нужно
-                      </button>
-                      <button
-                        className="ds-button ds-button--ghost ds-button--compact"
-                        type="button"
-                        onClick={() =>
-                          void onHideSimilarRecommendations(recommendation).catch((caughtError) =>
-                            setError(formatError(caughtError))
-                          )
-                        }
-                      >
-                        Скрыть похожие
-                      </button>
-                      <button
-                        className="ds-button ds-button--primary ds-button--compact"
-                        type="button"
+                    <div className="recommendation-row__actions">
+                      <Button
+                        className="ds-button--compact"
                         disabled={isActionPending(`recommendation:add:${recommendation.id}`)}
+                        variant="primary"
                         onClick={() =>
                           void onAcceptRecommendation(recommendation).catch((caughtError) =>
                             setError(formatError(caughtError))
@@ -382,7 +369,10 @@ export function CategoriesView({
                         {isActionPending(`recommendation:add:${recommendation.id}`)
                           ? "Добавляем..."
                           : "Добавить"}
-                      </button>
+                      </Button>
+                      <ProductRowMoreButton
+                        onClick={() => setActiveRecommendationId(recommendation.id)}
+                      />
                     </div>
                   </article>
                 ))}
@@ -573,6 +563,43 @@ export function CategoriesView({
                 </>
               )}
             </div>
+          </BottomSheet>
+
+          <BottomSheet
+            show={activeRecommendation !== null}
+            title={activeRecommendation?.suggestedItem ?? ""}
+            onClose={() => setActiveRecommendationId(null)}
+          >
+            {activeRecommendation ? (
+              <div className="ds-bottom-sheet__actions">
+                <button
+                  className="ds-bottom-sheet__action"
+                  type="button"
+                  onClick={() => {
+                    void onDismissRecommendation(activeRecommendation).catch((caughtError) =>
+                      setError(formatError(caughtError))
+                    );
+                    setActiveRecommendationId(null);
+                  }}
+                >
+                  <X aria-hidden="true" size={18} />
+                  Не нужно
+                </button>
+                <button
+                  className="ds-bottom-sheet__action"
+                  type="button"
+                  onClick={() => {
+                    void onHideSimilarRecommendations(activeRecommendation).catch(
+                      (caughtError) => setError(formatError(caughtError))
+                    );
+                    setActiveRecommendationId(null);
+                  }}
+                >
+                  <EyeOff aria-hidden="true" size={18} />
+                  Скрыть похожие
+                </button>
+              </div>
+            ) : null}
           </BottomSheet>
         </>
       ) : (
