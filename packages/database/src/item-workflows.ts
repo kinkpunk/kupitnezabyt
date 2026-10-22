@@ -99,6 +99,67 @@ export async function markShoppingListItemBought(
   });
 }
 
+export async function reopenShoppingListItem(
+  tx: TransactionClient,
+  userId: string,
+  shoppingListItemId: string,
+  input: {
+    previousStatus?: ItemStatus | undefined;
+    previousLastBoughtAt?: Date | null | undefined;
+  },
+  now = new Date(),
+  workspaceId?: string
+): Promise<ShoppingListItem> {
+  const shoppingListItem = await tx.shoppingListItem.findFirst({
+    where: {
+      id: shoppingListItemId,
+      ...(workspaceId ? { workspaceId } : { userId }),
+      isCompleted: true
+    }
+  });
+
+  if (!shoppingListItem) {
+    throw new Error("SHOPPING_LIST_ITEM_NOT_FOUND");
+  }
+
+  const reopenedItem = await tx.shoppingListItem.update({
+    where: {
+      id: shoppingListItem.id
+    },
+    data: {
+      isCompleted: false,
+      completedAt: null
+    }
+  });
+
+  if (shoppingListItem.itemId && input.previousStatus) {
+    const item = await tx.item.findFirst({
+      where: {
+        id: shoppingListItem.itemId,
+        ...(workspaceId ? { workspaceId } : { userId }),
+        archivedAt: null
+      }
+    });
+
+    if (item) {
+      const updatedItem = await tx.item.update({
+        where: {
+          id: item.id
+        },
+        data: {
+          status: input.previousStatus,
+          lastBoughtAt: input.previousLastBoughtAt ?? null,
+          lastCheckedAt: now,
+          nextCheckAt: calculateNextCheckAt(input.previousStatus, now, item.usageCycleDays)
+        }
+      });
+      await syncShoppingListItem(tx, updatedItem, now);
+    }
+  }
+
+  return reopenedItem;
+}
+
 export async function upsertItemCheckReminder(
   tx: TransactionClient,
   input: {

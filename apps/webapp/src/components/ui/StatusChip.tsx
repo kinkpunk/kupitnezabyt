@@ -1,3 +1,6 @@
+"use client";
+
+import { ChevronsUpDown } from "lucide-react";
 import React, { type MouseEvent } from "react";
 
 import type { UiItemStatus } from "../../lib/ui";
@@ -25,6 +28,7 @@ export function StatusChip({ status, onCycle, disabled = false }: StatusChipProp
     >
       <span aria-hidden="true" className="ds-status-chip__dot" />
       <span className="ds-status-chip__label">{uiStatusLabels[status]}</span>
+      <ChevronsUpDown aria-hidden="true" className="ds-status-chip__cycle" size={13} />
     </button>
   );
 }

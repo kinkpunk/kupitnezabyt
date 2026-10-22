@@ -1,10 +1,13 @@
+import { isItemStatus } from "@kupitnezabyt/shared";
+import type { ItemStatus } from "@kupitnezabyt/shared";
 import { prisma } from "@kupitnezabyt/database";
 import type { FastifyInstance } from "fastify";
 
-import { markShoppingListItemBought } from "../services.js";
+import { markShoppingListItemBought, reopenShoppingListItem } from "../services.js";
 import {
   canWriteWorkspace,
   hasOwnProperty,
+  readNullableDate,
   readOptionalString,
   readRequiredString,
   requireUserId,
@@ -200,6 +203,83 @@ export default async function shoppingListRoutes(app: FastifyInstance) {
         return prisma.shoppingListItem.findUniqueOrThrow({
           where: {
             id: completedItem.id
+          },
+          include: {
+            category: true,
+            item: true
+          }
+        });
+      } catch (error) {
+        if (error instanceof Error && error.message === "SHOPPING_LIST_ITEM_NOT_FOUND") {
+          await sendError(
+            reply,
+            404,
+            "SHOPPING_LIST_ITEM_NOT_FOUND",
+            "Shopping list item was not found."
+          );
+          return;
+        }
+
+        throw error;
+      }
+    }
+  );
+
+  app.post<{ Params: { id: string } }>(
+    "/api/shopping-list/:id/reopen",
+    async (request, reply) => {
+      const userId = requireUserId(request.userId);
+      const workspaceAccess = await resolveWorkspaceAccess(request, userId);
+      if (!workspaceAccess) {
+        await sendError(
+          reply,
+          404,
+          "SHOPPING_LIST_ITEM_NOT_FOUND",
+          "Shopping list item was not found."
+        );
+        return;
+      }
+      if (!canWriteWorkspace(workspaceAccess)) {
+        await sendError(reply, 403, "WORKSPACE_WRITE_FORBIDDEN", "Workspace write access is required.");
+        return;
+      }
+
+      const body = (request.body ?? {}) as Record<string, unknown>;
+      const previousStatusValue = readOptionalString(body.previousStatus);
+      let previousStatus: ItemStatus | undefined;
+      if (previousStatusValue) {
+        if (!isItemStatus(previousStatusValue)) {
+          await sendError(reply, 400, "INVALID_ITEM_STATUS", "Invalid previous item status.");
+          return;
+        }
+        previousStatus = previousStatusValue;
+      }
+
+      const previousLastBoughtAt = hasOwnProperty(body, "previousLastBoughtAt")
+        ? readNullableDate(body.previousLastBoughtAt)
+        : { value: null, invalid: false };
+      if (previousLastBoughtAt.invalid) {
+        await sendError(reply, 400, "INVALID_DATE", "Invalid previousLastBoughtAt.");
+        return;
+      }
+
+      try {
+        const reopenedItem = await prisma.$transaction((tx) =>
+          reopenShoppingListItem(
+            tx,
+            userId,
+            request.params.id,
+            {
+              previousStatus,
+              previousLastBoughtAt: previousLastBoughtAt.value
+            },
+            new Date(),
+            workspaceAccess.workspaceId
+          )
+        );
+        return prisma.shoppingListItem.findUniqueOrThrow({
+          where: {
+            id: reopenedItem.id
           },
           include: {
             category: true,

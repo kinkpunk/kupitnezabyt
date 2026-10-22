@@ -499,12 +499,29 @@ GET /api/shopping-list
 POST /api/shopping-list
 PATCH /api/shopping-list/:id
 POST /api/shopping-list/:id/complete
+POST /api/shopping-list/:id/reopen
 DELETE /api/shopping-list/:id
 DELETE /api/shopping-list/completed
 ```
 
 Completing a shopping list entry linked to an item marks the entry completed and
 sets the item back to `IN_STOCK`.
+
+Reopening a completed entry reverses the completion ("undo bought"). The client
+passes the item state captured before completion:
+
+```json
+{
+  "previousStatus": "LOW",
+  "previousLastBoughtAt": "2026-06-21T10:00:00.000Z"
+}
+```
+
+Both fields are optional. `previousStatus` must be a valid item status. The
+entry becomes active again (`isCompleted: false`, `completedAt: null`); when the
+entry is linked to an item and `previousStatus` is provided, the item status,
+`lastBoughtAt` and `nextCheckAt` are restored accordingly. Reopening an entry
+that is not completed returns `404` with `SHOPPING_LIST_ITEM_NOT_FOUND`.
 
 Manual entries are created without `itemId`:
 

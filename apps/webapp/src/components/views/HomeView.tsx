@@ -8,6 +8,7 @@ import { reminderEntityLabels } from "../../lib/ui";
 import type { Category, CheckSession, InAppReminder, Item, ShoppingListEntry } from "../../lib/types";
 import { EmptyState, ProductRow, SectionHeader } from "../common";
 import { Button } from "../ui/Button";
+import { PurchaseCheckbox } from "../ui/PurchaseCheckbox";
 
 export function HomeView({
   items,
@@ -40,8 +41,7 @@ export function HomeView({
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
-  function handleMarkBought(event: MouseEvent<HTMLButtonElement>, item: Item) {
-    event.stopPropagation();
+  function handleMarkBought(item: Item) {
     void onSetStatus(item, "IN_STOCK");
   }
 
@@ -133,7 +133,7 @@ export function HomeView({
           key: "categories",
           label: "Категории",
           count: categoryReminderCount,
-          tone: "brand"
+          tone: "check"
         }
       ]
     }
@@ -208,14 +208,10 @@ export function HomeView({
               <ProductRow
                 key={item.id}
                 actions={
-                  <Button
-                    disabled={isActionPending(`item:status:${item.id}`)}
-                    size="compact"
-                    variant="primary"
-                    onClick={(event) => handleMarkBought(event, item)}
-                  >
-                    {isActionPending(`item:status:${item.id}`) ? "Отмечаем..." : "Куплено"}
-                  </Button>
+                  <PurchaseCheckbox
+                    pending={isActionPending(`item:status:${item.id}`)}
+                    onMark={() => handleMarkBought(item)}
+                  />
                 }
                 subtitle={item.category?.name}
                 title={item.name}

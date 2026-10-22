@@ -1,12 +1,13 @@
 "use client";
 
-import { Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { Archive, Pencil, Plus, ShoppingCart, Trash2 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 import { formatError } from "../../lib/format";
-import type { Category, ShoppingListEntry } from "../../lib/types";
+import type { Category, Item, ShoppingListEntry } from "../../lib/types";
 import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton } from "../common";
 import { Button } from "../ui/Button";
+import { PurchaseCheckbox } from "../ui/PurchaseCheckbox";
 
 export function ShoppingView({
   shoppingList,
@@ -26,6 +27,8 @@ export function ShoppingView({
   onUpdateManualShoppingItem,
   onDeleteManualShoppingItem,
   onCompleteShoppingListItem,
+  onEditItemEntry,
+  onArchiveItem,
   setError,
   isActionPending
 }: {
@@ -46,6 +49,8 @@ export function ShoppingView({
   onUpdateManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onDeleteManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onCompleteShoppingListItem: (entry: ShoppingListEntry) => Promise<void>;
+  onEditItemEntry: (item: Item) => void;
+  onArchiveItem: (item: Item) => Promise<void>;
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
 }) {
@@ -69,6 +74,14 @@ export function ShoppingView({
     void onCompleteShoppingListItem(entry).catch((caughtError) => setError(formatError(caughtError)));
   }
 
+  function handleArchive(entry: ShoppingListEntry) {
+    if (!entry.item) {
+      return;
+    }
+    void onArchiveItem(entry.item).catch((caughtError) => setError(formatError(caughtError)));
+    setActiveEntryId(null);
+  }
+
   function getEntrySubtitle(entry: ShoppingListEntry): string {
     return entry.category?.name ?? (entry.itemId ? "Отслеживаемый товар" : "Разовая позиция");
   }
@@ -76,18 +89,12 @@ export function ShoppingView({
   function renderEntryActions(entry: ShoppingListEntry) {
     return (
       <div className="ds-shopping-actions">
-        <Button
-          size="compact"
-          variant="primary"
-          disabled={isActionPending(`shopping:bought:${entry.id}`)}
-          onClick={() => handleComplete(entry)}
-        >
-          {isActionPending(`shopping:bought:${entry.id}`) ? "Отмечаем..." : "Куплено"}
-        </Button>
+        <PurchaseCheckbox
+          pending={isActionPending(`shopping:bought:${entry.id}`)}
+          onMark={() => handleComplete(entry)}
+        />
         <span className="ds-shopping-actions__more">
-          {entry.itemId ? null : (
-            <ProductRowMoreButton onClick={() => setActiveEntryId(entry.id)} />
-          )}
+          <ProductRowMoreButton onClick={() => setActiveEntryId(entry.id)} />
         </span>
       </div>
     );
@@ -200,6 +207,11 @@ export function ShoppingView({
               className="ds-bottom-sheet__action"
               type="button"
               onClick={() => {
+                if (activeEntry.item) {
+                  onEditItemEntry(activeEntry.item);
+                  setActiveEntryId(null);
+                  return;
+                }
                 setEditingShoppingId(activeEntry.id);
                 setEditingShoppingTitle(activeEntry.title);
                 setActiveEntryId(null);
@@ -208,14 +220,25 @@ export function ShoppingView({
               <Pencil aria-hidden="true" size={18} />
               Редактировать
             </button>
-            <button
-              className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
-              type="button"
-              onClick={() => handleDelete(activeEntry)}
-            >
-              <Trash2 aria-hidden="true" size={18} />
-              Удалить
-            </button>
+            {activeEntry.item ? (
+              <button
+                className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
+                type="button"
+                onClick={() => handleArchive(activeEntry)}
+              >
+                <Archive aria-hidden="true" size={18} />
+                В архив
+              </button>
+            ) : (
+              <button
+                className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
+                type="button"
+                onClick={() => handleDelete(activeEntry)}
+              >
+                <Trash2 aria-hidden="true" size={18} />
+                Удалить
+              </button>
+            )}
           </div>
         ) : null}
       </BottomSheet>

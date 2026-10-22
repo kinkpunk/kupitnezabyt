@@ -37,10 +37,16 @@ declare global {
         themeParams?: TelegramThemeParams;
         ready?: () => void;
         expand?: () => void;
+        HapticFeedback?: TelegramHapticFeedback;
       };
     };
   }
 }
+
+type TelegramHapticFeedback = {
+  impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
+  notificationOccurred?: (type: "error" | "success" | "warning") => void;
+};
 
 const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const tokenStorageKey = "kupitnezabyt.token";
@@ -616,6 +622,17 @@ export function completeShoppingListItem(
   shoppingListItemId: string
 ): Promise<ShoppingListEntry> {
   return post<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}/complete`, token, {});
+}
+
+export function reopenShoppingListItem(
+  token: string,
+  shoppingListItemId: string,
+  input: {
+    previousStatus?: ItemStatus | undefined;
+    previousLastBoughtAt?: string | null | undefined;
+  }
+): Promise<ShoppingListEntry> {
+  return post<ShoppingListEntry>(`/api/shopping-list/${shoppingListItemId}/reopen`, token, input);
 }
 
 export function deleteShoppingListItem(

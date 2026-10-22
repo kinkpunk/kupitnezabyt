@@ -13,6 +13,7 @@ import {
   completeCheckSession,
   completeOnboarding,
   completeShoppingListItem,
+  reopenShoppingListItem,
   consumeInvitationAcceptedToast,
   createCategory,
   createItem,
@@ -66,7 +67,7 @@ import {
   clearSavedToken
 } from "../lib/api";
 import type { CategorySortMode } from "../lib/api";
-import { calculateSnoozedAt, formatError } from "../lib/format";
+import { calculateSnoozedAt, formatDate, formatError } from "../lib/format";
 import {
   onboardingStorageKey,
   reminderSnoozeDays,
@@ -198,6 +199,7 @@ export function useAppState() {
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastAction, setToastAction] = useState<{ label: string; run: () => void } | null>(null);
   const [showMenuSheet, setShowMenuSheet] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
@@ -301,15 +303,6 @@ export function useAppState() {
   const consentReady = !showLegalConsent || (termsAccepted && privacyAccepted);
 
   useEffect(() => {
-    if (!toastMessage) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(() => setToastMessage(null), 4000);
-    return () => window.clearTimeout(timeoutId);
-  }, [toastMessage]);
-
-  useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
     function handleSystemThemeChange(event: MediaQueryListEvent) {
@@ -367,7 +360,7 @@ export function useAppState() {
         }
 
         if (consumeInvitationAcceptedToast()) {
-          setToastMessage("Приглашение принято — вы переключены на общий список.");
+          showToastMessage("Приглашение принято — вы переключены на общий список.");
         }
 
         await completeSignIn(loginResult.token, loginResult.consentRecorded);
@@ -669,7 +662,10 @@ export function useAppState() {
       await refreshActiveData(token);
       await refreshRecommendations(token, updatedItem);
       if (status === "IN_STOCK" && item.status !== "IN_STOCK") {
-        showBoughtToast(item.name);
+        const previousStatus = item.status;
+        showBoughtToast(item.name, () => {
+          void handleSetStatus(item, previousStatus);
+        });
       }
     } finally {
       setPendingAction(actionKey, false);
@@ -792,7 +788,34 @@ export function useAppState() {
       if (completedEntry.item) {
         await refreshRecommendations(token, completedEntry.item);
       }
-      showBoughtToast(entry.title);
+      const previousStatus = entry.item?.status;
+      const previousLastBoughtAt = entry.item?.lastBoughtAt;
+      showBoughtToast(entry.title, () => {
+        void undoCompleteShoppingListItem(entry.id, previousStatus, previousLastBoughtAt);
+      });
+    } finally {
+      setPendingAction(actionKey, false);
+    }
+  }
+
+  async function undoCompleteShoppingListItem(
+    shoppingListItemId: string,
+    previousStatus?: ItemStatus,
+    previousLastBoughtAt?: string | null
+  ) {
+    if (!token) {
+      return;
+    }
+
+    const actionKey = `shopping:reopen:${shoppingListItemId}`;
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      await reopenShoppingListItem(token, shoppingListItemId, {
+        previousStatus,
+        previousLastBoughtAt
+      });
+      await refreshActiveData(token);
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -902,8 +925,19 @@ export function useAppState() {
     });
   }
 
-  function showBoughtToast(title: string) {
-    setToastMessage(`${title} отмечено купленным`);
+  function showToastMessage(message: string) {
+    setToastAction(null);
+    setToastMessage(message);
+  }
+
+  function showBoughtToast(title: string, onUndo?: () => void) {
+    setToastAction(onUndo ? { label: "Отменить", run: onUndo } : null);
+    setToastMessage(`${title} — куплено`);
+  }
+
+  function dismissToast() {
+    setToastAction(null);
+    setToastMessage(null);
   }
 
   function isActionPending(key: string): boolean {
@@ -942,7 +976,7 @@ export function useAppState() {
       }
 
       await refreshActiveData(token);
-      setToastMessage(`Проверка «${reminder.title}» отложена`);
+      showToastMessage(`Отложено до ${formatDate(calculateSnoozedAt(days))}`);
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -1262,6 +1296,15 @@ export function useAppState() {
   function handleSelectCategory(categoryId: string) {
     clearSearchSession();
     setSelectedCategoryId(categoryId);
+    setActiveTab("items");
+  }
+
+  function handleEditShoppingEntryItem(item: Item) {
+    clearSearchSession();
+    setSelectedCategoryId(item.categoryId);
+    setEditingItemId(item.id);
+    setEditingItemName(item.name);
+    setEditingItemImportance(item.importance);
     setActiveTab("items");
   }
 
@@ -1609,7 +1652,8 @@ export function useAppState() {
     telegramAvailable,
     authProviders,
     toastMessage,
-    setToastMessage,
+    toastAction,
+    dismissToast,
     handleRequestMagicLink,
     handleStartGoogleSignIn,
     handleStartAppleSignIn,
@@ -1759,6 +1803,7 @@ export function useAppState() {
     handleOpenActivity,
     toggleTheme,
     handleSelectCategory,
+    handleEditShoppingEntryItem,
     handleSelectWorkspace,
     handleCreateWorkspaceInvitation,
     handleRevokeWorkspaceInvitation,

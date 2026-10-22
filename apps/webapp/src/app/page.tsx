@@ -181,6 +181,8 @@ export default function Home() {
             onUpdateManualShoppingItem={state.handleUpdateManualShoppingItem}
             onDeleteManualShoppingItem={state.handleDeleteManualShoppingItem}
             onCompleteShoppingListItem={state.handleCompleteShoppingListItem}
+            onEditItemEntry={state.handleEditShoppingEntryItem}
+            onArchiveItem={state.handleArchiveItem}
             setError={state.setError}
             isActionPending={state.isActionPending}
           />
@@ -281,7 +283,12 @@ export default function Home() {
         onMenuClick={() => state.setShowMenuSheet((current) => !current)}
       />
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
-      <ToastNotice message={state.toastMessage} onClose={() => state.setToastMessage(null)} />
+      <ToastNotice
+        message={state.toastMessage}
+        actionLabel={state.toastAction?.label}
+        onAction={state.toastAction?.run}
+        onClose={state.dismissToast}
+      />
 
       <div className="main-content">{renderActiveView()}</div>
 

@@ -19,6 +19,11 @@
   --ds-status-warn-soft: #e5b04c1f;
   --ds-status-bad: #b53a36;
   --ds-status-bad-soft: #e26d681f;
+  --ds-status-check: #33628f;
+  --ds-status-check-soft: #7aa7d91f;
+
+  /* Layout */
+  --ds-bottom-nav-height: 65px; /* 1px border + 8px padding + 48px button + 8px padding */
 
   /* Convenience aliases */
   --background: var(--ds-bg-base);
@@ -93,6 +98,8 @@
     --ds-status-warn-soft: #e5b04c26;
     --ds-status-bad: #e26d68;
     --ds-status-bad-soft: #e26d6826;
+    --ds-status-check: #7aa7d9;
+    --ds-status-check-soft: #7aa7d926;
     --shadow: none;
   }
 }
@@ -112,6 +119,8 @@
   --ds-status-warn-soft: #e5b04c26;
   --ds-status-bad: #e26d68;
   --ds-status-bad-soft: #e26d6826;
+  --ds-status-check: #7aa7d9;
+  --ds-status-check-soft: #7aa7d926;
   --shadow: none;
 }
 
@@ -235,7 +244,7 @@ select {
 .toast-notice {
   position: fixed;
   right: max(16px, calc((100vw - 560px) / 2 + 16px));
-  bottom: calc(16px + env(safe-area-inset-bottom));
+  bottom: calc(var(--ds-bottom-nav-height) + 12px + env(safe-area-inset-bottom));
   left: max(16px, calc((100vw - 560px) / 2 + 16px));
   z-index: 10;
   display: flex;
@@ -267,6 +276,24 @@ select {
   font-size: 13px;
   font-weight: var(--font-weight-semibold);
   cursor: pointer;
+}
+
+.toast-notice__action {
+  flex: 0 0 auto;
+  min-height: 34px;
+  margin-left: auto;
+  border: 1px solid color-mix(in srgb, var(--color-success) 45%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-success) 12%, var(--surface));
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.toast-notice__action:not(:disabled):hover {
+  border-color: var(--color-success);
 }
 
 .toast-notice__close:not(:disabled):hover {
@@ -468,7 +495,8 @@ select {
   justify-content: center;
   height: 32px;
   min-height: 32px;
-  min-width: 78px;
+  /* Фиксированная ширина: статусы не прыгают по ширине между строками. */
+  width: 92px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 9px;
@@ -495,7 +523,13 @@ select {
 }
 
 .ds-status-chip:not(:disabled):active {
+  background: color-mix(in srgb, currentColor 14%, transparent);
   transform: scale(0.97);
+}
+
+.ds-status-chip__cycle {
+  flex: 0 0 auto;
+  opacity: 0.55;
 }
 
 .ds-status-chip__dot {
@@ -1382,6 +1416,59 @@ select {
   height: 34px;
 }
 
+.ds-purchase-checkbox {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ds-text-2);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-purchase-checkbox:disabled {
+  cursor: default;
+}
+
+.ds-purchase-checkbox__box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--ds-brand);
+  border-radius: 6px;
+  transition: background-color 120ms ease-out, transform 120ms ease-out;
+}
+
+.ds-purchase-checkbox:not(:disabled):active .ds-purchase-checkbox__box {
+  background: var(--ds-brand);
+  transform: scale(0.9);
+}
+
+.ds-purchase-checkbox__label {
+  white-space: nowrap;
+}
+
+.ds-purchase-checkbox__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ds-brand);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: ds-purchase-checkbox-spin 0.8s linear infinite;
+}
+
+@keyframes ds-purchase-checkbox-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .ds-product-row__actions {
   flex-wrap: wrap;
 }
@@ -1503,8 +1590,8 @@ select {
   color: var(--ds-status-warn);
 }
 
-.ds-home-summary__metric-value--brand {
-  color: var(--ds-brand);
+.ds-home-summary__metric-value--check {
+  color: var(--ds-status-check);
 }
 
 .ds-home-summary__metric-dot {
@@ -1522,8 +1609,8 @@ select {
   background: var(--ds-status-warn);
 }
 
-.ds-home-summary__metric-dot--brand {
-  background: var(--ds-brand);
+.ds-home-summary__metric-dot--check {
+  background: var(--ds-status-check);
 }
 
 .ds-home-summary__metric-dot--ok {

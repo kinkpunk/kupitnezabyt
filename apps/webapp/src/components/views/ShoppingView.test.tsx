@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Category, ShoppingListEntry } from "../../lib/types";
+import type { Category, Item, ShoppingListEntry } from "../../lib/types";
 import { ShoppingView } from "./ShoppingView";
 
 const category: Category = {
@@ -27,13 +27,32 @@ const manualEntry: ShoppingListEntry = {
   item: null
 };
 
+const trackedItem: Item = {
+  id: "item-1",
+  userId: "user-1",
+  categoryId: "cat-1",
+  name: "Молоко",
+  brand: null,
+  notes: null,
+  status: "LOW",
+  importance: "NORMAL",
+  usageCycleDays: 7,
+  reminderEnabled: false,
+  sortOrder: 0,
+  lastCheckedAt: null,
+  lastBoughtAt: null,
+  nextCheckAt: null,
+  archivedAt: null,
+  category
+};
+
 const trackedEntry: ShoppingListEntry = {
   id: "entry-2",
   title: "Молоко",
   itemId: "item-1",
   categoryId: "cat-1",
   category,
-  item: null
+  item: trackedItem
 };
 
 function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView>> = {}) {
@@ -55,6 +74,8 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
     onUpdateManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onDeleteManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onCompleteShoppingListItem: vi.fn().mockResolvedValue(undefined),
+    onEditItemEntry: vi.fn(),
+    onArchiveItem: vi.fn().mockResolvedValue(undefined),
     setError: vi.fn(),
     isActionPending: vi.fn().mockReturnValue(false),
     ...overrides
@@ -165,16 +186,32 @@ describe("ShoppingView", () => {
     expect(onUpdateManualShoppingItem).toHaveBeenCalledWith(manualEntry);
   });
 
-  it("does not render more button for tracked entries", () => {
+  it("renders more button for tracked entries", () => {
     render(<ShoppingView {...createProps({ shoppingList: [trackedEntry], shoppingGroups: [{ id: "g1", title: "Список", entries: [trackedEntry] }] })} />);
-    expect(screen.queryByRole("button", { name: "Ещё" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ещё" })).toBeInTheDocument();
   });
 
-  it("reserves an empty more-button slot for tracked entries to keep the bought button aligned", () => {
-    const { container } = render(<ShoppingView {...createProps()} />);
-    const slots = container.querySelectorAll(".ds-shopping-actions__more");
-    expect(slots).toHaveLength(2);
-    expect(slots[0]!.querySelector("button")).not.toBeNull();
-    expect(slots[1]!.querySelector("button")).toBeNull();
+  it("shows edit and archive actions for tracked entries", async () => {
+    const onEditItemEntry = vi.fn();
+    const onArchiveItem = vi.fn().mockResolvedValue(undefined);
+    render(<ShoppingView {...createProps({ onEditItemEntry, onArchiveItem })} />);
+    const moreButtons = screen.getAllByRole("button", { name: "Ещё" });
+    fireEvent.click(moreButtons[1]!);
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: "Редактировать" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Удалить" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Редактировать" }));
+    expect(onEditItemEntry).toHaveBeenCalledWith(trackedItem);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Ещё" })[1]!);
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "В архив" }));
+    expect(onArchiveItem).toHaveBeenCalledWith(trackedItem);
   });
 });

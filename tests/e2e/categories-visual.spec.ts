@@ -103,6 +103,9 @@ test.describe("Categories screen visual regression", () => {
     await expect(page.getByText("Хлеб", { exact: true })).toBeVisible();
     await expect(page.getByText("Сыр", { exact: true })).toBeVisible();
 
+    // Тост «Сыр — куплено» живёт 3.5 с — дожидаемся автоскрытия, чтобы снапшот был стабилен.
+    await expect(page.locator(".toast-notice")).toHaveCount(0);
+
     // Подписи «Проверено <дата>» зависят от текущего дня — исключаем их из сравнения.
     await expect(page).toHaveScreenshot("categories-statuses.png", {
       mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]

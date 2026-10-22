@@ -23,6 +23,7 @@ const mockPrisma = vi.hoisted(() => ({
 }));
 
 const mockMarkShoppingListItemBought = vi.hoisted(() => vi.fn());
+const mockReopenShoppingListItem = vi.hoisted(() => vi.fn());
 
 const mockTx = vi.hoisted(() => ({
   category: {
@@ -53,6 +54,7 @@ vi.mock("@kupitnezabyt/database", () => ({
   getPersonalWorkspaceId: (userId: string) => `workspace_${userId}`,
   markShoppingListItemBought: mockMarkShoppingListItemBought,
   prisma: mockPrisma,
+  reopenShoppingListItem: mockReopenShoppingListItem,
   setItemStatus: vi.fn(),
   upsertItemCheckReminder: vi.fn()
 }));
@@ -452,6 +454,110 @@ describe("archive routes", () => {
       include: {
         category: true,
         item: true
+      }
+    });
+
+    await app.close();
+  });
+
+  it("reopens a completed shopping entry and restores the previous item state", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockReopenShoppingListItem.mockResolvedValue({ id: "shopping-1" });
+    mockPrisma.shoppingListItem.findUniqueOrThrow.mockResolvedValue({
+      id: "shopping-1",
+      isCompleted: false,
+      item: {
+        id: "item-1",
+        name: "Кофе",
+        status: "LOW"
+      }
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/shopping-list/shopping-1/reopen",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        previousStatus: "LOW",
+        previousLastBoughtAt: "2026-06-21T10:00:00.000Z"
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().item).toMatchObject({
+      id: "item-1",
+      status: "LOW"
+    });
+    expect(mockReopenShoppingListItem).toHaveBeenCalledWith(
+      mockTx,
+      "user-1",
+      "shopping-1",
+      {
+        previousStatus: "LOW",
+        previousLastBoughtAt: new Date("2026-06-21T10:00:00.000Z")
+      },
+      expect.any(Date),
+      "workspace_user-1"
+    );
+
+    await app.close();
+  });
+
+  it("rejects reopening with an invalid previous status", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/shopping-list/shopping-1/reopen",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      },
+      payload: {
+        previousStatus: "UNKNOWN"
+      }
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "INVALID_ITEM_STATUS"
+      }
+    });
+    expect(mockReopenShoppingListItem).not.toHaveBeenCalled();
+
+    await app.close();
+  });
+
+  it("returns 404 when reopening a shopping entry that is not completed", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
+    mockReopenShoppingListItem.mockRejectedValue(
+      new Error("SHOPPING_LIST_ITEM_NOT_FOUND")
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/shopping-list/shopping-1/reopen",
+      headers: {
+        authorization: `Bearer ${createToken(signToken)}`
+      }
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({
+      error: {
+        code: "SHOPPING_LIST_ITEM_NOT_FOUND"
       }
     });
 
