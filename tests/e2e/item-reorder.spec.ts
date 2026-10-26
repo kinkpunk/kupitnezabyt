@@ -38,7 +38,7 @@ test("browser user can reorder items within a category", async ({ page, request 
 
   await page.getByRole("button", { name: "Новая" }).click();
   await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await page.getByRole("button", { name: "Добавить товар" }).click();

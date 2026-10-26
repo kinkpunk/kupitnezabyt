@@ -26,6 +26,7 @@ export function ChipTabs({
   trailing = null
 }: ChipTabsProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [hasHiddenBefore, setHasHiddenBefore] = useState(false);
   const [hasHiddenAfter, setHasHiddenAfter] = useState(false);
 
@@ -77,10 +78,39 @@ export function ChipTabs({
     .filter(Boolean)
     .join(" ");
 
+  function handleTabKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
+    if (items.length === 0) {
+      return;
+    }
+
+    let nextIndex: number | null = null;
+    if (event.key === "ArrowRight") {
+      nextIndex = (index + 1) % items.length;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + items.length) % items.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = items.length - 1;
+    }
+
+    if (nextIndex === null) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextItem = items[nextIndex];
+    if (!nextItem) {
+      return;
+    }
+    onSelect(nextItem.id);
+    tabRefs.current[nextIndex]?.focus();
+  }
+
   return (
     <div className={wrapClassName}>
       <div aria-label={ariaLabel} className="ds-category-tabs" ref={scrollRef} role="tablist">
-        {items.map((item) => {
+        {items.map((item, index) => {
           const isActive = selectedId === item.id;
 
           return (
@@ -91,9 +121,14 @@ export function ChipTabs({
               }
               key={item.id}
               role="tab"
+              tabIndex={isActive ? 0 : -1}
               title={item.warning ? "В категории есть товары, которых мало" : undefined}
               type="button"
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
               onClick={() => onSelect(item.id)}
+              onKeyDown={(event) => handleTabKeyDown(event, index)}
             >
               <span>{item.label}</span>
               {item.warning ? (

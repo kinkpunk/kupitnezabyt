@@ -43,7 +43,7 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
 
   await page.getByRole("button", { name: "Новая" }).click();
   await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await page.getByRole("button", { name: "Добавить товар" }).click();
@@ -57,7 +57,7 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await mainNavigation.getByRole("button", { name: "Покупки" }).click();
   const shoppingRow = page.locator(".ds-product-row").filter({ hasText: itemName });
   await expect(shoppingRow).toBeVisible();
-  await shoppingRow.getByRole("button", { name: "Куплено" }).click();
+  await shoppingRow.getByRole("checkbox", { name: "Куплено" }).click();
   await expect(shoppingRow).toHaveCount(0);
 
   const searchBox = page.getByRole("searchbox", { name: "Поиск" });

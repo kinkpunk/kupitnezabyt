@@ -65,6 +65,7 @@ export function OnboardingModal({
                 const isSelected = selectedStarterCategories.includes(name);
                 return (
                   <button
+                    aria-pressed={isSelected}
                     className={isSelected ? "ds-choice ds-choice--active" : "ds-choice"}
                     key={name}
                     type="button"

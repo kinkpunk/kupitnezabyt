@@ -61,6 +61,7 @@ export function MenuSheet({
           return (
             <button
               key={item.id}
+              aria-current={isActive ? "page" : undefined}
               className={
                 isActive
                   ? "ds-bottom-sheet__action ds-bottom-sheet__action--active"

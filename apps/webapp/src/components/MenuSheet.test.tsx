@@ -35,6 +35,8 @@ describe("MenuSheet", () => {
     render(<MenuSheet {...createProps()} />);
     expect(screen.getByLabelText("Активный список")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Настройки" })).toHaveClass("ds-bottom-sheet__action--active");
+    expect(screen.getByRole("button", { name: "Настройки" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "Архив" })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("button", { name: "Активность" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Архив" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Покупки" })).not.toBeInTheDocument();

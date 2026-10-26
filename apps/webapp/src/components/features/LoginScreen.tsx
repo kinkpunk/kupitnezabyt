@@ -189,6 +189,9 @@ export function LoginScreen({
         ) : null}
         <div className="ds-email-auth-box">
           <input
+            id="login-email"
+            aria-describedby={emailAuthMessage ? "login-email-error" : undefined}
+            aria-invalid={Boolean(emailAuthMessage)}
             aria-label="Email"
             autoComplete="email"
             disabled={isBusy}
@@ -209,7 +212,11 @@ export function LoginScreen({
             {isRequestingMagicLink ? "Отправляем..." : "Получить ссылку"}
           </Button>
         </div>
-        {emailAuthMessage ? <p className="ds-auth-success">{emailAuthMessage}</p> : null}
+        {emailAuthMessage ? (
+          <p id="login-email-error" className="ds-auth-success">
+            {emailAuthMessage}
+          </p>
+        ) : null}
         {devMagicLink ? (
           <a className="ds-dev-magic-link" href={devMagicLink}>
             Открыть dev magic link

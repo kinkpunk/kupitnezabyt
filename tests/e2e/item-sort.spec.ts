@@ -39,7 +39,7 @@ test("browser user can sort category items by status", async ({ page, request },
 
   await page.getByRole("button", { name: "Новая" }).click();
   await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 
   // Create items in an order that does not match status sorting. The status

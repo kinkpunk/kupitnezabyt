@@ -57,7 +57,7 @@ describe("ProductRow", () => {
     expect(handleStatusClick).toHaveBeenCalledOnce();
   });
 
-  it("calls onClick when row is pressed", () => {
+  it("calls onClick when title is pressed", () => {
     const handleClick = vi.fn();
     render(
       <ProductRow
@@ -67,6 +67,28 @@ describe("ProductRow", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Сыр" }));
     expect(handleClick).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the row wrapper free of button semantics and nesting", () => {
+    render(
+      <ProductRow
+        title="Сыр"
+        status="ok"
+        onStatusClick={vi.fn()}
+        onClick={vi.fn()}
+      />
+    );
+    const row = document.querySelector(".ds-product-row");
+    expect(row).not.toBeNull();
+    expect(row).not.toHaveAttribute("role", "button");
+    expect(row).not.toHaveAttribute("tabindex");
+    expect(row?.querySelector(".ds-product-row__title")?.tagName).toBe("BUTTON");
+  });
+
+  it("renders title as plain text when onClick is not provided", () => {
+    render(<ProductRow title="Сыр" />);
+    expect(screen.queryByRole("button", { name: "Сыр" })).not.toBeInTheDocument();
+    expect(screen.getByText("Сыр")).toBeInTheDocument();
   });
 
   it("renders custom actions", () => {

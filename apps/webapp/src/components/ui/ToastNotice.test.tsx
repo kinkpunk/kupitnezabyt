@@ -61,7 +61,7 @@ describe("ToastNotice", () => {
     const handleClose = vi.fn();
     const { rerender } = render(<ToastNotice message="Кофе — куплено" onClose={handleClose} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Закрыть уведомление" }));
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
     expect(handleClose).toHaveBeenCalledOnce();
 
     rerender(<ToastNotice message={null} onClose={handleClose} />);

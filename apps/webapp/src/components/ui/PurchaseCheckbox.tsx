@@ -32,6 +32,8 @@ export function PurchaseCheckbox({
       type="button"
       className="ds-purchase-checkbox"
       disabled={pending}
+      role="checkbox"
+      aria-checked={false}
       aria-label={pending ? pendingLabel : label}
       onClick={handleClick}
     >

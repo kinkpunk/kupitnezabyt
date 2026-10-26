@@ -38,6 +38,19 @@ describe("OnboardingModal", () => {
     expect(screen.getByRole("button", { name: "Еда" })).toBeInTheDocument();
   });
 
+  it("exposes selection state via aria-pressed on choice buttons", () => {
+    render(
+      <OnboardingModal
+        {...createProps({ onboardingStep: 1, selectedStarterCategories: ["Еда"] })}
+      />
+    );
+    expect(screen.getByRole("button", { name: "Еда" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Аптека" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
   it("toggles starter category selection", () => {
     const setSelectedStarterCategories = vi.fn();
     render(

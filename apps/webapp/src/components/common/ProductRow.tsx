@@ -28,33 +28,25 @@ export function ProductRow({
   onClick,
   reorderHandle = false
 }: ProductRowProps) {
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (onClick) {
-      event.preventDefault();
-      onClick();
-    }
-  };
-
   return (
-    <div
-      className="ds-product-row"
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={handleClick}
-      onKeyDown={(event) => {
-        if (onClick && (event.key === "Enter" || event.key === " ")) {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-    >
+    <div className="ds-product-row">
       {reorderHandle ? (
         <span className="ds-product-row__reorder" aria-hidden="true">
           <GripVertical size={18} />
         </span>
       ) : null}
       <div className="ds-product-row__info">
-        <span className="ds-product-row__name">{title}</span>
+        {onClick ? (
+          <button
+            type="button"
+            className="ds-product-row__name ds-product-row__title"
+            onClick={onClick}
+          >
+            {title}
+          </button>
+        ) : (
+          <span className="ds-product-row__name">{title}</span>
+        )}
         {subtitle ? <span className="ds-product-row__subtitle">{subtitle}</span> : null}
         {meta ? <div className="ds-product-row__meta">{meta}</div> : null}
       </div>

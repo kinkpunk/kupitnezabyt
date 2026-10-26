@@ -221,9 +221,11 @@ export function HomeView({
           </div>
         ) : (
           <EmptyState
+            actionLabel="К категориям"
             description="Нет товаров, которые нужно купить прямо сейчас"
             icon={ShoppingBasket}
             title="Пока спокойно"
+            onAction={() => onSelectTab("items")}
           />
         )}
       </section>
@@ -234,9 +236,11 @@ export function HomeView({
           renderReminderList(inAppReminders)
         ) : (
           <EmptyState
+            actionLabel="Начать проверку"
             description="Добавьте циклы проверки, чтобы видеть ближайшие даты"
             icon={Calendar}
             title="Нет проверок"
+            onAction={() => onSelectTab("check")}
           />
         )}
       </section>

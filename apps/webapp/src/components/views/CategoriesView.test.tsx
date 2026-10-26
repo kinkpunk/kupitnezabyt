@@ -214,9 +214,25 @@ describe("CategoriesView", () => {
     expect(screen.getByText("Добавьте первый товар в эту категорию.")).toBeInTheDocument();
   });
 
+  it("opens create item sheet from the empty state CTA", () => {
+    const setShowItemForm = vi.fn();
+    render(<CategoriesView {...createProps({ visibleItems: [], setShowItemForm })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Добавить товар" }));
+    expect(setShowItemForm).toHaveBeenCalledWith(true);
+  });
+
   it("shows empty state when no category is selected", () => {
     render(<CategoriesView {...createProps({ selectedCategory: null, visibleItems: [] })} />);
     expect(screen.getByText("Создайте категорию, чтобы добавить первый товар.")).toBeInTheDocument();
+  });
+
+  it("opens create category sheet from the empty state CTA", () => {
+    const setShowCategoryForm = vi.fn();
+    render(
+      <CategoriesView {...createProps({ selectedCategory: null, visibleItems: [], setShowCategoryForm })} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Создать категорию" }));
+    expect(setShowCategoryForm).toHaveBeenCalledWith(true);
   });
 
   it("opens create category form on plus button click", () => {

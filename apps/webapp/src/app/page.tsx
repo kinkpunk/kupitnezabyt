@@ -5,7 +5,7 @@ import { ToastNotice } from "../components/ui/ToastNotice";
 import { LoginScreen } from "../components/features/LoginScreen";
 import { LegalConsentModal } from "../components/features/LegalConsentModal";
 import { OnboardingModal } from "../components/features/OnboardingModal";
-import { AppHeader } from "../components/common";
+import { AppHeader, AppLoadingSkeleton, OfflineBanner } from "../components/common";
 import { BottomNav } from "../components/BottomNav";
 import { MenuSheet } from "../components/MenuSheet";
 import { NotificationSheet } from "../components/NotificationSheet";
@@ -17,17 +17,15 @@ import { SearchView } from "../components/views/SearchView";
 import { ArchiveView } from "../components/views/ArchiveView";
 import { SettingsView } from "../components/views/SettingsView";
 import { useAppState } from "../hooks/useAppState";
+import { useOnlineStatus } from "../hooks/useOnlineStatus";
 import { starterCategories, starterItemHints } from "../lib/ui";
 
 export default function Home() {
   const state = useAppState();
+  const isOnline = useOnlineStatus();
 
   if (state.isLoading) {
-    return (
-      <main className="app-shell loading-shell">
-        <p>{state.loadingMessage}</p>
-      </main>
-    );
+    return <AppLoadingSkeleton message={state.loadingMessage} />;
   }
 
   if (!state.token) {
@@ -290,6 +288,7 @@ export default function Home() {
         title={screenTitles[state.activeTab]}
         onMenuClick={() => state.setShowMenuSheet((current) => !current)}
       />
+      {isOnline ? null : <OfflineBanner />}
       <ErrorNotice message={state.error} onClose={() => state.setError(null)} />
       <ToastNotice
         message={state.toastMessage}

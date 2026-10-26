@@ -6,8 +6,10 @@ import {
   ArrowDown,
   ArrowUp,
   EyeOff,
+  FolderPlus,
   GripVertical,
   ListOrdered,
+  PackagePlus,
   Pencil,
   Plus,
   X
@@ -28,6 +30,7 @@ import {
 import {
   BottomSheet,
   ChipTabs,
+  EmptyState,
   PanelHeader,
   ProductRow,
   ProductRowMoreButton,
@@ -433,14 +436,18 @@ export function CategoriesView({
                   />
                 )
               )
+            ) : statusFilter === "all" ? (
+              <EmptyState
+                actionLabel="Добавить товар"
+                description="Добавьте первый товар в эту категорию."
+                icon={PackagePlus}
+                title="В категории пусто"
+                onAction={() => setShowItemForm(true)}
+              />
             ) : (
-              <p className="ds-empty">
-                {statusFilter === "all"
-                  ? "Добавьте первый товар в эту категорию."
-                  : "Нет товаров с таким статусом."}
-              </p>
+              <p className="ds-empty">Нет товаров с таким статусом.</p>
             )}
-            {isReordering ? null : (
+            {isReordering || (visibleItems.length === 0 && statusFilter === "all") ? null : (
               <button
                 className="ds-add-item-row"
                 type="button"
@@ -603,7 +610,13 @@ export function CategoriesView({
           </BottomSheet>
         </>
       ) : (
-        <p className="ds-empty">Создайте категорию, чтобы добавить первый товар.</p>
+        <EmptyState
+          actionLabel="Создать категорию"
+          description="Создайте категорию, чтобы добавить первый товар."
+          icon={FolderPlus}
+          title="Нет категорий"
+          onAction={() => setShowCategoryForm(true)}
+        />
       )}
     </section>
   );

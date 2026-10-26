@@ -30,7 +30,7 @@ test("two accounts can share and edit a workspace", async ({ browser, request },
 
   await ownerPage.getByRole("button", { name: "Новая" }).click();
   await ownerPage.getByLabel("Название категории").fill(categoryName);
-  await ownerPage.getByRole("button", { name: "Создать" }).click();
+  await ownerPage.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
 
   await ownerPage.getByRole("button", { name: "Добавить товар" }).click();
@@ -154,7 +154,7 @@ test("ownership transfer makes the invited member the workspace owner", async ({
   await ownerNavigation.getByRole("button", { name: "Категории" }).click();
   await ownerPage.getByRole("button", { name: "Новая" }).click();
   await ownerPage.getByLabel("Название категории").fill(categoryName);
-  await ownerPage.getByRole("button", { name: "Создать" }).click();
+  await ownerPage.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(ownerPage.getByRole("tab", { name: categoryName })).toBeVisible();
 
   // The invitee must already be a verified user before the invitation is sent.

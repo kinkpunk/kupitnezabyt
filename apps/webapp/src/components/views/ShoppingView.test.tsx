@@ -89,6 +89,17 @@ describe("ShoppingView", () => {
     expect(screen.getByText("Список покупок пуст")).toBeInTheDocument();
   });
 
+  it("opens create shopping sheet from the empty state CTA", () => {
+    const setShowShoppingForm = vi.fn();
+    render(
+      <ShoppingView
+        {...createProps({ shoppingList: [], shoppingGroups: [], setShowShoppingForm })}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Добавить покупку" }));
+    expect(setShowShoppingForm).toHaveBeenCalledWith(true);
+  });
+
   it("renders shopping groups and entries", () => {
     render(<ShoppingView {...createProps()} />);
     expect(screen.getByText("Хлеб")).toBeInTheDocument();
@@ -119,11 +130,11 @@ describe("ShoppingView", () => {
     expect(onCreateManualShoppingItem).toHaveBeenCalledOnce();
   });
 
-  it("calls onCompleteShoppingListItem when bought button is clicked", () => {
+  it("calls onCompleteShoppingListItem when bought checkbox is clicked", () => {
     const onCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
     render(<ShoppingView {...createProps({ onCompleteShoppingListItem })} />);
-    const boughtButtons = screen.getAllByRole("button", { name: "Куплено" });
-    fireEvent.click(boughtButtons[0]!);
+    const boughtCheckboxes = screen.getAllByRole("checkbox", { name: "Куплено" });
+    fireEvent.click(boughtCheckboxes[0]!);
     expect(onCompleteShoppingListItem).toHaveBeenCalledWith(manualEntry);
   });
 

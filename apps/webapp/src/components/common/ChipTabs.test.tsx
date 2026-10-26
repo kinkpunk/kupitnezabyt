@@ -38,6 +38,42 @@ describe("ChipTabs", () => {
     expect(handleSelect).toHaveBeenCalledWith("c");
   });
 
+  it("uses roving tabindex: only the selected tab is in the tab order", () => {
+    render(<ChipTabs items={items} selectedId="b" onSelect={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: "Аптека" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("tab", { name: "Еда" })).toHaveAttribute("tabindex", "-1");
+    expect(screen.getByRole("tab", { name: "Дом" })).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("moves focus and selection with ArrowRight and wraps around", () => {
+    const handleSelect = vi.fn();
+    render(<ChipTabs items={items} selectedId="c" onSelect={handleSelect} />);
+    const current = screen.getByRole("tab", { name: "Дом" });
+    current.focus();
+    fireEvent.keyDown(current, { key: "ArrowRight" });
+    expect(handleSelect).toHaveBeenCalledWith("a");
+  });
+
+  it("moves focus and selection with ArrowLeft", () => {
+    const handleSelect = vi.fn();
+    render(<ChipTabs items={items} selectedId="b" onSelect={handleSelect} />);
+    const current = screen.getByRole("tab", { name: "Аптека" });
+    current.focus();
+    fireEvent.keyDown(current, { key: "ArrowLeft" });
+    expect(handleSelect).toHaveBeenCalledWith("a");
+  });
+
+  it("jumps to the first and last tab with Home and End", () => {
+    const handleSelect = vi.fn();
+    render(<ChipTabs items={items} selectedId="b" onSelect={handleSelect} />);
+    const current = screen.getByRole("tab", { name: "Аптека" });
+    current.focus();
+    fireEvent.keyDown(current, { key: "Home" });
+    expect(handleSelect).toHaveBeenCalledWith("a");
+    fireEvent.keyDown(current, { key: "End" });
+    expect(handleSelect).toHaveBeenCalledWith("c");
+  });
+
   it("shows warning dot for items with warning", () => {
     render(<ChipTabs items={items} selectedId="a" onSelect={vi.fn()} />);
     const tab = screen.getByRole("tab", { name: "Аптека" });

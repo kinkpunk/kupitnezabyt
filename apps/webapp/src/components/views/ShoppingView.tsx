@@ -218,20 +218,24 @@ export function ShoppingView({
         />
       ) : (
         <EmptyState
+          actionLabel="Добавить покупку"
           description="Добавьте разовые покупки или отметьте товары для покупки в категориях"
           icon={ShoppingBasket}
           title="Список покупок пуст"
+          onAction={() => setShowShoppingForm(true)}
         />
       )}
 
-      <button
-        className="ds-add-item-row"
-        type="button"
-        onClick={() => setShowShoppingForm(true)}
-      >
-        <Plus aria-hidden="true" size={18} />
-        Добавить покупку
-      </button>
+      {shoppingGroups.length === 0 && !searchQuery.trim() ? null : (
+        <button
+          className="ds-add-item-row"
+          type="button"
+          onClick={() => setShowShoppingForm(true)}
+        >
+          <Plus aria-hidden="true" size={18} />
+          Добавить покупку
+        </button>
+      )}
 
       <BottomSheet
         show={activeEntryId !== null}

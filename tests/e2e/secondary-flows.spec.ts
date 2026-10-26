@@ -190,6 +190,6 @@ async function createCategory(page: Page, categoryName: string): Promise<void> {
   await expect(newCategoryButton).toBeVisible();
   await newCategoryButton.click();
   await page.getByLabel("Название категории").fill(categoryName);
-  await page.getByRole("button", { name: "Создать" }).click();
+  await page.getByRole("button", { name: "Создать", exact: true }).click();
   await expect(page.getByRole("tab", { name: categoryName })).toBeVisible();
 }

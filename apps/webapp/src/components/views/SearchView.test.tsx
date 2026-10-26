@@ -91,7 +91,7 @@ describe("SearchView", () => {
         })}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "Кофе Еда Есть" }));
+    fireEvent.click(screen.getByRole("button", { name: "Кофе" }));
     expect(onClearSearchSession).toHaveBeenCalledOnce();
     expect(onSelectCategory).toHaveBeenCalledWith(item.categoryId);
     expect(onSelectItemsTab).toHaveBeenCalledOnce();

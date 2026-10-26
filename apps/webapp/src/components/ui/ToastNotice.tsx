@@ -40,14 +40,14 @@ export function ToastNotice({
   }
 
   return (
-    <div className="toast-notice" role="status">
-      <span>{message}</span>
+    <div className="toast-notice">
+      <span className="toast-notice__message" role="status">{message}</span>
       {actionLabel && onAction ? (
         <button type="button" className="toast-notice__action" onClick={handleAction}>
           {actionLabel}
         </button>
       ) : null}
-      <button type="button" className="toast-notice__close" aria-label="Закрыть уведомление" onClick={onClose}>
+      <button type="button" className="toast-notice__close" onClick={onClose}>
         Закрыть
       </button>
     </div>

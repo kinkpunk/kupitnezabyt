@@ -74,17 +74,17 @@ test.describe("Categories screen visual regression", () => {
   test("active and inactive tabs", async () => {
     await page.getByRole("button", { name: "Новая категория" }).click();
     await page.getByLabel("Название категории").fill("Аптека");
-    await page.getByRole("button", { name: "Создать" }).click();
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Аптека" })).toBeVisible();
 
     await page.getByRole("button", { name: "Новая категория" }).click();
     await page.getByLabel("Название категории").fill("Еда");
-    await page.getByRole("button", { name: "Создать" }).click();
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Еда" })).toBeVisible();
 
     await page.getByRole("button", { name: "Новая категория" }).click();
     await page.getByLabel("Название категории").fill("Дом");
-    await page.getByRole("button", { name: "Создать" }).click();
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Дом" })).toBeVisible();
 
     // После создания категории автоматически выбирается последняя, поэтому Еда выбираем явно.
@@ -126,7 +126,7 @@ test.describe("Categories screen visual regression", () => {
   test("empty selected category", async () => {
     await page.getByRole("button", { name: "Новая категория" }).click();
     await page.getByLabel("Название категории").fill("Пустая");
-    await page.getByRole("button", { name: "Создать" }).click();
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Пустая" })).toBeVisible();
 
     await page.getByRole("tab", { name: "Пустая" }).click();

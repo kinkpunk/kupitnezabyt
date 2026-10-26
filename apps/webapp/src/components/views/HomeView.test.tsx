@@ -112,37 +112,52 @@ describe("HomeView", () => {
     expect(onSelectTab).not.toHaveBeenCalled();
   });
 
-  it("renders need-buy items and navigates on click", () => {
+  it("renders need-buy items and navigates on title click", () => {
     const onSelectCategory = vi.fn();
     render(<HomeView {...createProps({ onSelectCategory })} />);
-    const row = screen.getByRole("button", { name: "Молоко Еда Куплено" });
-    expect(row).toBeInTheDocument();
-    fireEvent.click(row);
+    const title = screen.getByRole("button", { name: "Молоко" });
+    expect(title).toBeInTheDocument();
+    expect(title).toHaveClass("ds-product-row__title");
+    fireEvent.click(title);
     expect(onSelectCategory).toHaveBeenCalledWith(itemNeedBuy.categoryId);
   });
 
-  it("marks need-buy item as bought via Куплено button", () => {
+  it("marks need-buy item as bought via Куплено checkbox", () => {
     const onSetStatus = vi.fn().mockResolvedValue(undefined);
     const onSelectCategory = vi.fn();
     render(<HomeView {...createProps({ onSetStatus, onSelectCategory })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Куплено" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
     expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK");
     expect(onSelectCategory).not.toHaveBeenCalled();
   });
 
-  it("shows pending state on Куплено button while status update is in flight", () => {
+  it("shows pending state on Куплено checkbox while status update is in flight", () => {
     render(
       <HomeView
         {...createProps({ isActionPending: (key: string) => key === "item:status:item-1" })}
       />
     );
-    const button = screen.getByRole("button", { name: "Отмечаем..." });
-    expect(button).toBeDisabled();
+    const checkbox = screen.getByRole("checkbox", { name: "Отмечаем..." });
+    expect(checkbox).toBeDisabled();
   });
 
   it("shows empty state when there are no need-buy items", () => {
     render(<HomeView {...createProps({ needBuyItems: [] })} />);
     expect(document.querySelector(".ds-empty-state")?.textContent).toContain("Пока спокойно");
+  });
+
+  it("navigates to categories from the Купить сейчас empty state CTA", () => {
+    const onSelectTab = vi.fn();
+    render(<HomeView {...createProps({ needBuyItems: [], onSelectTab })} />);
+    fireEvent.click(screen.getByRole("button", { name: "К категориям" }));
+    expect(onSelectTab).toHaveBeenCalledWith("items");
+  });
+
+  it("navigates to checks from the Проверки empty state CTA", () => {
+    const onSelectTab = vi.fn();
+    render(<HomeView {...createProps({ inAppReminders: [], onSelectTab })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Начать проверку" }));
+    expect(onSelectTab).toHaveBeenCalledWith("check");
   });
 
   it("renders reminders in the checks section", () => {
@@ -155,7 +170,8 @@ describe("HomeView", () => {
   it("calls onOpenReminder when reminder row is clicked", () => {
     const onOpenReminder = vi.fn();
     render(<HomeView {...createProps({ onOpenReminder })} />);
-    const row = screen.getByRole("button", { name: /Еда Категория/ });
+    const section = screen.getByRole("heading", { name: "Проверки" }).closest("section");
+    const row = within(section as HTMLElement).getByRole("button", { name: "Еда" });
     fireEvent.click(row);
     expect(onOpenReminder).toHaveBeenCalledWith(categoryReminder);
   });

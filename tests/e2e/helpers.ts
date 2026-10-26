@@ -34,7 +34,9 @@ export async function waitForApiHealth(request: APIRequestContext): Promise<void
 // Проходит онбординг стандартным путём: подтверждает стартовые категории
 // (включая «Еда») и пропускает добавление стартовых товаров.
 export async function finishOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
+  // exact: true — иначе подстрока «Начать» матчит, например, CTA «Начать проверку»
+  // из empty-стейта главной, и хелпер уходит не на тот экран.
+  const startButton = page.getByRole("button", { name: "Начать", exact: true });
   // locator.isVisible() does not wait, so use waitFor to survive cold dev compiles.
   const isOnboardingVisible = await startButton
     .waitFor({ state: "visible", timeout: 30_000 })
@@ -53,7 +55,7 @@ export async function finishOnboardingIfNeeded(page: Page): Promise<void> {
 // Проходит онбординг, полностью пропуская создание стартовых данных,
 // чтобы не засорять БД (используется в visual-спеках с собственным сидингом).
 export async function skipOnboardingIfNeeded(page: Page): Promise<void> {
-  const startButton = page.getByRole("button", { name: "Начать" });
+  const startButton = page.getByRole("button", { name: "Начать", exact: true });
   const isOnboardingVisible = await startButton
     .waitFor({ state: "visible", timeout: 30_000 })
     .then(() => true)

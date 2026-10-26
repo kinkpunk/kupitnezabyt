@@ -60,6 +60,21 @@ describe("LoginScreen", () => {
     expect(onEmailChange).toHaveBeenCalledWith("test@example.com");
   });
 
+  it("links the email input to the auth message via aria-describedby and aria-invalid", () => {
+    render(<LoginScreen {...createProps({ emailAuthMessage: "Ссылка отправлена" })} />);
+    const input = screen.getByLabelText("Email");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAttribute("aria-describedby", "login-email-error");
+    expect(document.getElementById("login-email-error")).toHaveTextContent("Ссылка отправлена");
+  });
+
+  it("removes the description link when there is no auth message", () => {
+    render(<LoginScreen {...createProps({ emailAuthMessage: null })} />);
+    const input = screen.getByLabelText("Email");
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(input).not.toHaveAttribute("aria-describedby");
+  });
+
   it("calls onRequestMagicLink when email form is submitted", () => {
     const onRequestMagicLink = vi.fn().mockResolvedValue(undefined);
     render(<LoginScreen {...createProps({ email: "test@example.com", onRequestMagicLink })} />);
