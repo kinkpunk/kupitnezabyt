@@ -152,6 +152,8 @@ export default function Home() {
             onArchiveItem={state.handleArchiveItem}
             onArchiveSelectedCategory={state.handleArchiveSelectedCategory}
             onStartCategoryCheck={state.handleStartCategoryCheck}
+            onSaveReminderSetting={state.handleSaveReminderSetting}
+            savingReminderKeys={state.savingReminderKeys}
             setError={state.setError}
             isActionPending={state.isActionPending}
           />
@@ -241,20 +243,13 @@ export default function Home() {
             workspaceLoadFailed={state.workspaceLoadFailed}
             workspaceMembers={state.workspaceMembers}
             workspaceInvitations={state.workspaceInvitations}
-            categories={state.categories}
-            items={state.items}
             theme={state.theme}
             onThemeChange={state.setTheme}
-            reminderSettingsMessage={state.reminderSettingsMessage}
-            savingReminderKeys={state.savingReminderKeys}
-            reminderDrafts={state.reminderDrafts}
             onCreateWorkspaceInvitation={state.handleCreateWorkspaceInvitation}
             onRevokeWorkspaceInvitation={state.handleRevokeWorkspaceInvitation}
             onRemoveWorkspaceMember={state.handleRemoveWorkspaceMember}
             onTransferWorkspaceOwnership={state.handleTransferWorkspaceOwnership}
             onRetryWorkspaceLoad={state.handleRetryWorkspaceLoad}
-            onSaveReminderSettingsGroup={state.handleSaveReminderSettingsGroup}
-            onUpdateReminderDraft={state.updateReminderDraft}
             onExportUserData={state.handleExportUserData}
             onDeleteAccount={state.handleDeleteAccount}
             onSignOut={state.handleSignOut}
@@ -269,7 +264,10 @@ export default function Home() {
   const screenTitles: Partial<Record<typeof state.activeTab, string>> = {
     home: "Главная",
     items: "Категории",
-    shopping: "Покупки"
+    shopping: "Покупки",
+    check: "Проверка",
+    archive: "Архив",
+    settings: "Настройки"
   };
 
   return (

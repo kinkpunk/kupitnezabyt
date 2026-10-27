@@ -2,22 +2,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Category, Item, WorkspaceInvitation, WorkspaceMember, WorkspaceSummary } from "../../lib/types";
-import type { ReminderDraft } from "../../hooks/useAppState";
+import type { WorkspaceInvitation, WorkspaceMember, WorkspaceSummary } from "../../lib/types";
 import { SettingsView } from "./SettingsView";
-
-const category: Category = {
-  id: "cat-1",
-  name: "Еда",
-  icon: null,
-  sortOrder: 0,
-  usageCycleDays: 7,
-  nextCheckAt: null,
-  reminderEnabled: false,
-  archivedAt: null,
-  itemCount: 1,
-  aggregateStatus: "OK"
-};
 
 const activeWorkspace: WorkspaceSummary = {
   id: "ws-1",
@@ -42,22 +28,13 @@ function createProps(overrides: Partial<React.ComponentProps<typeof SettingsView
     workspaceLoadFailed: false,
     workspaceMembers: [] as WorkspaceMember[],
     workspaceInvitations: [] as WorkspaceInvitation[],
-    categories: [category],
-    items: [] as Item[],
     theme: "system" as const,
     onThemeChange: vi.fn(),
-    reminderSettingsMessage: null,
-    savingReminderKeys: [] as string[],
-    reminderDrafts: {
-      "CATEGORY:cat-1": { usageCycleDays: "7", reminderEnabled: true } as ReminderDraft
-    },
     onCreateWorkspaceInvitation: vi.fn().mockResolvedValue(undefined),
     onRevokeWorkspaceInvitation: vi.fn().mockResolvedValue(undefined),
     onRemoveWorkspaceMember: vi.fn().mockResolvedValue(undefined),
     onTransferWorkspaceOwnership: vi.fn().mockResolvedValue(undefined),
     onRetryWorkspaceLoad: vi.fn().mockResolvedValue(undefined),
-    onSaveReminderSettingsGroup: vi.fn(),
-    onUpdateReminderDraft: vi.fn(),
     onExportUserData: vi.fn().mockResolvedValue(undefined),
     onDeleteAccount: vi.fn().mockResolvedValue(undefined),
     onSignOut: vi.fn(),
@@ -69,7 +46,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof SettingsView
 describe("SettingsView", () => {
   it("renders settings sections", () => {
     render(<SettingsView {...createProps()} />);
-    expect(screen.getByRole("heading", { name: "Настройки" })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Тема оформления" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Как на устройстве" })).toHaveAttribute("aria-pressed", "true");
   });
@@ -101,28 +77,10 @@ describe("SettingsView", () => {
     expect(onCreateWorkspaceInvitation).toHaveBeenCalledOnce();
   });
 
-  it("renders reminder settings sections with rows", () => {
+  it("does not render reminder cycle settings", () => {
     render(<SettingsView {...createProps()} />);
-    expect(screen.getByRole("heading", { name: "Проверки" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Категории" })).toBeInTheDocument();
-    expect(screen.getByText("Еда")).toBeInTheDocument();
-  });
-
-  it("calls onUpdateReminderDraft when toggle changes", () => {
-    const onUpdateReminderDraft = vi.fn();
-    render(<SettingsView {...createProps({ onUpdateReminderDraft })} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Напоминания: Еда" }));
-    expect(onUpdateReminderDraft).toHaveBeenCalledWith("CATEGORY:cat-1", {
-      usageCycleDays: "7",
-      reminderEnabled: false
-    });
-  });
-
-  it("calls onSaveReminderSettingsGroup when save button is clicked", () => {
-    const onSaveReminderSettingsGroup = vi.fn();
-    render(<SettingsView {...createProps({ onSaveReminderSettingsGroup })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить категории" }));
-    expect(onSaveReminderSettingsGroup).toHaveBeenCalledWith("CATEGORY", [category.id]);
+    expect(screen.queryByRole("heading", { name: "Напоминания" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Сохранить категории")).not.toBeInTheDocument();
   });
 
   it("calls onExportUserData when export button is clicked", () => {

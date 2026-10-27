@@ -11,7 +11,14 @@ import { EmptyState, SectionHeader } from "../common";
 import { Button } from "../ui/Button";
 import { ProgressBar } from "../ui/ProgressBar";
 
-const statusButtonOrder: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY"];
+const statusButtonOrder = ["IN_STOCK", "LOW", "NEED_BUY"] as const;
+type CheckStatus = (typeof statusButtonOrder)[number];
+
+const statusToneByStatus: Record<CheckStatus, "ok" | "warn" | "bad"> = {
+  IN_STOCK: "ok",
+  LOW: "warn",
+  NEED_BUY: "bad"
+};
 
 export function CheckView({
   checkSession,
@@ -57,15 +64,17 @@ export function CheckView({
   const currentPosition =
     checkSession?.status === "IN_PROGRESS" && currentCheckItem ? checkedCount + 1 : checkedCount;
 
-  function renderStatusButton(status: ItemStatus) {
+  function renderStatusButton(status: CheckStatus) {
+    const tone = statusToneByStatus[status];
     return (
       <Button
         key={status}
-        className="ds-check-status"
+        className={`ds-check-status ds-check-status--${tone}`}
         disabled={Boolean(pendingCheckItemName)}
         variant="ghost"
         onClick={() => handleStatus(status)}
       >
+        <span aria-hidden="true" className={`ds-check-status__dot ds-check-status__dot--${tone}`} />
         {statusLabels[status]}
       </Button>
     );
@@ -73,18 +82,6 @@ export function CheckView({
 
   return (
     <section className="stack">
-      <SectionHeader
-        title="Проверка"
-        subtitle={checkSession ? `${currentPosition} из ${totalItems}` : "Выберите категорию"}
-        actions={
-          checkSession?.status === "IN_PROGRESS" ? (
-            <Button size="compact" variant="ghost" onClick={handleCancel}>
-              Отмена
-            </Button>
-          ) : null
-        }
-      />
-
       {checkSession?.status !== "IN_PROGRESS" ? (
         <form className="ds-check-form" onSubmit={handleStart}>
           <select
@@ -101,7 +98,11 @@ export function CheckView({
               </option>
             ))}
           </select>
-          <Button disabled={!selectedCategory || selectedCategory.itemCount === 0} type="submit">
+          <Button
+            disabled={!selectedCategory || selectedCategory.itemCount === 0}
+            type="submit"
+            variant="accent"
+          >
             Начать
           </Button>
         </form>
@@ -112,7 +113,7 @@ export function CheckView({
           description={
             pendingCheckItemName
               ? `Завершаем проверку, сохраняем "${pendingCheckItemName}"...`
-              : "Все товары проверены"
+              : `Все товары проверены (${currentPosition} из ${totalItems})`
           }
           icon={CheckCircle2}
           title="Проверка завершена"
@@ -122,7 +123,12 @@ export function CheckView({
       ) : currentCheckItem ? (
         <div className="ds-check-card">
           <SectionHeader
-            subtitle={checkSession?.category?.name ?? "Проверка"}
+            actions={
+              <Button size="compact" variant="ghost" onClick={handleCancel}>
+                Отмена
+              </Button>
+            }
+            subtitle={`${checkSession?.category?.name ?? "Проверка"} · ${currentPosition} из ${totalItems}`}
             title={currentCheckItem.item.name}
           />
           <ProgressBar done={checkedCount} total={checkSession?.items.length ?? 0} />
@@ -131,7 +137,7 @@ export function CheckView({
               Сохраняем "{pendingCheckItemName}"...
             </p>
           ) : null}
-          <div className="ds-check-status-grid" role="group" aria-label="Статус товара">
+          <div className="ds-check-status-list" role="group" aria-label="Статус товара">
             {statusButtonOrder.map((status) => renderStatusButton(status))}
           </div>
         </div>

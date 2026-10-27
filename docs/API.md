@@ -329,9 +329,14 @@ Create body:
 ```json
 {
   "name": "Аптека",
-  "icon": "💊"
+  "icon": "💊",
+  "usageCycleDays": 14,
+  "reminderEnabled": true
 }
 ```
+
+`usageCycleDays` and `reminderEnabled` are optional. When `usageCycleDays` is set,
+`nextCheckAt` is scheduled automatically; `reminderEnabled` defaults to `true`.
 
 ## Items
 
@@ -361,9 +366,14 @@ Create body:
   "brand": "optional",
   "notes": "optional",
   "importance": "NORMAL",
-  "usageCycleDays": 30
+  "usageCycleDays": 30,
+  "reminderEnabled": true
 }
 ```
+
+When `usageCycleDays` is set, the item is created with status `IN_STOCK`;
+without it the initial status is `NEED_BUY` and the item appears in the
+shopping list. `reminderEnabled` is optional and defaults to `true`.
 
 Supported importance values (optional, defaults to `NORMAL`; invalid values
 return `400 INVALID_IMPORTANCE`):

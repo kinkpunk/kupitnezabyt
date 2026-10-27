@@ -130,6 +130,8 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     onArchiveItem: vi.fn().mockResolvedValue(undefined),
     onArchiveSelectedCategory: vi.fn().mockResolvedValue(undefined),
     onStartCategoryCheck: vi.fn().mockResolvedValue(undefined),
+    onSaveReminderSetting: vi.fn().mockResolvedValue(undefined),
+    savingReminderKeys: [] as string[],
     setError: vi.fn(),
     isActionPending: vi.fn().mockReturnValue(false),
     ...overrides
@@ -250,6 +252,20 @@ describe("CategoriesView", () => {
     expect(onCreateCategory).toHaveBeenCalledOnce();
   });
 
+  it("passes an empty reminder when creating a category", () => {
+    const onCreateCategory = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({ showCategoryForm: true, categoryName: "Дом", onCreateCategory })}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Создать" }));
+    expect(onCreateCategory).toHaveBeenCalledWith({
+      usageCycleDays: null,
+      reminderEnabled: false
+    });
+  });
+
   it("closes create category bottom sheet on close button click", () => {
     const setShowCategoryForm = vi.fn();
     render(
@@ -294,6 +310,21 @@ describe("CategoriesView", () => {
     expect(onCreateItem).toHaveBeenCalledOnce();
   });
 
+  it("passes reminder settings when creating an item with the switch on", () => {
+    const onCreateItem = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({ showItemForm: true, itemName: "Хлеб", onCreateItem })}
+      />
+    );
+    fireEvent.click(screen.getByRole("switch"));
+    const daysInput = screen.getByLabelText("Количество дней");
+    expect(daysInput).toBeEnabled();
+    expect(daysInput).toHaveValue(30);
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    expect(onCreateItem).toHaveBeenCalledWith({ usageCycleDays: 30, reminderEnabled: true });
+  });
+
   it("opens item actions sheet and triggers edit", () => {
     const setEditingItemId = vi.fn();
     const setEditingItemName = vi.fn();
@@ -318,6 +349,44 @@ describe("CategoriesView", () => {
     clickItemActionsButton();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+  });
+
+  it("opens item reminder sheet and saves the setting", async () => {
+    const onSaveReminderSetting = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onSaveReminderSetting })} />);
+    clickItemActionsButton();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Напоминание о проверке" })
+    );
+
+    const switchButton = screen.getByRole("switch");
+    expect(switchButton).toHaveAttribute("aria-checked", "false");
+    const daysInput = screen.getByLabelText("Количество дней");
+    expect(daysInput).toBeDisabled();
+
+    fireEvent.click(switchButton);
+    expect(daysInput).toBeEnabled();
+    fireEvent.change(daysInput, { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await waitFor(() =>
+      expect(onSaveReminderSetting).toHaveBeenCalledWith("ITEM", itemInStock.id, {
+        usageCycleDays: 30,
+        reminderEnabled: true
+      })
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("opens category reminder sheet from the panel menu", () => {
+    render(<CategoriesView {...createProps()} />);
+    const panel = document.querySelector(".ds-panel-header") as HTMLElement;
+    fireEvent.click(within(panel).getByRole("button", { name: "Ещё" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Напоминание о проверке" })
+    );
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", "Еда");
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false");
   });
 
   it("allows archiving an empty category while check stays disabled", () => {

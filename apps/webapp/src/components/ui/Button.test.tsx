@@ -5,17 +5,17 @@ import { describe, expect, it, vi } from "vitest";
 import { Button } from "./Button";
 
 describe("Button", () => {
-  it("renders primary variant by default", () => {
-    render(<Button>Primary</Button>);
-    const button = screen.getByRole("button", { name: "Primary" });
-    expect(button).toHaveClass("ds-button", "ds-button--primary");
+  it("renders accent variant by default", () => {
+    render(<Button>Accent</Button>);
+    const button = screen.getByRole("button", { name: "Accent" });
+    expect(button).toHaveClass("ds-button", "ds-button--accent");
   });
 
   it("renders ghost variant", () => {
     render(<Button variant="ghost">Ghost</Button>);
     const button = screen.getByRole("button", { name: "Ghost" });
     expect(button).toHaveClass("ds-button--ghost");
-    expect(button).not.toHaveClass("ds-button--primary");
+    expect(button).not.toHaveClass("ds-button--accent");
   });
 
   it("renders icon variant", () => {
@@ -24,7 +24,7 @@ describe("Button", () => {
     expect(button).toHaveClass("ds-button--icon");
   });
 
-  it("supports compact size for primary variant", () => {
+  it("supports compact size for accent variant", () => {
     render(<Button size="compact">Compact</Button>);
     const button = screen.getByRole("button", { name: "Compact" });
     expect(button).toHaveClass("ds-button--compact");

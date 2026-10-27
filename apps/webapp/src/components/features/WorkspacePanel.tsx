@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Crown, Send, UserMinus } from "lucide-react";
+import { Crown, Send, Share2, UserMinus } from "lucide-react";
 
 import { formatDate } from "../../lib/format";
 import { formatWorkspaceMemberName } from "../../hooks/useAppState";
@@ -52,6 +52,7 @@ export function WorkspacePanel({
     return (
       <section className="ds-settings-section" aria-label="Поделиться списком">
         <SectionHeader
+          icon={<Share2 aria-hidden="true" size={16} />}
           title="Поделиться списком"
           subtitle="Не удалось загрузить данные списка, поэтому приглашения пока недоступны. Проверьте, что backend развернут с поддержкой совместных списков, и обновите списки."
         />
@@ -83,6 +84,7 @@ export function WorkspacePanel({
   return (
     <section className="ds-settings-section" aria-label="Поделиться списком">
       <SectionHeader
+        icon={<Share2 aria-hidden="true" size={16} />}
         title="Поделиться списком"
         subtitle={`${activeWorkspace.name} · ${workspaceRoleLabels[activeWorkspace.role]} · ${activeWorkspace.memberCount} ${memberCountLabel}`}
       />
@@ -112,10 +114,11 @@ export function WorkspacePanel({
             />
             <Button
               type="submit"
+              variant="accent"
               aria-label="Отправить приглашение"
               disabled={workspaceAction === "invite" || !workspaceInviteEmail.trim()}
             >
-              <Send aria-hidden="true" size={18} />
+              <Send aria-hidden="true" size={16} />
               <span>
                 {workspaceAction === "invite" ? "Отправляем..." : "Поделиться"}
               </span>

@@ -410,8 +410,12 @@ export function getArchivedCategories(token: string): Promise<Category[]> {
   return get<Category[]>("/api/categories?archived=true", token);
 }
 
-export function createCategory(token: string, name: string): Promise<Category> {
-  return post<Category>("/api/categories", token, { name });
+export function createCategory(
+  token: string,
+  name: string,
+  input: { usageCycleDays?: number | null; reminderEnabled?: boolean } = {}
+): Promise<Category> {
+  return post<Category>("/api/categories", token, { name, ...input });
 }
 
 export function reorderCategories(token: string, categoryIds: string[]): Promise<Category[]> {
@@ -488,6 +492,8 @@ export function createItem(
   input: {
     categoryId: string;
     name: string;
+    usageCycleDays?: number | null;
+    reminderEnabled?: boolean;
   }
 ): Promise<Item> {
   return post<Item>("/api/items", token, input);

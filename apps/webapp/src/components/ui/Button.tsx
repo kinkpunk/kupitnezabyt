@@ -1,6 +1,6 @@
 import React, { type ButtonHTMLAttributes, type ReactNode } from "react";
 
-type ButtonVariant = "primary" | "ghost" | "icon";
+type ButtonVariant = "accent" | "ghost" | "icon";
 type ButtonSize = "default" | "compact";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -10,7 +10,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({
-  variant = "primary",
+  variant = "accent",
   size = "default",
   className = "",
   children,

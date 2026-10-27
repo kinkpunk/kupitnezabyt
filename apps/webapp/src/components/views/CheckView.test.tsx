@@ -64,7 +64,6 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CheckView>> 
 describe("CheckView", () => {
   it("renders category selector and start button", () => {
     render(<CheckView {...createProps()} />);
-    expect(screen.getByRole("heading", { name: "Проверка" })).toBeInTheDocument();
     expect(screen.getByLabelText("Категория для проверки")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Начать" })).toBeInTheDocument();
   });
@@ -116,11 +115,40 @@ describe("CheckView", () => {
       />
     );
     expect(screen.getByText("Кофе")).toBeInTheDocument();
-    expect(screen.getByText("1 из 1")).toBeInTheDocument();
+    expect(screen.getByText(/1 из 1/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Есть" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Мало" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Купить" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Срочно" })).not.toBeInTheDocument();
+  });
+
+  it("groups status buttons in order with status dots", () => {
+    const checkSession: CheckSession = {
+      id: "check-1",
+      categoryId: category.id,
+      status: "IN_PROGRESS",
+      startedAt: "2026-09-01T00:00:00Z",
+      completedAt: null,
+      category,
+      items: [
+        { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: null, checkedAt: null, item }
+      ]
+    };
+    render(
+      <CheckView
+        {...createProps({
+          checkSession,
+          currentCheckItem: checkSession.items[0]!
+        })}
+      />
+    );
+    const group = screen.getByRole("group", { name: "Статус товара" });
+    const buttons = group.querySelectorAll(".ds-check-status");
+    expect(buttons).toHaveLength(3);
+    expect(buttons[0]).toHaveTextContent("Есть");
+    expect(buttons[1]).toHaveTextContent("Мало");
+    expect(buttons[2]).toHaveTextContent("Купить");
+    expect(group.querySelectorAll(".ds-check-status__dot")).toHaveLength(3);
   });
 
   it("calls onCheckStatus when status button is clicked", () => {
@@ -149,7 +177,7 @@ describe("CheckView", () => {
     expect(onCheckStatus).toHaveBeenCalledWith("IN_STOCK");
   });
 
-  it("calls onCancelCheck when cancel is clicked", () => {
+  it("calls onCancelCheck when card cancel is clicked", () => {
     const onCancelCheck = vi.fn().mockResolvedValue(undefined);
     const checkSession: CheckSession = {
       id: "check-1",
@@ -158,9 +186,19 @@ describe("CheckView", () => {
       startedAt: "2026-09-01T00:00:00Z",
       completedAt: null,
       category,
-      items: []
+      items: [
+        { id: "ci-1", sessionId: "check-1", itemId: item.id, sortOrder: 0, selectedStatus: null, checkedAt: null, item }
+      ]
     };
-    render(<CheckView {...createProps({ onCancelCheck, checkSession })} />);
+    render(
+      <CheckView
+        {...createProps({
+          onCancelCheck,
+          checkSession,
+          currentCheckItem: checkSession.items[0]!
+        })}
+      />
+    );
     fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
     expect(onCancelCheck).toHaveBeenCalledOnce();
   });
@@ -193,7 +231,7 @@ describe("CheckView", () => {
       ]
     };
     render(<CheckView {...createProps({ checkSession, checkedCount: 2 })} />);
-    expect(screen.getByText("2 из 2")).toBeInTheDocument();
+    expect(screen.getByText(/2 из 2/)).toBeInTheDocument();
   });
 
   it("renders cancelled empty state", () => {

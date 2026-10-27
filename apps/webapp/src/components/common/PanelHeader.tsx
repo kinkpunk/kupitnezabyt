@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, MoreVertical, Plus, SlidersHorizontal } from "lucide-react";
+import { Archive, Bell, ListPlus, ListTodo, MoreVertical, SlidersHorizontal } from "lucide-react";
 import React from "react";
 
 import { Button } from "../ui/Button";
@@ -17,6 +17,7 @@ export interface PanelHeaderProps {
   onFilterChange: (filter: CategoryStatusFilter) => void;
   onArchive: () => void;
   onCheck: () => void;
+  onOpenReminderSettings?: (() => void) | undefined;
   onAddItem?: (() => void) | undefined;
   disabled?: boolean;
   archiveDisabled?: boolean;
@@ -38,6 +39,7 @@ export function PanelHeader({
   onFilterChange,
   onArchive,
   onCheck,
+  onOpenReminderSettings,
   onAddItem,
   disabled = false,
   archiveDisabled = false
@@ -63,7 +65,7 @@ export function PanelHeader({
               variant="ghost"
               onClick={onAddItem}
             >
-              <Plus aria-hidden="true" size={18} />
+              <ListPlus aria-hidden="true" size={18} />
               <span aria-hidden="true" className="ds-panel-header__add-label">
                 <span className="ds-panel-header__add-label-full">Добавить товар</span>
                 <span className="ds-panel-header__add-label-short">Товар</span>
@@ -76,6 +78,7 @@ export function PanelHeader({
             variant="ghost"
             onClick={onCheck}
           >
+            <ListTodo aria-hidden="true" size={18} />
             Проверить
           </Button>
         </div>
@@ -142,6 +145,19 @@ export function PanelHeader({
         onClose={() => setMenuOpen(false)}
       >
         <div className="ds-bottom-sheet__actions">
+          {onOpenReminderSettings ? (
+            <button
+              className="ds-bottom-sheet__action"
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onOpenReminderSettings();
+              }}
+            >
+              <Bell aria-hidden="true" size={18} />
+              Напоминание о проверке
+            </button>
+          ) : null}
           <button
             className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
             type="button"

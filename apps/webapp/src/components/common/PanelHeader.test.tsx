@@ -130,6 +130,23 @@ describe("PanelHeader", () => {
     expect(screen.getByRole("button", { name: "В архив" })).toBeInTheDocument();
   });
 
+  it("hides reminder settings action when onOpenReminderSettings is not provided", () => {
+    render(<PanelHeader {...createProps()} />);
+    openMenu();
+    expect(
+      screen.queryByRole("button", { name: "Напоминание о проверке" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls onOpenReminderSettings and closes the sheet", () => {
+    const handleOpenReminderSettings = vi.fn();
+    render(<PanelHeader {...createProps({ onOpenReminderSettings: handleOpenReminderSettings })} />);
+    openMenu();
+    fireEvent.click(screen.getByRole("button", { name: "Напоминание о проверке" }));
+    expect(handleOpenReminderSettings).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("calls onArchive when the sheet action is pressed and closes the sheet", () => {
     const handleArchive = vi.fn();
     render(<PanelHeader {...createProps({ onArchive: handleArchive })} />);

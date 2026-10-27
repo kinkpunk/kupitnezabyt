@@ -1,13 +1,12 @@
 "use client";
 
+import { Download, LogOut, Trash2 } from "lucide-react";
 import React from "react";
-import { formatDate, formatError } from "../../lib/format";
+import { formatError } from "../../lib/format";
 import { WorkspacePanel } from "../features/WorkspacePanel";
-import { ReminderSettingsSection } from "../ui/ReminderSettingsSection";
 import { Button } from "../ui/Button";
 import { SectionHeader, ThemeSwitcher } from "../common";
-import type { Category, Item, WorkspaceSummary } from "../../lib/types";
-import type { ReminderDraft } from "../../hooks/useAppState";
+import type { WorkspaceSummary } from "../../lib/types";
 import type { ThemeMode } from "../../lib/ui";
 
 export function SettingsView({
@@ -22,20 +21,13 @@ export function SettingsView({
   workspaceLoadFailed,
   workspaceMembers,
   workspaceInvitations,
-  categories,
-  items,
   theme,
   onThemeChange,
-  reminderSettingsMessage,
-  savingReminderKeys,
-  reminderDrafts,
   onCreateWorkspaceInvitation,
   onRevokeWorkspaceInvitation,
   onRemoveWorkspaceMember,
   onTransferWorkspaceOwnership,
   onRetryWorkspaceLoad,
-  onSaveReminderSettingsGroup,
-  onUpdateReminderDraft,
   onExportUserData,
   onDeleteAccount,
   onSignOut,
@@ -52,13 +44,8 @@ export function SettingsView({
   workspaceLoadFailed: boolean;
   workspaceMembers: import("../../lib/types").WorkspaceMember[];
   workspaceInvitations: import("../../lib/types").WorkspaceInvitation[];
-  categories: Category[];
-  items: Item[];
   theme: ThemeMode;
   onThemeChange: (theme: ThemeMode) => void;
-  reminderSettingsMessage: string | null;
-  savingReminderKeys: string[];
-  reminderDrafts: Record<string, ReminderDraft>;
   onCreateWorkspaceInvitation: () => Promise<void>;
   onRevokeWorkspaceInvitation: (
     invitation: import("../../lib/types").WorkspaceInvitation
@@ -68,20 +55,13 @@ export function SettingsView({
     member: import("../../lib/types").WorkspaceMember
   ) => Promise<void>;
   onRetryWorkspaceLoad: () => Promise<void>;
-  onSaveReminderSettingsGroup: (entityType: "CATEGORY" | "ITEM", ids: string[]) => void;
-  onUpdateReminderDraft: (key: string, draft: ReminderDraft) => void;
   onExportUserData: () => Promise<void>;
   onDeleteAccount: () => Promise<void>;
   onSignOut: () => void;
   setError: (message: string | null) => void;
 }) {
   return (
-    <section className="stack">
-      <SectionHeader
-        title="Настройки"
-        subtitle="Совместный доступ, проверки, экспорт и удаление данных"
-      />
-
+    <div className="ds-settings">
       <section aria-label="Тема оформления">
         <SectionHeader title="Тема оформления" />
         <ThemeSwitcher theme={theme} onChange={onThemeChange} />
@@ -106,79 +86,25 @@ export function SettingsView({
         onRetryLoad={onRetryWorkspaceLoad}
       />
 
-      <section aria-label="Настройки проверок">
-        <SectionHeader
-          title="Проверки"
-          subtitle="Циклы для напоминаний внутри приложения"
-        />
-
-        {reminderSettingsMessage ? (
-          <p className="ds-inline-message ds-inline-message--success" role="status">
-            {reminderSettingsMessage}
-          </p>
-        ) : null}
-
-        <ReminderSettingsSection
-          title="Категории"
-          emptyMessage="Создайте категорию, чтобы настроить цикл проверки."
-          saveLabel="Сохранить категории"
-          isSaving={savingReminderKeys.includes("CATEGORY:SECTION")}
-          rows={categories.map((category) => ({
-            id: category.id,
-            entityType: "CATEGORY" as const,
-            title: category.name,
-            subtitle: category.nextCheckAt
-              ? `Следующая: ${formatDate(category.nextCheckAt)}`
-              : "Дата не задана"
-          }))}
-          drafts={reminderDrafts}
-          onDraftChange={onUpdateReminderDraft}
-          onSave={() =>
-            void onSaveReminderSettingsGroup(
-              "CATEGORY",
-              categories.map((category) => category.id)
-            )
-          }
-        />
-
-        <ReminderSettingsSection
-          title="Товары"
-          emptyMessage="Добавьте товар, чтобы настроить индивидуальную проверку."
-          saveLabel="Сохранить товары"
-          isSaving={savingReminderKeys.includes("ITEM:SECTION")}
-          rows={items.map((item) => ({
-            id: item.id,
-            entityType: "ITEM" as const,
-            title: item.name,
-            subtitle: item.nextCheckAt
-              ? `Следующая: ${formatDate(item.nextCheckAt)}`
-              : "Дата не задана"
-          }))}
-          drafts={reminderDrafts}
-          onDraftChange={onUpdateReminderDraft}
-          onSave={() =>
-            void onSaveReminderSettingsGroup(
-              "ITEM",
-              items.map((item) => item.id)
-            )
-          }
-        />
-      </section>
-
       <div className="ds-settings-actions">
         <Button
           type="button"
+          variant="accent"
           onClick={() =>
             void onExportUserData().catch((caughtError) =>
               setError(formatError(caughtError))
             )
           }
         >
+          <Download aria-hidden="true" size={16} />
           Скачать JSON
         </Button>
         <Button variant="ghost" type="button" onClick={onSignOut}>
+          <LogOut aria-hidden="true" size={16} />
           Выйти
         </Button>
+      </div>
+      <div className="ds-settings-danger">
         <Button
           className="ds-button--danger"
           variant="ghost"
@@ -189,9 +115,10 @@ export function SettingsView({
             )
           }
         >
+          <Trash2 aria-hidden="true" size={16} />
           Удалить аккаунт
         </Button>
       </div>
-    </section>
+    </div>
   );
 }

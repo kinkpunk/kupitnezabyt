@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, ShoppingBasket } from "lucide-react";
+import { Calendar, ListTodo, ShoppingBasket } from "lucide-react";
 import React, { type MouseEvent } from "react";
 
 import { formatDate } from "../../lib/format";
@@ -75,9 +75,10 @@ export function HomeView({
         {reminder.entityType !== "ITEM" ? (
           <Button
             size="compact"
-            variant="primary"
+            variant="accent"
             onClick={(event) => handleStartReminderCheck(event, reminder)}
           >
+            <ListTodo aria-hidden="true" size={16} />
             Проверить
           </Button>
         ) : null}

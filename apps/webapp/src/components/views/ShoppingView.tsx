@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Pencil, Plus, Search, ShoppingBasket, Trash2 } from "lucide-react";
+import { Archive, ListPlus, Pencil, Save, Search, ShoppingBasket, Trash2 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 import { formatError } from "../../lib/format";
@@ -156,8 +156,10 @@ export function ShoppingView({
           </select>
           <Button
             type="submit"
+            variant="accent"
             disabled={isActionPending("shopping:add") || !manualShoppingTitle.trim()}
           >
+            <ListPlus aria-hidden="true" size={16} />
             {isActionPending("shopping:add") ? "Добавляем..." : "Добавить"}
           </Button>
         </form>
@@ -186,7 +188,7 @@ export function ShoppingView({
                 variant="ghost"
                 onClick={() => setShowShoppingForm(true)}
               >
-                <Plus aria-hidden="true" size={18} />
+                <ListPlus aria-hidden="true" size={18} />
                 <span aria-hidden="true" className="ds-panel-header__add-label">
                   <span className="ds-panel-header__add-label-full">Добавить покупку</span>
                   <span className="ds-panel-header__add-label-short">Покупка</span>
@@ -215,6 +217,7 @@ export function ShoppingView({
                         onChange={(event) => setEditingShoppingTitle(event.target.value)}
                       />
                       <Button size="compact" type="submit">
+                        <Save aria-hidden="true" size={16} />
                         Сохранить
                       </Button>
                     </form>

@@ -433,20 +433,18 @@ select {
   opacity: 0.75;
 }
 
-.ds-button--primary {
-  border-color: var(--ds-brand);
-  background: var(--ds-brand);
-  color: var(--ds-on-brand);
+.ds-button--accent {
+  border-color: transparent;
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand-ink);
 }
 
-.ds-button--primary:not(:disabled):hover {
-  border-color: color-mix(in srgb, var(--ds-brand) 90%, var(--ds-text-1));
-  background: color-mix(in srgb, var(--ds-brand) 90%, var(--ds-text-1));
+.ds-button--accent:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ds-brand-soft) 80%, var(--ds-line));
 }
 
-.ds-button--primary:not(:disabled):active {
-  border-color: color-mix(in srgb, var(--ds-brand) 80%, var(--ds-text-1));
-  background: color-mix(in srgb, var(--ds-brand) 80%, var(--ds-text-1));
+.ds-button--accent:not(:disabled):active {
+  background: var(--ds-brand-soft);
 }
 
 .ds-button--compact {
@@ -1022,6 +1020,17 @@ select {
   background: var(--ds-bg-base);
 }
 
+/* Первая строка списка под панелью примыкает к ней: нижний отступ панели
+   (8px + обводка) уже задаёт нужный воздух, иначе первая строка выглядит
+   просторнее остальных. */
+.ds-panel-header + .ds-product-list > .ds-product-row:first-child,
+.ds-panel-header
+  + .ds-shopping-groups
+  .ds-shopping-group:first-child
+  .ds-product-row:first-child {
+  padding-top: 0;
+}
+
 .ds-panel-header__add {
   min-width: 0;
 }
@@ -1275,6 +1284,8 @@ select {
 
 .ds-product-row__edit input,
 .ds-product-row__edit select {
+  flex: 1;
+  min-width: 0;
   min-height: 36px;
 }
 
@@ -1471,10 +1482,19 @@ select {
 }
 
 .ds-section-header__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
   font-size: var(--font-size-section);
   font-weight: var(--font-weight-bold);
   line-height: var(--line-height-tight);
+}
+
+.ds-section-header__icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--ds-text-2);
 }
 
 .ds-section-header__subtitle {
@@ -1496,7 +1516,11 @@ select {
 }
 
 .ds-theme-switcher__option {
+  display: flex;
   flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-height: 44px;
   border: 0;
   border-radius: 12px;
@@ -1511,8 +1535,8 @@ select {
 }
 
 .ds-theme-switcher__option--active {
-  background: var(--ds-brand);
-  color: var(--ds-on-brand);
+  background: var(--ds-brand-soft);
+  color: var(--ds-brand-ink);
 }
 
 .ds-theme-switcher__option:not(:disabled):hover {
@@ -1520,7 +1544,7 @@ select {
 }
 
 .ds-theme-switcher__option--active:not(:disabled):hover {
-  background: color-mix(in srgb, var(--ds-brand) 90%, var(--ds-text-1));
+  background: color-mix(in srgb, var(--ds-brand-soft) 80%, var(--ds-line));
 }
 
 .ds-bottom-sheet__create-form {
@@ -1571,15 +1595,20 @@ select {
   display: grid;
 }
 
+/* Список разбит на группы по категориям (заголовков групп нет), поэтому
+   глобальное снятие разделителя у :last-child обрывает линию между группами:
+   разделитель нужен между всеми строками, кроме последней в последней группе. */
+.ds-shopping-groups .ds-product-row:last-child {
+  border-bottom: 1px solid var(--ds-line);
+}
+
+.ds-shopping-group:last-child .ds-product-row:last-child {
+  border-bottom: 0;
+}
+
 .ds-shopping-group {
   display: grid;
   gap: 8px;
-}
-
-/* В «Покупках» нет строки добавления в конце списка, поэтому разделитель
-   последней строки (:last-child) здесь сохраняем. */
-.ds-shopping-group .ds-product-row:last-child {
-  border-bottom: 1px solid var(--ds-line);
 }
 
 .ds-shopping-actions {
@@ -1699,14 +1728,60 @@ select {
   font-size: var(--font-size-sm);
 }
 
-.ds-check-status-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.ds-check-status-list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
 }
 
-.ds-check-status {
-  min-height: 48px;
+.ds-check-status-list .ds-check-status {
+  display: flex;
+  width: 100%;
+  min-height: 52px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--ds-line);
+  padding: 0 16px;
+  color: var(--ds-text-1);
+}
+
+.ds-check-status-list .ds-check-status:last-child {
+  border-bottom: 0;
+}
+
+.ds-check-status-list .ds-check-status--ok:not(:disabled):active {
+  background: var(--ds-status-ok-soft);
+}
+
+.ds-check-status-list .ds-check-status--warn:not(:disabled):active {
+  background: var(--ds-status-warn-soft);
+}
+
+.ds-check-status-list .ds-check-status--bad:not(:disabled):active {
+  background: var(--ds-status-bad-soft);
+}
+
+.ds-check-status__dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+}
+
+.ds-check-status__dot--ok {
+  background: var(--ds-status-ok);
+}
+
+.ds-check-status__dot--warn {
+  background: var(--ds-status-warn);
+}
+
+.ds-check-status__dot--bad {
+  background: var(--ds-status-bad);
 }
 
 .ds-home-summary {
@@ -1837,6 +1912,12 @@ select {
   gap: 6px;
 }
 
+.ds-settings {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+
 .ds-settings-section {
   display: grid;
   gap: 12px;
@@ -1845,6 +1926,12 @@ select {
 .ds-settings-actions {
   display: grid;
   gap: 8px;
+}
+
+.ds-settings-danger {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ds-line);
 }
 
 .ds-inline-message {
@@ -1858,6 +1945,10 @@ select {
 }
 
 .ds-inline-message--warning {
+  color: var(--ds-status-bad);
+}
+
+.ds-inline-message--error {
   color: var(--ds-status-bad);
 }
 
@@ -1893,65 +1984,89 @@ select {
   justify-self: start;
 }
 
-.ds-reminder-settings-group {
+.ds-reminder-sheet {
   display: grid;
-  gap: 8px;
+  gap: 16px;
 }
 
-.ds-reminder-settings-list {
-  display: grid;
-}
-
-.ds-reminder-settings-row {
-  display: grid;
-  gap: 12px;
-  min-height: 72px;
-  border-bottom: 1px solid var(--ds-line);
-  padding: 12px 0;
-}
-
-.ds-reminder-settings-row:last-child {
-  border-bottom: 0;
-}
-
-.ds-reminder-settings-row h4,
-.ds-reminder-settings-row p {
-  margin: 0;
-}
-
-.ds-reminder-settings-row h4 {
-  color: var(--ds-text-1);
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
-}
-
-.ds-reminder-settings-row p {
-  color: var(--ds-text-2);
-  font-size: var(--font-size-sm);
-}
-
-.ds-reminder-toggle {
+.ds-reminder-fields {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 44px;
-  color: var(--ds-text-2);
-  font-weight: var(--font-weight-semibold);
 }
 
-.ds-reminder-toggle input {
-  min-height: auto;
+.ds-reminder-fields__label {
+  flex: 1 1 auto;
+  color: var(--ds-text-1);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+.ds-reminder-fields__days {
+  flex: none;
+  width: 56px;
+  min-height: 36px;
+  padding: 0 6px;
+  text-align: center;
+}
+
+.ds-reminder-fields__days:disabled {
+  opacity: 0.6;
+}
+
+.ds-reminder-fields__unit {
+  flex: none;
+  color: var(--ds-text-2);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 400px) {
+  .ds-reminder-fields {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+.ds-reminder-switch {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  flex: none;
+  border: 1px solid var(--ds-line);
+  border-radius: 999px;
+  background: var(--ds-surface-2);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ds-reminder-switch:disabled {
+  opacity: 0.6;
+}
+
+.ds-reminder-switch[aria-checked="true"] {
+  border-color: var(--ds-brand);
+  background: var(--ds-brand);
+}
+
+.ds-reminder-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ds-surface-1);
+  transition: transform 0.15s ease;
+}
+
+.ds-reminder-switch[aria-checked="true"] .ds-reminder-switch__thumb {
+  transform: translateX(16px);
 }
 
 @media (min-width: 520px) {
   .ds-workspace-invite-form {
     grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .ds-reminder-settings-row {
-    grid-template-columns: minmax(0, 1fr) 120px 96px;
-    align-items: center;
   }
 }
 

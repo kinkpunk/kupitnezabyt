@@ -174,6 +174,8 @@ export default async function itemRoutes(app: FastifyInstance) {
     }
 
     const usageCycleDays = readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null;
+    const requestedReminderEnabled = readOptionalBoolean(request.body?.reminderEnabled);
+    const reminderEnabled = requestedReminderEnabled ?? true;
     const importance = readOptionalItemImportance(request.body?.importance);
     if (importance === null) {
       await sendError(reply, 400, "INVALID_IMPORTANCE", "Item importance is invalid.");
@@ -207,6 +209,8 @@ export default async function itemRoutes(app: FastifyInstance) {
           notes: readOptionalString(request.body?.notes) ?? null,
           importance: importance ?? "NORMAL",
           usageCycleDays,
+          // Без явного значения поле не пишем: действует дефолт модели.
+          ...(requestedReminderEnabled === undefined ? {} : { reminderEnabled: requestedReminderEnabled }),
           sortOrder: nextSortOrder,
           nextCheckAt: calculateNextCheckAt(initialStatus, now, usageCycleDays)
         }
@@ -224,7 +228,7 @@ export default async function itemRoutes(app: FastifyInstance) {
         });
       }
 
-      if (item.nextCheckAt) {
+      if (item.nextCheckAt && reminderEnabled) {
         await upsertItemCheckReminder(tx, {
           userId,
           workspaceId: workspaceAccess.workspaceId,

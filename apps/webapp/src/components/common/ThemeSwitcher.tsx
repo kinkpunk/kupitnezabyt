@@ -1,5 +1,6 @@
 "use client";
 
+import { Moon, Sun, SunMoon } from "lucide-react";
 import React from "react";
 
 import type { ThemeMode } from "../../lib/ui";
@@ -9,10 +10,10 @@ export interface ThemeSwitcherProps {
   onChange: (theme: ThemeMode) => void;
 }
 
-const options: { value: ThemeMode; label: string }[] = [
-  { value: "system", label: "Как на устройстве" },
-  { value: "light", label: "Светлая" },
-  { value: "dark", label: "Тёмная" }
+const options: { value: ThemeMode; label: string; Icon: typeof Sun }[] = [
+  { value: "system", label: "Как на устройстве", Icon: SunMoon },
+  { value: "light", label: "Светлая", Icon: Sun },
+  { value: "dark", label: "Тёмная", Icon: Moon }
 ];
 
 export function ThemeSwitcher({ theme, onChange }: ThemeSwitcherProps) {
@@ -20,6 +21,7 @@ export function ThemeSwitcher({ theme, onChange }: ThemeSwitcherProps) {
     <div className="ds-theme-switcher" role="group" aria-label="Тема оформления">
       {options.map((option) => {
         const isActive = theme === option.value;
+        const { Icon } = option;
 
         return (
           <button
@@ -33,6 +35,7 @@ export function ThemeSwitcher({ theme, onChange }: ThemeSwitcherProps) {
             type="button"
             onClick={() => onChange(option.value)}
           >
+            <Icon aria-hidden="true" size={16} />
             {option.label}
           </button>
         );

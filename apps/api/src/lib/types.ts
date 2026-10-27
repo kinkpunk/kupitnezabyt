@@ -1,6 +1,8 @@
 export type NamedBody = {
   name?: unknown;
   icon?: unknown;
+  usageCycleDays?: unknown;
+  reminderEnabled?: unknown;
 };
 
 export type CheckSettingsBody = {
@@ -18,6 +20,7 @@ export type CreateItemBody = {
   notes?: unknown;
   importance?: unknown;
   usageCycleDays?: unknown;
+  reminderEnabled?: unknown;
 };
 
 export type UpdateItemBody = {

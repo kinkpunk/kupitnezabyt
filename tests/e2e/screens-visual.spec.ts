@@ -105,7 +105,7 @@ test.describe("Screens visual regression", () => {
 
   test("archive empty", async () => {
     await openMenuTab(page, "Архив");
-    await expect(page.getByText("Архив пуст")).toBeVisible();
+    await expect(page.getByText("Архивных категорий нет")).toBeVisible();
     await expect(page).toHaveScreenshot("archive-empty.png");
   });
 

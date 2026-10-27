@@ -1,6 +1,6 @@
 "use client";
 
-import { ArchiveX } from "lucide-react";
+import { ArchiveX, Trash2, Undo2 } from "lucide-react";
 import React from "react";
 
 import { formatDate, formatError } from "../../lib/format";
@@ -26,8 +26,6 @@ export function ArchiveView({
   onDeleteArchivedItem: (item: Item) => Promise<void>;
   setError: (message: string | null) => void;
 }) {
-  const totalCount = archivedCategories.length + archivedStandaloneItems.length;
-
   function handleRestoreCategory(category: Category) {
     void onRestoreCategory(category).catch((caughtError) => setError(formatError(caughtError)));
   }
@@ -50,6 +48,7 @@ export function ArchiveView({
     return (
       <div className="ds-row-actions">
         <Button size="compact" variant="ghost" onClick={() => handleRestoreCategory(category)}>
+          <Undo2 aria-hidden="true" size={16} />
           Вернуть
         </Button>
         <Button
@@ -58,6 +57,7 @@ export function ArchiveView({
           variant="ghost"
           onClick={() => handleDeleteCategory(category)}
         >
+          <Trash2 aria-hidden="true" size={16} />
           Удалить
         </Button>
       </div>
@@ -68,6 +68,7 @@ export function ArchiveView({
     return (
       <div className="ds-row-actions">
         <Button size="compact" variant="ghost" onClick={() => handleRestoreItem(item)}>
+          <Undo2 aria-hidden="true" size={16} />
           Вернуть
         </Button>
         <Button
@@ -76,6 +77,7 @@ export function ArchiveView({
           variant="ghost"
           onClick={() => handleDeleteItem(item)}
         >
+          <Trash2 aria-hidden="true" size={16} />
           Удалить
         </Button>
       </div>
@@ -92,15 +94,6 @@ export function ArchiveView({
 
   return (
     <section className="stack">
-      <SectionHeader
-        title="Архив"
-        subtitle={
-          totalCount
-            ? `${archivedCategories.length} кат. · ${archivedStandaloneItems.length} тов.`
-            : "Архив пуст"
-        }
-      />
-
       <section className="ds-archive-section" aria-label="Архивные категории">
         <SectionHeader
           title="Категории"

@@ -106,11 +106,6 @@ export type ActiveTab =
   | "settings"
   | "shopping";
 
-export type ReminderDraft = {
-  usageCycleDays: string;
-  reminderEnabled: boolean;
-};
-
 const defaultStarterItems: StarterItemDraft[] = [
   { name: "Кофе", categoryName: "Еда" },
   { name: "Ибупрофен", categoryName: "Аптека" },
@@ -189,9 +184,7 @@ export function useAppState() {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [consentRecorded, setConsentRecorded] = useState<boolean | null>(null);
   const [authProviders, setAuthProviders] = useState<{ google: boolean; apple: boolean } | null>(null);
-  const [reminderDrafts, setReminderDrafts] = useState<Record<string, ReminderDraft>>({});
   const [savingReminderKeys, setSavingReminderKeys] = useState<string[]>([]);
-  const [reminderSettingsMessage, setReminderSettingsMessage] = useState<string | null>(null);
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [workspaceLoadFailed, setWorkspaceLoadFailed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -449,26 +442,6 @@ export function useAppState() {
     );
   }, [activeTab, activeWorkspace?.id, canManageActiveWorkspace, token]);
 
-  useEffect(() => {
-    const nextDrafts: Record<string, ReminderDraft> = {};
-
-    for (const category of categories) {
-      nextDrafts[getReminderDraftKey("CATEGORY", category.id)] = {
-        usageCycleDays: String(category.usageCycleDays ?? ""),
-        reminderEnabled: category.reminderEnabled
-      };
-    }
-
-    for (const item of items) {
-      nextDrafts[getReminderDraftKey("ITEM", item.id)] = {
-        usageCycleDays: String(item.usageCycleDays ?? ""),
-        reminderEnabled: item.reminderEnabled
-      };
-    }
-
-    setReminderDrafts(nextDrafts);
-  }, [categories, items]);
-
   async function refreshActiveData(authToken = token, sortMode: CategorySortMode = categorySortMode) {
     if (!authToken) {
       return {
@@ -602,7 +575,10 @@ export function useAppState() {
     setRecommendationSourceCategoryId(nextRecommendations.length ? item.categoryId : null);
   }
 
-  async function handleCreateCategory() {
+  async function handleCreateCategory(input: {
+    usageCycleDays: number | null;
+    reminderEnabled: boolean;
+  }) {
     if (!token || !categoryName.trim()) {
       return;
     }
@@ -611,7 +587,7 @@ export function useAppState() {
     try {
       setError(null);
       setPendingAction(actionKey, true);
-      const category = await createCategory(token, categoryName.trim());
+      const category = await createCategory(token, categoryName.trim(), input);
       setCategoryName("");
       setShowCategoryForm(false);
       setCategories((current) => [...current, category]);
@@ -621,7 +597,10 @@ export function useAppState() {
     }
   }
 
-  async function handleCreateItem() {
+  async function handleCreateItem(input: {
+    usageCycleDays: number | null;
+    reminderEnabled: boolean;
+  }) {
     if (!token || !selectedCategory || !itemName.trim()) {
       return;
     }
@@ -632,7 +611,9 @@ export function useAppState() {
       setPendingAction(actionKey, true);
       const item = await createItem(token, {
         categoryId: selectedCategory.id,
-        name: itemName.trim()
+        name: itemName.trim(),
+        usageCycleDays: input.usageCycleDays,
+        reminderEnabled: input.reminderEnabled
       });
       setItemName("");
       setShowItemForm(false);
@@ -885,22 +866,29 @@ export function useAppState() {
     await refreshActiveData(token);
   }
 
-  function updateReminderDraft(key: string, draft: ReminderDraft) {
-    setReminderDrafts((current) => ({
-      ...current,
-      [key]: draft
-    }));
-    setReminderSettingsMessage(null);
-  }
-
-  function parseReminderCycleDays(draft: ReminderDraft): number | null {
-    const trimmedDays = draft.usageCycleDays.trim();
-    const usageCycleDays = trimmedDays ? Number(trimmedDays) : null;
-    if (usageCycleDays !== null && (!Number.isInteger(usageCycleDays) || usageCycleDays <= 0)) {
-      throw new Error("Цикл проверки должен быть целым числом дней.");
+  async function handleSaveReminderSetting(
+    entityType: InAppReminder["entityType"],
+    entityId: string,
+    input: { usageCycleDays: number | null; reminderEnabled: boolean }
+  ) {
+    if (!token) {
+      return;
     }
 
-    return usageCycleDays;
+    const key = getReminderDraftKey(entityType, entityId);
+    try {
+      setError(null);
+      setReminderSaving(key, true);
+      if (entityType === "CATEGORY") {
+        await updateCategory(token, entityId, input);
+      } else {
+        await updateItem(token, entityId, input);
+      }
+
+      await refreshActiveData(token);
+    } finally {
+      setReminderSaving(key, false);
+    }
   }
 
   function setReminderSaving(key: string, isSaving: boolean) {
@@ -992,56 +980,6 @@ export function useAppState() {
       setCheckSession(session);
       setActiveTab("check");
       return;
-    }
-  }
-
-  async function handleSaveReminderSettingsGroup(
-    entityType: InAppReminder["entityType"],
-    entityIds: string[]
-  ) {
-    if (!token) {
-      return;
-    }
-
-    if (!entityIds.length) {
-      return;
-    }
-
-    const groupKey = `${entityType}:SECTION`;
-    try {
-      setError(null);
-      setReminderSettingsMessage(null);
-      setReminderSaving(groupKey, true);
-      await Promise.all(
-        entityIds.map((entityId) => {
-          const draft = reminderDrafts[getReminderDraftKey(entityType, entityId)];
-          if (!draft) {
-            return Promise.resolve(null);
-          }
-
-          const input = {
-            usageCycleDays: parseReminderCycleDays(draft),
-            reminderEnabled: draft.reminderEnabled
-          };
-
-          if (entityType === "CATEGORY") {
-            return updateCategory(token, entityId, input);
-          }
-
-          return updateItem(token, entityId, input);
-        })
-      );
-
-      await refreshActiveData(token);
-      setReminderSettingsMessage(
-        entityType === "CATEGORY"
-          ? "Настройки категорий сохранены."
-          : "Настройки товаров сохранены."
-      );
-    } catch (caughtError) {
-      setError(formatError(caughtError));
-    } finally {
-      setReminderSaving(groupKey, false);
     }
   }
 
@@ -1720,9 +1658,7 @@ export function useAppState() {
     checkSession,
     setCheckSession,
     pendingCheckItemName,
-    reminderDrafts,
     savingReminderKeys,
-    reminderSettingsMessage,
     pendingActionKeys,
     workspaceLoadFailed,
     showMenuSheet,
@@ -1770,7 +1706,6 @@ export function useAppState() {
     handleUpdateManualShoppingItem,
     handleDeleteManualShoppingItem,
     handleUpdateItem,
-    updateReminderDraft,
     setReminderSaving,
     setPendingAction,
     showBoughtToast,
@@ -1778,7 +1713,7 @@ export function useAppState() {
     handleOpenReminder,
     handleSnoozeReminder,
     handleStartReminderCheck,
-    handleSaveReminderSettingsGroup,
+    handleSaveReminderSetting,
     handleArchiveItem,
     handleArchiveSelectedCategory,
     handleRestoreCategory,

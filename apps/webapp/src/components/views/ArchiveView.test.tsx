@@ -53,13 +53,12 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ArchiveView>
 describe("ArchiveView", () => {
   it("renders empty state when archive is empty", () => {
     render(<ArchiveView {...createProps({ archivedCategories: [], archivedStandaloneItems: [] })} />);
-    expect(screen.getByRole("heading", { name: "Архив" })).toBeInTheDocument();
-    expect(screen.getByText("Архив пуст")).toBeInTheDocument();
+    expect(screen.getByText("Архивных категорий нет")).toBeInTheDocument();
+    expect(screen.getByText("Отдельно архивированных товаров нет")).toBeInTheDocument();
   });
 
-  it("renders archived categories and items counts", () => {
+  it("renders archived categories and items", () => {
     render(<ArchiveView {...createProps()} />);
-    expect(screen.getByText("1 кат. · 1 тов.")).toBeInTheDocument();
     expect(screen.getByText("🏡 Дача")).toBeInTheDocument();
     expect(screen.getByText("Лопата")).toBeInTheDocument();
   });

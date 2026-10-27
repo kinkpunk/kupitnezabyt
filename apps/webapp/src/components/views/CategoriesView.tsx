@@ -5,19 +5,23 @@ import {
   Archive,
   ArrowDown,
   ArrowUp,
+  Bell,
   EyeOff,
   FolderPlus,
   GripVertical,
   ListOrdered,
+  ListPlus,
   PackagePlus,
   Pencil,
   Plus,
+  Save,
   X
 } from "lucide-react";
 import React, { useMemo, useState } from "react";
 
 import type { CategorySortMode } from "../../lib/api";
 import { formatDate, formatError } from "../../lib/format";
+import { getReminderDraftKey } from "../../lib/reminder-draft";
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import {
   categoryTriggerItemStatus,
@@ -35,6 +39,9 @@ import {
   SearchField,
   type CategoryStatusFilter
 } from "../common";
+import { ReminderFields, type ReminderFieldsValue } from "../ui/ReminderFields";
+import { ReminderSettingsSheet } from "../ui/ReminderSettingsSheet";
+import type { ReminderSettingEntity, ReminderSettingInput } from "../ui/ReminderSettingsSheet";
 import { Button } from "../ui/Button";
 
 export function CategoriesView({
@@ -73,6 +80,8 @@ export function CategoriesView({
   onArchiveItem,
   onArchiveSelectedCategory,
   onStartCategoryCheck,
+  onSaveReminderSetting,
+  savingReminderKeys,
   setError,
   isActionPending
 }: {
@@ -99,8 +108,8 @@ export function CategoriesView({
   onSearchQueryChange: (value: string) => void;
   onSearch: () => Promise<void>;
   onSelectCategory: (categoryId: string) => void;
-  onCreateCategory: () => Promise<void>;
-  onCreateItem: () => Promise<void>;
+  onCreateCategory: (input: ReminderSettingInput) => Promise<void>;
+  onCreateItem: (input: ReminderSettingInput) => Promise<void>;
   onSetStatus: (item: Item, status: ItemStatus) => Promise<void>;
   onCategorySortModeChange: (mode: CategorySortMode) => Promise<void>;
   onMoveItem: (item: Item, direction: "up" | "down") => Promise<void>;
@@ -111,13 +120,23 @@ export function CategoriesView({
   onArchiveItem: (item: Item) => Promise<void>;
   onArchiveSelectedCategory: () => Promise<void>;
   onStartCategoryCheck: () => Promise<void>;
+  onSaveReminderSetting: (
+    entityType: "CATEGORY" | "ITEM",
+    entityId: string,
+    input: ReminderSettingInput
+  ) => Promise<void>;
+  savingReminderKeys: string[];
   setError: (message: string | null) => void;
   isActionPending: (key: string) => boolean;
 }) {
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
   const [activeRecommendationId, setActiveRecommendationId] = useState<string | null>(null);
+  const emptyReminderValue: ReminderFieldsValue = { usageCycleDays: null, reminderEnabled: false };
+  const [categoryReminder, setCategoryReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
+  const [itemReminder, setItemReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
   const [isReordering, setIsReordering] = useState(false);
   const [statusFilter, setStatusFilter] = useState<CategoryStatusFilter>("all");
+  const [reminderEntity, setReminderEntity] = useState<ReminderSettingEntity | null>(null);
 
   React.useEffect(() => {
     setStatusFilter("all");
@@ -179,6 +198,17 @@ export function CategoriesView({
   function handleStartEdit(item: Item) {
     setEditingItemId(item.id);
     setEditingItemName(item.name);
+    setSheetItemId(null);
+  }
+
+  function openItemReminderSettings(item: Item) {
+    setReminderEntity({
+      id: item.id,
+      entityType: "ITEM",
+      name: item.name,
+      usageCycleDays: item.usageCycleDays,
+      reminderEnabled: item.reminderEnabled
+    });
     setSheetItemId(null);
   }
 
@@ -259,13 +289,18 @@ export function CategoriesView({
       <BottomSheet
         show={showCategoryForm}
         title="Новая категория"
-        onClose={() => setShowCategoryForm(false)}
+        onClose={() => {
+          setCategoryReminder(emptyReminderValue);
+          setShowCategoryForm(false);
+        }}
       >
         <form
           className="ds-bottom-sheet__create-form"
           onSubmit={(event) => {
             event.preventDefault();
-            void onCreateCategory().catch((caughtError) => setError(formatError(caughtError)));
+            void onCreateCategory(categoryReminder)
+              .then(() => setCategoryReminder(emptyReminderValue))
+              .catch((caughtError) => setError(formatError(caughtError)));
           }}
         >
           <input
@@ -275,10 +310,18 @@ export function CategoriesView({
             disabled={isActionPending("category:create")}
             onChange={(event) => setCategoryName(event.target.value)}
           />
+          <ReminderFields
+            idPrefix="category-create"
+            disabled={isActionPending("category:create")}
+            value={categoryReminder}
+            onChange={setCategoryReminder}
+          />
           <Button
             type="submit"
             disabled={isActionPending("category:create") || !categoryName.trim()}
+            variant="accent"
           >
+            <ListPlus aria-hidden="true" size={16} />
             {isActionPending("category:create") ? "Создаем..." : "Создать"}
           </Button>
         </form>
@@ -327,6 +370,15 @@ export function CategoriesView({
                 setError(formatError(caughtError))
               )
             }
+            onOpenReminderSettings={() =>
+              setReminderEntity({
+                id: selectedCategory.id,
+                entityType: "CATEGORY",
+                name: selectedCategory.name,
+                usageCycleDays: selectedCategory.usageCycleDays,
+                reminderEnabled: selectedCategory.reminderEnabled
+              })
+            }
             onAddItem={
               isReordering || (visibleItems.length === 0 && statusFilter === "all")
                 ? undefined
@@ -355,7 +407,7 @@ export function CategoriesView({
                       <Button
                         className="ds-button--compact"
                         disabled={isActionPending(`recommendation:add:${recommendation.id}`)}
-                        variant="primary"
+                        variant="accent"
                         onClick={() =>
                           void onAcceptRecommendation(recommendation).catch((caughtError) =>
                             setError(formatError(caughtError))
@@ -396,6 +448,7 @@ export function CategoriesView({
                       onChange={(event) => setEditingItemName(event.target.value)}
                     />
                     <Button size="compact" type="submit">
+                      <Save aria-hidden="true" size={16} />
                       Сохранить
                     </Button>
                   </form>
@@ -432,15 +485,20 @@ export function CategoriesView({
           <BottomSheet
             show={showItemForm}
             title="Новый товар"
-            onClose={() => setShowItemForm(false)}
+            onClose={() => {
+              setItemReminder(emptyReminderValue);
+              setShowItemForm(false);
+            }}
           >
             <form
               className="ds-bottom-sheet__create-form"
               onSubmit={(event) => {
                 event.preventDefault();
-                void onCreateItem().catch((caughtError) =>
-                  setError(formatError(caughtError))
-                );
+                void onCreateItem(itemReminder)
+                  .then(() => setItemReminder(emptyReminderValue))
+                  .catch((caughtError) =>
+                    setError(formatError(caughtError))
+                  );
               }}
             >
               <input
@@ -450,10 +508,18 @@ export function CategoriesView({
                 disabled={isActionPending("item:create")}
                 onChange={(event) => setItemName(event.target.value)}
               />
+              <ReminderFields
+                idPrefix="item-create"
+                disabled={isActionPending("item:create")}
+                value={itemReminder}
+                onChange={setItemReminder}
+              />
               <Button
                 type="submit"
                 disabled={isActionPending("item:create") || !itemName.trim()}
+                variant="accent"
               >
+                <ListPlus aria-hidden="true" size={16} />
                 {isActionPending("item:create") ? "Добавляем..." : "Добавить"}
               </Button>
             </form>
@@ -530,6 +596,14 @@ export function CategoriesView({
                     Редактировать
                   </button>
                   <button
+                    className="ds-bottom-sheet__action"
+                    type="button"
+                    onClick={() => sheetItem && openItemReminderSettings(sheetItem)}
+                  >
+                    <Bell aria-hidden="true" size={18} />
+                    Напоминание о проверке
+                  </button>
+                  <button
                     className="ds-bottom-sheet__action ds-bottom-sheet__action--danger"
                     type="button"
                     onClick={handleArchiveSelectedItem}
@@ -578,6 +652,29 @@ export function CategoriesView({
               </div>
             ) : null}
           </BottomSheet>
+
+          <ReminderSettingsSheet
+            entity={reminderEntity}
+            isSaving={
+              reminderEntity
+                ? savingReminderKeys.includes(
+                    getReminderDraftKey(reminderEntity.entityType, reminderEntity.id)
+                  )
+                : false
+            }
+            onClose={() => setReminderEntity(null)}
+            onSave={(input) => {
+              if (!reminderEntity) {
+                return Promise.resolve();
+              }
+
+              return onSaveReminderSetting(
+                reminderEntity.entityType,
+                reminderEntity.id,
+                input
+              );
+            }}
+          />
         </>
       ) : (
         <EmptyState

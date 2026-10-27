@@ -79,12 +79,23 @@ export default async function categoryRoutes(app: FastifyInstance) {
       }
     });
 
+    const usageCycleDays = readOptionalPositiveInteger(request.body?.usageCycleDays) ?? null;
+    const requestedReminderEnabled = readOptionalBoolean(request.body?.reminderEnabled);
+
     const category = await prisma.category.create({
       data: {
         userId,
         workspaceId: workspaceAccess.workspaceId,
         name,
         icon: readOptionalString(request.body?.icon) ?? null,
+        // Без явных значений поля не пишем: действуют дефолты модели.
+        ...(usageCycleDays === null
+          ? {}
+          : {
+              usageCycleDays,
+              nextCheckAt: calculateConfiguredNextCheckAt(new Date(), usageCycleDays)
+            }),
+        ...(requestedReminderEnabled === undefined ? {} : { reminderEnabled: requestedReminderEnabled }),
         sortOrder: categoryCount
       }
     });

@@ -168,6 +168,60 @@ describe("workspace access routes", () => {
     await app.close();
   });
 
+  it("creates categories with a configured check reminder", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.category.count.mockResolvedValue(0);
+    mockPrisma.category.create.mockResolvedValue({
+      id: "category-4",
+      userId: "member-1",
+      workspaceId: "workspace-shared",
+      name: "Аптека",
+      icon: null,
+      usageCycleDays: 14,
+      reminderEnabled: true,
+      nextCheckAt: new Date(),
+      sortOrder: 0,
+      archivedAt: null
+    });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/categories",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        name: "Аптека",
+        usageCycleDays: 14,
+        reminderEnabled: true
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.category.create).toHaveBeenCalledWith({
+      data: {
+        userId: "member-1",
+        workspaceId: "workspace-shared",
+        name: "Аптека",
+        icon: null,
+        usageCycleDays: 14,
+        reminderEnabled: true,
+        nextCheckAt: expect.any(Date),
+        sortOrder: 0
+      }
+    });
+
+    await app.close();
+  });
+
   it("rejects category writes for shared workspace viewers", async () => {
     const { buildServer } = await import("./server.js");
     const { signToken } = await import("./auth.js");
@@ -339,6 +393,55 @@ describe("workspace access routes", () => {
     expect(scheduledFor ? scheduledFor.getTime() - Date.now() : 0).toBeLessThan(
       15 * 24 * 60 * 60 * 1000
     );
+
+    await app.close();
+  });
+
+  it("does not schedule a reminder for a cycle-tracked item with the switch off", async () => {
+    const { buildServer } = await import("./server.js");
+    const { signToken } = await import("./auth.js");
+    const app = buildServer();
+
+    mockPrisma.workspaceMember.findFirst.mockResolvedValue({
+      role: "EDITOR",
+      workspaceId: "workspace-shared"
+    });
+    mockPrisma.category.findFirst.mockResolvedValue({
+      id: "category-1",
+      workspaceId: "workspace-shared",
+      archivedAt: null
+    });
+    mockTx.item.create.mockImplementation(({ data }) =>
+      Promise.resolve({
+        id: "item-1",
+        ...data
+      })
+    );
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/items",
+      headers: {
+        authorization: `Bearer ${createToken(signToken, "member-1")}`,
+        "x-workspace-id": "workspace-shared"
+      },
+      payload: {
+        categoryId: "category-1",
+        name: "Шампунь",
+        usageCycleDays: 14,
+        reminderEnabled: false
+      }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockTx.item.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        usageCycleDays: 14,
+        reminderEnabled: false,
+        nextCheckAt: expect.any(Date)
+      })
+    });
+    expect(mockUpsertItemCheckReminder).not.toHaveBeenCalled();
 
     await app.close();
   });

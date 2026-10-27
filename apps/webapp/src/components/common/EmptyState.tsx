@@ -32,7 +32,7 @@ export function EmptyState({
       <p className="ds-empty-state__title">{title}</p>
       {description ? <p className="ds-empty-state__description">{description}</p> : null}
       {actionLabel && onAction ? (
-        <Button className="ds-empty-state__action" variant="primary" onClick={onAction}>
+        <Button className="ds-empty-state__action" variant="accent" onClick={onAction}>
           {actionLabel}
         </Button>
       ) : null}
