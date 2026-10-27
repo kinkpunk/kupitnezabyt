@@ -176,6 +176,27 @@ export function ShoppingView({
         />
       </form>
 
+      {shoppingGroups.length === 0 && !searchQuery.trim() ? null : (
+        <div className="ds-panel-header">
+          <div className="ds-panel-header__row">
+            <div className="ds-panel-header__row-actions">
+              <Button
+                aria-label="Добавить покупку"
+                className="ds-button--compact ds-panel-header__add"
+                variant="ghost"
+                onClick={() => setShowShoppingForm(true)}
+              >
+                <Plus aria-hidden="true" size={18} />
+                <span aria-hidden="true" className="ds-panel-header__add-label">
+                  <span className="ds-panel-header__add-label-full">Добавить покупку</span>
+                  <span className="ds-panel-header__add-label-short">Покупка</span>
+                </span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {visibleGroups.length ? (
         <div className="ds-shopping-groups">
           {visibleGroups.map((group) => (
@@ -224,17 +245,6 @@ export function ShoppingView({
           title="Список покупок пуст"
           onAction={() => setShowShoppingForm(true)}
         />
-      )}
-
-      {shoppingGroups.length === 0 && !searchQuery.trim() ? null : (
-        <button
-          className="ds-add-item-row"
-          type="button"
-          onClick={() => setShowShoppingForm(true)}
-        >
-          <Plus aria-hidden="true" size={18} />
-          Добавить покупку
-        </button>
       )}
 
       <BottomSheet

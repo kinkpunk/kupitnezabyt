@@ -106,11 +106,20 @@ describe("ShoppingView", () => {
     expect(screen.getByText("Молоко")).toBeInTheDocument();
   });
 
-  it("opens create shopping sheet via add item row", () => {
+  it("opens create shopping sheet from the sticky panel header", () => {
     const setShowShoppingForm = vi.fn();
     render(<ShoppingView {...createProps({ setShowShoppingForm })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Добавить покупку" }));
+    const addButton = screen.getByRole("button", { name: "Добавить покупку" });
+    expect(addButton).toHaveClass("ds-button--ghost");
+    expect(addButton.closest(".ds-panel-header")).not.toBeNull();
+    expect(document.querySelector(".ds-add-item-row")).not.toBeInTheDocument();
+    fireEvent.click(addButton);
     expect(setShowShoppingForm).toHaveBeenCalledWith(true);
+  });
+
+  it("hides the panel add button when the list is empty", () => {
+    render(<ShoppingView {...createProps({ shoppingList: [], shoppingGroups: [] })} />);
+    expect(document.querySelector(".ds-panel-header")).not.toBeInTheDocument();
   });
 
   it("submits create manual item form", () => {

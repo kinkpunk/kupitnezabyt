@@ -127,18 +127,14 @@ export default function Home() {
             setEditingItemId={state.setEditingItemId}
             editingItemName={state.editingItemName}
             setEditingItemName={state.setEditingItemName}
-            editingItemImportance={state.editingItemImportance}
-            setEditingItemImportance={state.setEditingItemImportance}
             categorySortMode={state.categorySortMode}
             visibleItems={state.visibleItems}
             visibleRecommendations={state.visibleRecommendations}
             recommendationSourceItemName={state.recommendationSourceItemName}
             canWriteActiveWorkspace={state.canWriteActiveWorkspace}
-            showShareEntryPoint={state.showShareEntryPoint}
             searchQuery={state.searchQuery}
             onSearchQueryChange={state.setSearchQuery}
             onSearch={state.handleSearchItems}
-            onSelectSettings={() => state.handleSelectTab("settings")}
             onSelectCategory={(categoryId) => {
               state.clearSearchSession();
               state.setSelectedCategoryId(categoryId);

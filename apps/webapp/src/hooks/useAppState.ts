@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemImportance, ItemStatus, LegalConsent } from "@kupitnezabyt/shared";
+import type { ItemStatus, LegalConsent } from "@kupitnezabyt/shared";
 import { useEffect, useMemo, useState } from "react";
 
 import {
@@ -165,7 +165,6 @@ export function useAppState() {
   const [itemName, setItemName] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemName, setEditingItemName] = useState("");
-  const [editingItemImportance, setEditingItemImportance] = useState<ItemImportance>("NORMAL");
   const [manualShoppingTitle, setManualShoppingTitle] = useState("");
   const [manualShoppingCategoryId, setManualShoppingCategoryId] = useState("");
   const [editingShoppingId, setEditingShoppingId] = useState<string | null>(null);
@@ -226,7 +225,6 @@ export function useAppState() {
   const canWriteActiveWorkspace =
     activeWorkspace?.role === "OWNER" || activeWorkspace?.role === "EDITOR";
   const showWorkspaceSwitcher = workspaces.length > 1;
-  const showShareEntryPoint = Boolean(token && (!activeWorkspace || canManageActiveWorkspace));
 
   const visibleItems = useMemo(
     () =>
@@ -877,15 +875,13 @@ export function useAppState() {
 
     setError(null);
     const updatedItem = await updateItem(token, item.id, {
-      name: editingItemName.trim(),
-      importance: editingItemImportance
+      name: editingItemName.trim()
     });
     setItems((current) =>
       current.map((currentItem) => (currentItem.id === updatedItem.id ? updatedItem : currentItem))
     );
     setEditingItemId(null);
     setEditingItemName("");
-    setEditingItemImportance("NORMAL");
     await refreshActiveData(token);
   }
 
@@ -1306,7 +1302,6 @@ export function useAppState() {
     setSelectedCategoryId(item.categoryId);
     setEditingItemId(item.id);
     setEditingItemName(item.name);
-    setEditingItemImportance(item.importance);
     setActiveTab("items");
   }
 
@@ -1714,8 +1709,6 @@ export function useAppState() {
     setEditingItemId,
     editingItemName,
     setEditingItemName,
-    editingItemImportance,
-    setEditingItemImportance,
     manualShoppingTitle,
     setManualShoppingTitle,
     manualShoppingCategoryId,
@@ -1746,7 +1739,6 @@ export function useAppState() {
     canManageActiveWorkspace,
     canWriteActiveWorkspace,
     showWorkspaceSwitcher,
-    showShareEntryPoint,
     visibleItems,
     visibleRecommendations,
     starterCategoryOptions,

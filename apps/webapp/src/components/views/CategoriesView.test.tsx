@@ -109,18 +109,14 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     setEditingItemId: vi.fn(),
     editingItemName: "",
     setEditingItemName: vi.fn(),
-    editingItemImportance: "NORMAL" as const,
-    setEditingItemImportance: vi.fn(),
     categorySortMode: "manual" as const,
     visibleItems: [itemInStock, itemLow],
     visibleRecommendations: [],
     recommendationSourceItemName: null,
     canWriteActiveWorkspace: true,
-    showShareEntryPoint: true,
     searchQuery: "",
     onSearchQueryChange: vi.fn(),
     onSearch: vi.fn().mockResolvedValue(undefined),
-    onSelectSettings: vi.fn(),
     onSelectCategory: vi.fn(),
     onCreateCategory: vi.fn().mockResolvedValue(undefined),
     onCreateItem: vi.fn().mockResolvedValue(undefined),
@@ -263,14 +259,21 @@ describe("CategoriesView", () => {
     expect(setShowCategoryForm).toHaveBeenCalledWith(false);
   });
 
-  it("opens create item sheet via add item row", () => {
+  it("opens create item sheet from the panel header", () => {
     const setShowItemForm = vi.fn();
     render(<CategoriesView {...createProps({ setShowItemForm })} />);
     fireEvent.click(screen.getByRole("button", { name: "Добавить товар" }));
     expect(setShowItemForm).toHaveBeenCalledWith(true);
+    expect(document.querySelector(".ds-add-item-row")).not.toBeInTheDocument();
   });
 
-  it("hides add item row while reordering", () => {
+  it("hides the panel add button in an empty category", () => {
+    render(<CategoriesView {...createProps({ visibleItems: [] })} />);
+    expect(document.querySelector(".ds-panel-header__add")).not.toBeInTheDocument();
+    expect(screen.getByText("Добавьте первый товар в эту категорию.")).toBeInTheDocument();
+  });
+
+  it("hides panel add button while reordering", () => {
     render(<CategoriesView {...createProps()} />);
     expect(screen.getByRole("button", { name: "Добавить товар" })).toBeInTheDocument();
 
@@ -294,13 +297,11 @@ describe("CategoriesView", () => {
   it("opens item actions sheet and triggers edit", () => {
     const setEditingItemId = vi.fn();
     const setEditingItemName = vi.fn();
-    const setEditingItemImportance = vi.fn();
     render(
       <CategoriesView
         {...createProps({
           setEditingItemId,
-          setEditingItemName,
-          setEditingItemImportance
+          setEditingItemName
         })}
       />
     );
@@ -309,7 +310,6 @@ describe("CategoriesView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Редактировать" }));
     expect(setEditingItemId).toHaveBeenCalledWith(itemInStock.id);
     expect(setEditingItemName).toHaveBeenCalledWith(itemInStock.name);
-    expect(setEditingItemImportance).toHaveBeenCalledWith(itemInStock.importance);
   });
 
   it("archives item from actions sheet", () => {

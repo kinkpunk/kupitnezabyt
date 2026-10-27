@@ -133,6 +133,87 @@ test.describe("Categories screen visual regression", () => {
     await expect(page.getByText("Добавьте первый товар в эту категорию.")).toBeVisible();
     await expect(page).toHaveScreenshot("categories-empty-category.png");
   });
+
+  test("panel actions stay visible while scrolling a long list", async () => {
+    await page.getByRole("button", { name: "Новая категория" }).click();
+    await page.getByLabel("Название категории").fill("Запасы");
+    await page.getByRole("button", { name: "Создать", exact: true }).click();
+    await expect(page.getByRole("tab", { name: "Запасы" })).toBeVisible();
+
+    for (const name of [
+      "Рис",
+      "Гречка",
+      "Овсянка",
+      "Макароны",
+      "Консервы",
+      "Чай",
+      "Кофе в зернах",
+      "Сахар",
+      "Соль",
+      "Мука",
+      "Подсолнечное масло",
+      "Уксус"
+    ]) {
+      await addItemWithStatus(page, name, 0);
+    }
+
+    const checkedSubtitle = page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ });
+    await expect(page).toHaveScreenshot("categories-long-list-top.png", {
+      mask: [checkedSubtitle]
+    });
+
+    // Раскрытые фильтры остаются в закреплённой панели при прокрутке.
+    await page.getByRole("button", { name: "Фильтры" }).click();
+    const mainContent = page.locator(".main-content");
+    await mainContent.evaluate((el) => {
+      el.scrollTop = Math.round(el.scrollHeight / 2);
+    });
+    await expect(page.getByRole("button", { name: "Добавить товар" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Фильтр по статусу" })).toBeVisible();
+    await expect(page).toHaveScreenshot("categories-long-list-mid-filters.png", {
+      mask: [checkedSubtitle]
+    });
+
+    // Кнопка добавления открывает bottom sheet без возврата к началу списка.
+    await page.getByRole("button", { name: "Добавить товар" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByLabel("Название товара")).toBeVisible();
+    await page.getByRole("button", { name: "Закрыть" }).click();
+
+    await mainContent.evaluate((el) => {
+      el.scrollTop = el.scrollHeight;
+    });
+    await expect(page.getByRole("button", { name: "Добавить товар" })).toBeVisible();
+    await expect(page).toHaveScreenshot("categories-long-list-bottom.png", {
+      mask: [checkedSubtitle]
+    });
+  });
+
+  test("new category button stays visible when tabs overflow", async () => {
+    for (const name of [
+      "Авто",
+      "Косметика",
+      "Питомцы",
+      "Химия",
+      "Одежда",
+      "Аптечка",
+      "Дача",
+      "Спорт"
+    ]) {
+      await page.getByRole("button", { name: "Новая категория" }).click();
+      await page.getByLabel("Название категории").fill(name);
+      await page.getByRole("button", { name: "Создать", exact: true }).click();
+      await expect(page.getByRole("tab", { name })).toBeVisible();
+    }
+
+    const tabs = page.locator(".ds-category-tabs");
+    await tabs.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+
+    await expect(page.getByRole("button", { name: "Новая категория" })).toBeVisible();
+    await expect(page).toHaveScreenshot("categories-tabs-scrolled.png");
+  });
 });
 
 async function addItemWithStatus(page: Page, name: string, statusClicks: number) {

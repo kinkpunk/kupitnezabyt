@@ -73,7 +73,8 @@ export function ChipTabs({
   const wrapClassName = [
     "ds-category-tabs-wrap",
     hasHiddenBefore ? "ds-category-tabs-wrap--start" : "",
-    hasHiddenAfter ? "ds-category-tabs-wrap--end" : ""
+    hasHiddenAfter ? "ds-category-tabs-wrap--end" : "",
+    trailing ? "ds-category-tabs-wrap--trailing" : ""
   ]
     .filter(Boolean)
     .join(" ");
@@ -137,8 +138,8 @@ export function ChipTabs({
             </button>
           );
         })}
-        {trailing ? <div className="ds-category-tabs__trailing">{trailing}</div> : null}
       </div>
+      {trailing ? <div className="ds-category-tabs__trailing">{trailing}</div> : null}
     </div>
   );
 }

@@ -90,7 +90,7 @@ describe("ChipTabs", () => {
   });
 
   it("renders trailing action after tabs", () => {
-    render(
+    const { container } = render(
       <ChipTabs
         items={items}
         selectedId="a"
@@ -99,7 +99,8 @@ describe("ChipTabs", () => {
       />
     );
     const tablist = screen.getByRole("tablist");
-    expect(tablist.querySelector(".ds-category-tabs__trailing")).toBeInTheDocument();
+    expect(tablist.querySelector(".ds-category-tabs__trailing")).toBeNull();
+    expect(container.querySelector(".ds-category-tabs-wrap > .ds-category-tabs__trailing")).not.toBeNull();
     expect(screen.getByRole("button", { name: "Добавить" })).toBeInTheDocument();
   });
 

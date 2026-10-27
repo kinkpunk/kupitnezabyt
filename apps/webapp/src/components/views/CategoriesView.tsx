@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
+import type { ItemStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
   ArrowDown,
@@ -21,8 +21,6 @@ import { formatDate, formatError } from "../../lib/format";
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import {
   categoryTriggerItemStatus,
-  importanceLabels,
-  importanceOptions,
   itemStatusToUiStatus,
   nextUiStatus,
   uiStatusToItemStatus
@@ -54,18 +52,14 @@ export function CategoriesView({
   setEditingItemId,
   editingItemName,
   setEditingItemName,
-  editingItemImportance,
-  setEditingItemImportance,
   categorySortMode,
   visibleItems,
   visibleRecommendations,
   recommendationSourceItemName,
   canWriteActiveWorkspace,
-  showShareEntryPoint,
   searchQuery,
   onSearchQueryChange,
   onSearch,
-  onSelectSettings,
   onSelectCategory,
   onCreateCategory,
   onCreateItem,
@@ -96,18 +90,14 @@ export function CategoriesView({
   setEditingItemId: (value: string | null) => void;
   editingItemName: string;
   setEditingItemName: (value: string) => void;
-  editingItemImportance: ItemImportance;
-  setEditingItemImportance: (value: ItemImportance) => void;
   categorySortMode: CategorySortMode;
   visibleItems: Item[];
   visibleRecommendations: RecommendationSuggestion[];
   recommendationSourceItemName: string | null;
   canWriteActiveWorkspace: boolean;
-  showShareEntryPoint: boolean;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onSearch: () => Promise<void>;
-  onSelectSettings: () => void;
   onSelectCategory: (categoryId: string) => void;
   onCreateCategory: () => Promise<void>;
   onCreateItem: () => Promise<void>;
@@ -189,7 +179,6 @@ export function CategoriesView({
   function handleStartEdit(item: Item) {
     setEditingItemId(item.id);
     setEditingItemName(item.name);
-    setEditingItemImportance(item.importance);
     setSheetItemId(null);
   }
 
@@ -338,7 +327,11 @@ export function CategoriesView({
                 setError(formatError(caughtError))
               )
             }
-            onShare={showShareEntryPoint ? onSelectSettings : undefined}
+            onAddItem={
+              isReordering || (visibleItems.length === 0 && statusFilter === "all")
+                ? undefined
+                : () => setShowItemForm(true)
+            }
           />
 
           {visibleRecommendations.length ? (
@@ -402,19 +395,6 @@ export function CategoriesView({
                       value={editingItemName}
                       onChange={(event) => setEditingItemName(event.target.value)}
                     />
-                    <select
-                      aria-label={`Важность товара ${item.name}`}
-                      value={editingItemImportance}
-                      onChange={(event) =>
-                        setEditingItemImportance(event.target.value as ItemImportance)
-                      }
-                    >
-                      {importanceOptions.map((importance) => (
-                        <option key={importance} value={importance}>
-                          {importanceLabels[importance]}
-                        </option>
-                      ))}
-                    </select>
                     <Button size="compact" type="submit">
                       Сохранить
                     </Button>
@@ -446,16 +426,6 @@ export function CategoriesView({
               />
             ) : (
               <p className="ds-empty">Нет товаров с таким статусом.</p>
-            )}
-            {isReordering || (visibleItems.length === 0 && statusFilter === "all") ? null : (
-              <button
-                className="ds-add-item-row"
-                type="button"
-                onClick={() => setShowItemForm(true)}
-              >
-                <Plus aria-hidden="true" size={18} />
-                Добавить товар
-              </button>
             )}
           </div>
 

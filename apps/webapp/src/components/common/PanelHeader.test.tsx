@@ -27,10 +27,24 @@ function openMenu() {
 }
 
 describe("PanelHeader", () => {
-  it("renders the action row with a single primary check action", () => {
+  it("renders the action row with quiet ghost actions", () => {
     render(<PanelHeader {...createProps()} />);
-    expect(screen.getByRole("button", { name: "Проверить" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Проверить" })).toHaveClass("ds-button--ghost");
     expect(screen.queryByRole("button", { name: "В архив" })).not.toBeInTheDocument();
+  });
+
+  it("hides the add item button when onAddItem is not provided", () => {
+    render(<PanelHeader {...createProps()} />);
+    expect(screen.queryByRole("button", { name: "Добавить товар" })).not.toBeInTheDocument();
+  });
+
+  it("renders the add item button as ghost and calls onAddItem when provided", () => {
+    const handleAddItem = vi.fn();
+    render(<PanelHeader {...createProps({ onAddItem: handleAddItem })} />);
+    const addButton = screen.getByRole("button", { name: "Добавить товар" });
+    expect(addButton).toHaveClass("ds-button--ghost");
+    fireEvent.click(addButton);
+    expect(handleAddItem).toHaveBeenCalledOnce();
   });
 
   it("renders collapsed by default with a filters toggle button", () => {
@@ -134,20 +148,6 @@ describe("PanelHeader", () => {
     fireEvent.click(screen.getByRole("button", { name: "Проверить" }));
     expect(handleCheck).toHaveBeenCalledOnce();
     expect(screen.getByRole("group", { name: "Фильтр по статусу" })).toBeInTheDocument();
-  });
-
-  it("hides the share button when onShare is not provided", () => {
-    render(<PanelHeader {...createProps()} />);
-    expect(
-      screen.queryByRole("button", { name: "Экспорт и совместный доступ" })
-    ).not.toBeInTheDocument();
-  });
-
-  it("renders the share button and calls onShare when provided", () => {
-    const handleShare = vi.fn();
-    render(<PanelHeader {...createProps({ onShare: handleShare })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Экспорт и совместный доступ" }));
-    expect(handleShare).toHaveBeenCalledOnce();
   });
 
   it("gives icon-only buttons tooltip labels", () => {

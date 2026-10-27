@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, MoreVertical, Share2, SlidersHorizontal } from "lucide-react";
+import { Archive, MoreVertical, Plus, SlidersHorizontal } from "lucide-react";
 import React from "react";
 
 import { Button } from "../ui/Button";
@@ -17,7 +17,7 @@ export interface PanelHeaderProps {
   onFilterChange: (filter: CategoryStatusFilter) => void;
   onArchive: () => void;
   onCheck: () => void;
-  onShare?: (() => void) | undefined;
+  onAddItem?: (() => void) | undefined;
   disabled?: boolean;
   archiveDisabled?: boolean;
 }
@@ -38,7 +38,7 @@ export function PanelHeader({
   onFilterChange,
   onArchive,
   onCheck,
-  onShare,
+  onAddItem,
   disabled = false,
   archiveDisabled = false
 }: PanelHeaderProps) {
@@ -56,27 +56,30 @@ export function PanelHeader({
     <div className="ds-panel-header">
       <div className="ds-panel-header__row">
         <div className="ds-panel-header__row-actions">
+          {onAddItem ? (
+            <Button
+              aria-label="Добавить товар"
+              className="ds-button--compact ds-panel-header__add"
+              variant="ghost"
+              onClick={onAddItem}
+            >
+              <Plus aria-hidden="true" size={18} />
+              <span aria-hidden="true" className="ds-panel-header__add-label">
+                <span className="ds-panel-header__add-label-full">Добавить товар</span>
+                <span className="ds-panel-header__add-label-short">Товар</span>
+              </span>
+            </Button>
+          ) : null}
           <Button
             className="ds-button--compact"
             disabled={disabled}
-            variant="primary"
+            variant="ghost"
             onClick={onCheck}
           >
             Проверить
           </Button>
         </div>
         <div className="ds-panel-header__row-tools">
-          {onShare ? (
-            <Button
-              aria-label="Экспорт и совместный доступ"
-              size="compact"
-              title="Экспорт и совместный доступ"
-              variant="icon"
-              onClick={onShare}
-            >
-              <Share2 aria-hidden="true" size={18} />
-            </Button>
-          ) : null}
           <Button
             aria-expanded={expanded}
             aria-label="Фильтры"
