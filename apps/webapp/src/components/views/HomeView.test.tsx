@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -35,6 +35,13 @@ const itemNeedBuy: Item = {
   nextCheckAt: null,
   archivedAt: null,
   category
+};
+
+const itemNeedBuySecond: Item = {
+  ...itemNeedBuy,
+  id: "item-2",
+  name: "Хлеб",
+  sortOrder: 1
 };
 
 const categoryReminder: InAppReminder = {
@@ -122,13 +129,14 @@ describe("HomeView", () => {
     expect(onSelectCategory).toHaveBeenCalledWith(itemNeedBuy.categoryId);
   });
 
-  it("marks need-buy item as bought via Куплено checkbox", () => {
+  it("marks need-buy item as bought via Куплено checkbox", async () => {
     const onSetStatus = vi.fn().mockResolvedValue(undefined);
     const onSelectCategory = vi.fn();
     render(<HomeView {...createProps({ onSetStatus, onSelectCategory })} />);
     fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
-    expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK");
+    expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK", { showBoughtToast: false });
     expect(onSelectCategory).not.toHaveBeenCalled();
+    expect(await screen.findByRole("status", { name: "Куплено" })).toBeInTheDocument();
   });
 
   it("shows pending state on Куплено checkbox while status update is in flight", () => {
@@ -137,8 +145,47 @@ describe("HomeView", () => {
         {...createProps({ isActionPending: (key: string) => key === "item:status:item-1" })}
       />
     );
-    const checkbox = screen.getByRole("checkbox", { name: "Отмечаем..." });
+    const checkbox = screen.getByRole("checkbox", { name: "Куплено" });
     expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute("title", "Отмечаем...");
+  });
+
+  it("keeps the bought row in place with undo and removes it after the linger timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const onSetStatus = vi.fn().mockResolvedValue(undefined);
+      render(
+        <HomeView
+          {...createProps({ onSetStatus, needBuyItems: [itemNeedBuy, itemNeedBuySecond] })}
+        />
+      );
+      fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+
+      const row = document.querySelector(".ds-product-list .ds-product-row") as HTMLElement;
+      expect(row.textContent).toContain("Молоко");
+      expect(row.textContent).toContain("Куплено");
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("restores the item when Отмена is clicked on the bought row", async () => {
+    const onSetStatus = vi.fn().mockResolvedValue(undefined);
+    render(<HomeView {...createProps({ onSetStatus })} />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Отмена" }));
+    expect(onSetStatus).toHaveBeenLastCalledWith(itemNeedBuy, "NEED_BUY", {
+      showBoughtToast: false
+    });
+    expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
   });
 
   it("shows empty state when there are no need-buy items", () => {

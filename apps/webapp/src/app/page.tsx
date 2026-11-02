@@ -178,6 +178,7 @@ export default function Home() {
             onUpdateManualShoppingItem={state.handleUpdateManualShoppingItem}
             onDeleteManualShoppingItem={state.handleDeleteManualShoppingItem}
             onCompleteShoppingListItem={state.handleCompleteShoppingListItem}
+            onUndoCompleteShoppingListItem={state.undoCompleteShoppingListItem}
             onEditItemEntry={state.handleEditShoppingEntryItem}
             onArchiveItem={state.handleArchiveItem}
             setError={state.setError}

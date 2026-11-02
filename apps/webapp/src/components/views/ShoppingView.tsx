@@ -1,13 +1,22 @@
 "use client";
 
 import { Archive, ListPlus, Pencil, Save, Search, ShoppingBasket, Trash2 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatError } from "../../lib/format";
 import type { Category, Item, ShoppingListEntry } from "../../lib/types";
 import { BottomSheet, EmptyState, ProductRow, ProductRowMoreButton, SearchField } from "../common";
 import { Button } from "../ui/Button";
 import { PurchaseCheckbox } from "../ui/PurchaseCheckbox";
+
+const BOUGHT_LINGER_MS = 5000;
+
+interface BoughtEntryState {
+  entry: ShoppingListEntry;
+  previousStatus: Item["status"] | undefined;
+  previousLastBoughtAt: string | null;
+  position: number;
+}
 
 export function ShoppingView({
   shoppingList,
@@ -27,6 +36,7 @@ export function ShoppingView({
   onUpdateManualShoppingItem,
   onDeleteManualShoppingItem,
   onCompleteShoppingListItem,
+  onUndoCompleteShoppingListItem,
   onEditItemEntry,
   onArchiveItem,
   setError,
@@ -49,6 +59,11 @@ export function ShoppingView({
   onUpdateManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onDeleteManualShoppingItem: (entry: ShoppingListEntry) => Promise<void>;
   onCompleteShoppingListItem: (entry: ShoppingListEntry) => Promise<void>;
+  onUndoCompleteShoppingListItem: (
+    shoppingListItemId: string,
+    previousStatus: Item["status"] | undefined,
+    previousLastBoughtAt: string | null
+  ) => Promise<void>;
   onEditItemEntry: (item: Item) => void;
   onArchiveItem: (item: Item) => Promise<void>;
   setError: (message: string | null) => void;
@@ -56,10 +71,21 @@ export function ShoppingView({
 }) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [boughtEntries, setBoughtEntries] = useState<ReadonlyMap<string, BoughtEntryState>>(
+    new Map()
+  );
+  const boughtTimersRef = useRef<Map<string, number>>(new Map());
   const activeEntry = useMemo(
     () => shoppingList.find((entry) => entry.id === activeEntryId) ?? null,
     [shoppingList, activeEntryId]
   );
+
+  useEffect(() => {
+    const timers = boughtTimersRef.current;
+    return () => {
+      timers.forEach((timerId) => window.clearTimeout(timerId));
+    };
+  }, []);
 
   const visibleGroups = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -78,6 +104,84 @@ export function ShoppingView({
       .filter((group) => group.entries.length > 0);
   }, [shoppingGroups, searchQuery]);
 
+  const displayGroups = useMemo(() => {
+    if (boughtEntries.size === 0) {
+      return visibleGroups;
+    }
+
+    const groups = visibleGroups.map((group) => ({ ...group, entries: [...group.entries] }));
+    const groupIndex = new Map(groups.map((group, index) => [group.id, index]));
+    for (const { entry, position } of boughtEntries.values()) {
+      const index = groupIndex.get(entry.category?.id ?? "manual");
+      const group = index === undefined ? undefined : groups[index];
+      if (!group || group.entries.some((candidate) => candidate.id === entry.id)) {
+        continue;
+      }
+      group.entries.splice(Math.min(position, group.entries.length), 0, entry);
+    }
+    return groups;
+  }, [visibleGroups, boughtEntries]);
+
+  function removeBoughtEntry(entryId: string) {
+    const timerId = boughtTimersRef.current.get(entryId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      boughtTimersRef.current.delete(entryId);
+    }
+    setBoughtEntries((current) => {
+      if (!current.has(entryId)) {
+        return current;
+      }
+      const next = new Map(current);
+      next.delete(entryId);
+      return next;
+    });
+  }
+
+  function findEntryPosition(entry: ShoppingListEntry): number {
+    const groupId = entry.category?.id ?? "manual";
+    const index = visibleGroups
+      .find((group) => group.id === groupId)
+      ?.entries.findIndex((candidate) => candidate.id === entry.id);
+    return index !== undefined && index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+  }
+
+  function registerBoughtEntry(entry: ShoppingListEntry, position: number) {
+    const existingTimerId = boughtTimersRef.current.get(entry.id);
+    if (existingTimerId !== undefined) {
+      window.clearTimeout(existingTimerId);
+    }
+    const timerId = window.setTimeout(() => removeBoughtEntry(entry.id), BOUGHT_LINGER_MS);
+    boughtTimersRef.current.set(entry.id, timerId);
+    setBoughtEntries((current) => {
+      const next = new Map(current);
+      next.set(entry.id, {
+        entry,
+        previousStatus: entry.item?.status,
+        previousLastBoughtAt: entry.item?.lastBoughtAt ?? null,
+        position
+      });
+      return next;
+    });
+  }
+
+  function handleComplete(entry: ShoppingListEntry) {
+    const position = findEntryPosition(entry);
+    void onCompleteShoppingListItem(entry)
+      .then(() => registerBoughtEntry(entry, position))
+      .catch((caughtError) => setError(formatError(caughtError)));
+  }
+
+  function handleUndoBought(entryId: string) {
+    const bought = boughtEntries.get(entryId);
+    if (!bought) {
+      return;
+    }
+    removeBoughtEntry(entryId);
+    void onUndoCompleteShoppingListItem(entryId, bought.previousStatus, bought.previousLastBoughtAt)
+      .catch((caughtError) => setError(formatError(caughtError)));
+  }
+
   function handleUpdate(entry: ShoppingListEntry, event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     void onUpdateManualShoppingItem(entry).catch((caughtError) => setError(formatError(caughtError)));
@@ -86,10 +190,6 @@ export function ShoppingView({
   function handleDelete(entry: ShoppingListEntry) {
     void onDeleteManualShoppingItem(entry).catch((caughtError) => setError(formatError(caughtError)));
     setActiveEntryId(null);
-  }
-
-  function handleComplete(entry: ShoppingListEntry) {
-    void onCompleteShoppingListItem(entry).catch((caughtError) => setError(formatError(caughtError)));
   }
 
   function handleArchive(entry: ShoppingListEntry) {
@@ -105,6 +205,23 @@ export function ShoppingView({
   }
 
   function renderEntryActions(entry: ShoppingListEntry) {
+    if (boughtEntries.has(entry.id)) {
+      return (
+        <div className="ds-shopping-actions ds-shopping-actions--bought">
+          <span className="ds-shopping-actions__bought" role="status" aria-label="Куплено">
+            Куплено
+          </span>
+          <button
+            type="button"
+            className="ds-shopping-actions__undo"
+            onClick={() => handleUndoBought(entry.id)}
+          >
+            Отмена
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="ds-shopping-actions">
         <PurchaseCheckbox
@@ -199,9 +316,9 @@ export function ShoppingView({
         </div>
       )}
 
-      {visibleGroups.length ? (
+      {displayGroups.length ? (
         <div className="ds-shopping-groups">
-          {visibleGroups.map((group) => (
+          {displayGroups.map((group) => (
             <section className="ds-shopping-group" key={group.id}>
               <div className="ds-product-list">
                 {group.entries.map((entry) =>

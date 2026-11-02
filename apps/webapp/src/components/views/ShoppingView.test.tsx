@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -58,7 +58,7 @@ const trackedEntry: ShoppingListEntry = {
 function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView>> = {}) {
   return {
     shoppingList: [manualEntry, trackedEntry],
-    shoppingGroups: [{ id: "group-1", title: "Список", entries: [manualEntry, trackedEntry] }],
+    shoppingGroups: [{ id: "cat-1", title: "Еда", entries: [manualEntry, trackedEntry] }],
     categories: [category],
     manualShoppingTitle: "",
     setManualShoppingTitle: vi.fn(),
@@ -74,6 +74,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof ShoppingView
     onUpdateManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onDeleteManualShoppingItem: vi.fn().mockResolvedValue(undefined),
     onCompleteShoppingListItem: vi.fn().mockResolvedValue(undefined),
+    onUndoCompleteShoppingListItem: vi.fn().mockResolvedValue(undefined),
     onEditItemEntry: vi.fn(),
     onArchiveItem: vi.fn().mockResolvedValue(undefined),
     setError: vi.fn(),
@@ -145,6 +146,46 @@ describe("ShoppingView", () => {
     const boughtCheckboxes = screen.getAllByRole("checkbox", { name: "Куплено" });
     fireEvent.click(boughtCheckboxes[0]!);
     expect(onCompleteShoppingListItem).toHaveBeenCalledWith(manualEntry);
+  });
+
+  it("keeps the bought row in place with Куплено and Отмена, then removes it after the linger timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const onCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
+      render(<ShoppingView {...createProps({ onCompleteShoppingListItem })} />);
+      fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(screen.getByRole("status", { name: "Куплено" })).toBeInTheDocument();
+
+      const rows = document.querySelectorAll(".ds-product-row");
+      expect(rows[0]?.textContent).toContain("Хлеб");
+      expect(rows[0]?.textContent).toContain("Куплено");
+      expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000);
+      });
+      expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Отмена" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("calls onUndoCompleteShoppingListItem when Отмена is clicked on the bought row", async () => {
+    const onCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
+    const onUndoCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ShoppingView
+        {...createProps({ onCompleteShoppingListItem, onUndoCompleteShoppingListItem })}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[1] as HTMLElement);
+    fireEvent.click(await screen.findByRole("button", { name: "Отмена" }));
+    expect(onUndoCompleteShoppingListItem).toHaveBeenCalledWith("entry-2", "LOW", null);
+    expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
   });
 
   it("opens entry actions sheet for manual entries", async () => {

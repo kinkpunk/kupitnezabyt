@@ -1,7 +1,7 @@
 "use client";
 
 import { Calendar, ListTodo, ShoppingBasket } from "lucide-react";
-import React, { type MouseEvent } from "react";
+import React, { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import { formatDate } from "../../lib/format";
 import { reminderEntityLabels } from "../../lib/ui";
@@ -9,6 +9,14 @@ import type { Category, CheckSession, InAppReminder, Item, ShoppingListEntry } f
 import { EmptyState, ProductRow, SectionHeader } from "../common";
 import { Button } from "../ui/Button";
 import { PurchaseCheckbox } from "../ui/PurchaseCheckbox";
+
+const BOUGHT_LINGER_MS = 5000;
+
+interface BoughtItemState {
+  item: Item;
+  previousStatus: Item["status"];
+  position: number;
+}
 
 export function HomeView({
   items,
@@ -31,18 +39,91 @@ export function HomeView({
   needBuyItems: Item[];
   onSelectTab: (tab: "items" | "check") => void;
   onSelectCategory: (categoryId: string) => void;
-  onSetStatus: (item: Item, status: Item["status"]) => Promise<void>;
+  onSetStatus: (
+    item: Item,
+    status: Item["status"],
+    options?: { showBoughtToast?: boolean }
+  ) => Promise<void>;
   onStartReminderCheck: (reminder: InAppReminder) => Promise<void>;
   onSnoozeReminder: (reminder: InAppReminder, days?: number) => Promise<void>;
   onOpenReminder: (reminder: InAppReminder) => void;
   isActionPending: (key: string) => boolean;
 }) {
+  const [boughtItems, setBoughtItems] = useState<ReadonlyMap<string, BoughtItemState>>(new Map());
+  const boughtTimersRef = useRef<Map<string, number>>(new Map());
+
+  useEffect(() => {
+    const timers = boughtTimersRef.current;
+    return () => {
+      timers.forEach((timerId) => window.clearTimeout(timerId));
+    };
+  }, []);
+
+  const displayNeedBuyItems = useMemo(() => {
+    if (boughtItems.size === 0) {
+      return needBuyItems;
+    }
+    const result = [...needBuyItems];
+    for (const { item, position } of boughtItems.values()) {
+      if (result.some((candidate) => candidate.id === item.id)) {
+        continue;
+      }
+      result.splice(Math.min(position, result.length), 0, item);
+    }
+    return result;
+  }, [needBuyItems, boughtItems]);
+
   const checkedCount =
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
+  function removeBoughtItem(itemId: string) {
+    const timerId = boughtTimersRef.current.get(itemId);
+    if (timerId !== undefined) {
+      window.clearTimeout(timerId);
+      boughtTimersRef.current.delete(itemId);
+    }
+    setBoughtItems((current) => {
+      if (!current.has(itemId)) {
+        return current;
+      }
+      const next = new Map(current);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
+  function registerBoughtItem(item: Item, position: number) {
+    const existingTimerId = boughtTimersRef.current.get(item.id);
+    if (existingTimerId !== undefined) {
+      window.clearTimeout(existingTimerId);
+    }
+    const timerId = window.setTimeout(() => removeBoughtItem(item.id), BOUGHT_LINGER_MS);
+    boughtTimersRef.current.set(item.id, timerId);
+    setBoughtItems((current) => {
+      const next = new Map(current);
+      next.set(item.id, { item, previousStatus: item.status, position });
+      return next;
+    });
+  }
+
   function handleMarkBought(item: Item) {
-    void onSetStatus(item, "IN_STOCK");
+    const position = Math.max(
+      needBuyItems.findIndex((candidate) => candidate.id === item.id),
+      0
+    );
+    void onSetStatus(item, "IN_STOCK", { showBoughtToast: false }).then(() =>
+      registerBoughtItem(item, position)
+    );
+  }
+
+  function handleUndoBought(itemId: string) {
+    const bought = boughtItems.get(itemId);
+    if (!bought) {
+      return;
+    }
+    removeBoughtItem(itemId);
+    void onSetStatus(bought.item, bought.previousStatus, { showBoughtToast: false });
   }
 
   function handleStartReminderCheck(event: MouseEvent<HTMLButtonElement>, reminder: InAppReminder) {
@@ -203,16 +284,31 @@ export function HomeView({
 
       <section className="home-section">
         <SectionHeader title="Купить сейчас" />
-        {needBuyItems.length ? (
+        {displayNeedBuyItems.length ? (
           <div className="ds-product-list">
-            {needBuyItems.map((item) => (
+            {displayNeedBuyItems.map((item) => (
               <ProductRow
                 key={item.id}
                 actions={
-                  <PurchaseCheckbox
-                    pending={isActionPending(`item:status:${item.id}`)}
-                    onMark={() => handleMarkBought(item)}
-                  />
+                  boughtItems.has(item.id) ? (
+                    <div className="ds-shopping-actions ds-shopping-actions--bought">
+                      <span className="ds-shopping-actions__bought" role="status" aria-label="Куплено">
+                        Куплено
+                      </span>
+                      <button
+                        type="button"
+                        className="ds-shopping-actions__undo"
+                        onClick={() => handleUndoBought(item.id)}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                  ) : (
+                    <PurchaseCheckbox
+                      pending={isActionPending(`item:status:${item.id}`)}
+                      onMark={() => handleMarkBought(item)}
+                    />
+                  )
                 }
                 subtitle={item.category?.name}
                 title={item.name}

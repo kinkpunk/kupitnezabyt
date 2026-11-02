@@ -7,15 +7,11 @@ import { hapticImpactLight } from "../../lib/haptics";
 export interface PurchaseCheckboxProps {
   pending?: boolean;
   onMark: () => void;
-  label?: string;
-  pendingLabel?: string;
 }
 
 export function PurchaseCheckbox({
   pending = false,
-  onMark,
-  label = "Куплено",
-  pendingLabel = "Отмечаем..."
+  onMark
 }: PurchaseCheckboxProps) {
   function handleClick(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -34,12 +30,10 @@ export function PurchaseCheckbox({
       disabled={pending}
       role="checkbox"
       aria-checked={false}
-      aria-label={pending ? pendingLabel : label}
+      aria-label="Куплено"
+      title={pending ? "Отмечаем..." : "Куплено"}
       onClick={handleClick}
     >
-      <span className="ds-purchase-checkbox__label">
-        {pending ? pendingLabel : label}
-      </span>
       <span className="ds-purchase-checkbox__box" aria-hidden="true">
         {pending ? <span className="ds-purchase-checkbox__spinner" /> : null}
       </span>

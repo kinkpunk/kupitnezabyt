@@ -625,7 +625,11 @@ export function useAppState() {
     }
   }
 
-  async function handleSetStatus(item: Item, status: ItemStatus) {
+  async function handleSetStatus(
+    item: Item,
+    status: ItemStatus,
+    options?: { showBoughtToast?: boolean }
+  ) {
     if (!token) {
       return;
     }
@@ -642,7 +646,7 @@ export function useAppState() {
       );
       await refreshActiveData(token);
       await refreshRecommendations(token, updatedItem);
-      if (status === "IN_STOCK" && item.status !== "IN_STOCK") {
+      if (options?.showBoughtToast !== false && status === "IN_STOCK" && item.status !== "IN_STOCK") {
         const previousStatus = item.status;
         showBoughtToast(item.name, () => {
           void handleSetStatus(item, previousStatus);
@@ -769,11 +773,6 @@ export function useAppState() {
       if (completedEntry.item) {
         await refreshRecommendations(token, completedEntry.item);
       }
-      const previousStatus = entry.item?.status;
-      const previousLastBoughtAt = entry.item?.lastBoughtAt;
-      showBoughtToast(entry.title, () => {
-        void undoCompleteShoppingListItem(entry.id, previousStatus, previousLastBoughtAt);
-      });
     } finally {
       setPendingAction(actionKey, false);
     }
@@ -1702,6 +1701,7 @@ export function useAppState() {
     handleDismissRecommendation,
     handleHideSimilarRecommendations,
     handleCompleteShoppingListItem,
+    undoCompleteShoppingListItem,
     handleCreateManualShoppingItem,
     handleUpdateManualShoppingItem,
     handleDeleteManualShoppingItem,

@@ -106,10 +106,16 @@ test.describe("Categories screen visual regression", () => {
     // Тост «Сыр — куплено» живёт 3.5 с — дожидаемся автоскрытия, чтобы снапшот был стабилен.
     await expect(page.locator(".toast-notice")).toHaveCount(0);
 
-    // Подписи «Проверено <дата>» зависят от текущего дня — исключаем их из сравнения.
-    await expect(page).toHaveScreenshot("categories-statuses.png", {
-      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
-    });
+    // Подписи «Проверено <дата>» зависят от текущего дня (и ширина строки тоже),
+    // а маска перекрывает только фактический бокс подписи — подменяем текст
+    // фиксированным, чтобы снапшот не менялся от даты прогона.
+    await page.locator(".ds-product-row__subtitle").evaluateAll((els) =>
+      els.forEach((el) => {
+        el.textContent = "Проверено ## месяца";
+      })
+    );
+
+    await expect(page).toHaveScreenshot("categories-statuses.png");
   });
 
   test("long product name", async () => {
@@ -117,10 +123,14 @@ test.describe("Categories screen visual regression", () => {
     await addItemWithStatus(page, longName, 0);
 
     await expect(page.getByText(longName)).toBeVisible();
-    // Соседние строки показывают «Проверено <дата>» — исключаем дату из сравнения.
-    await expect(page).toHaveScreenshot("categories-long-name.png", {
-      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
-    });
+    // Соседние строки показывают «Проверено <дата>» — подменяем текст фиксированным,
+    // чтобы ширина подписи (а с ней и снапшот) не зависела от даты прогона.
+    await page.locator(".ds-product-row__subtitle").evaluateAll((els) =>
+      els.forEach((el) => {
+        el.textContent = "Проверено ## месяца";
+      })
+    );
+    await expect(page).toHaveScreenshot("categories-long-name.png");
   });
 
   test("empty selected category", async () => {

@@ -29,11 +29,12 @@ describe("PurchaseCheckbox", () => {
     expect(onMark).toHaveBeenCalledOnce();
   });
 
-  it("does not call onMark while pending and shows pending label", () => {
+  it("does not call onMark while pending and keeps the Куплено name", () => {
     const onMark = vi.fn();
     render(<PurchaseCheckbox pending onMark={onMark} />);
-    const button = screen.getByRole("checkbox", { name: "Отмечаем..." });
+    const button = screen.getByRole("checkbox", { name: "Куплено" });
     expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("title", "Отмечаем...");
     fireEvent.click(button);
     expect(onMark).not.toHaveBeenCalled();
   });

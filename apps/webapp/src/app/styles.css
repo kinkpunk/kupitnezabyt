@@ -1619,7 +1619,7 @@ select {
   gap: 8px;
 }
 
-/* Резервный слот держит «Куплено» на одной оси у отслеживаемых
+/* Резервный слот держит чекбокс на одной оси у отслеживаемых
    и разовых позиций; ширина равна ds-button--icon--small. */
 .ds-shopping-actions__more {
   display: inline-flex;
@@ -1630,16 +1630,40 @@ select {
   height: 34px;
 }
 
+/* Купленная позиция: подтверждение вместе с отменой
+   на месте чекбокса, строка исчезает через несколько секунд. */
+.ds-shopping-actions--bought {
+  flex-wrap: nowrap;
+}
+
+.ds-shopping-actions__undo {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-shopping-actions__bought {
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
 .ds-purchase-checkbox {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 8px;
   padding: 10px 8px;
   border: 0;
   background: transparent;
   color: var(--ds-text-2);
-  font-size: var(--font-size-sm);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1662,10 +1686,6 @@ select {
 .ds-purchase-checkbox:not(:disabled):active .ds-purchase-checkbox__box {
   background: var(--ds-brand);
   transform: scale(0.9);
-}
-
-.ds-purchase-checkbox__label {
-  white-space: nowrap;
 }
 
 .ds-purchase-checkbox__spinner {
