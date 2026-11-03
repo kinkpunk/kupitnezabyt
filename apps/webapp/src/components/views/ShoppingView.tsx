@@ -15,6 +15,7 @@ interface BoughtEntryState {
   entry: ShoppingListEntry;
   previousStatus: Item["status"] | undefined;
   previousLastBoughtAt: string | null;
+  groupIndex: number;
   position: number;
 }
 
@@ -111,20 +112,23 @@ export function ShoppingView({
     }
 
     const groups = visibleGroups.map((group) => ({ ...group, entries: [...group.entries] }));
-    const groupIndex = new Map(groups.map((group, index) => [group.id, index]));
-    for (const { entry, position } of boughtEntries.values()) {
+    const groupIndexMap = new Map(groups.map((group, index) => [group.id, index]));
+    for (const { entry, groupIndex, position } of boughtEntries.values()) {
       const groupId = entry.category?.id ?? "manual";
-      let index = groupIndex.get(groupId);
+      let index = groupIndexMap.get(groupId);
       if (index === undefined) {
         // The last open entry of a group was just bought, so the group fell out
-        // of the shopping list. Recreate it to keep the bought row visible.
-        groups.push({
+        // of the shopping list. Recreate it at its original place to keep the
+        // bought row where the user tapped it.
+        const recreated = {
           id: groupId,
           title: entry.category?.name ?? "Без категории",
           entries: []
-        });
-        index = groups.length - 1;
-        groupIndex.set(groupId, index);
+        };
+        index = Math.min(groupIndex, groups.length);
+        groups.splice(index, 0, recreated);
+        groupIndexMap.clear();
+        groups.forEach((group, groupPosition) => groupIndexMap.set(group.id, groupPosition));
       }
       const group = groups[index]!;
       if (group.entries.some((candidate) => candidate.id === entry.id)) {
@@ -151,15 +155,22 @@ export function ShoppingView({
     });
   }
 
-  function findEntryPosition(entry: ShoppingListEntry): number {
+  function findEntryPosition(entry: ShoppingListEntry): { groupIndex: number; position: number } {
     const groupId = entry.category?.id ?? "manual";
-    const index = visibleGroups
-      .find((group) => group.id === groupId)
-      ?.entries.findIndex((candidate) => candidate.id === entry.id);
-    return index !== undefined && index >= 0 ? index : Number.MAX_SAFE_INTEGER;
+    const groupIndex = visibleGroups.findIndex((group) => group.id === groupId);
+    if (groupIndex < 0) {
+      return { groupIndex: Number.MAX_SAFE_INTEGER, position: Number.MAX_SAFE_INTEGER };
+    }
+    const index = visibleGroups[groupIndex]!.entries.findIndex(
+      (candidate) => candidate.id === entry.id
+    );
+    return { groupIndex, position: index >= 0 ? index : Number.MAX_SAFE_INTEGER };
   }
 
-  function registerBoughtEntry(entry: ShoppingListEntry, position: number) {
+  function registerBoughtEntry(
+    entry: ShoppingListEntry,
+    location: { groupIndex: number; position: number }
+  ) {
     const existingTimerId = boughtTimersRef.current.get(entry.id);
     if (existingTimerId !== undefined) {
       window.clearTimeout(existingTimerId);
@@ -172,16 +183,17 @@ export function ShoppingView({
         entry,
         previousStatus: entry.item?.status,
         previousLastBoughtAt: entry.item?.lastBoughtAt ?? null,
-        position
+        groupIndex: location.groupIndex,
+        position: location.position
       });
       return next;
     });
   }
 
   function handleComplete(entry: ShoppingListEntry) {
-    const position = findEntryPosition(entry);
+    const location = findEntryPosition(entry);
     void onCompleteShoppingListItem(entry)
-      .then(() => registerBoughtEntry(entry, position))
+      .then(() => registerBoughtEntry(entry, location))
       .catch((caughtError) => setError(formatError(caughtError)));
   }
 

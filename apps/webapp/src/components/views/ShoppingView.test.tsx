@@ -174,7 +174,7 @@ describe("ShoppingView", () => {
     }
   });
 
-  it("keeps the bought row visible when the bought entry was the last one in its group", async () => {
+  it("keeps the bought row in place when it was the last one in its group", async () => {
     const soloManual: ShoppingListEntry = {
       id: "entry-solo",
       title: "Соль",
@@ -185,7 +185,7 @@ describe("ShoppingView", () => {
     };
 
     function Wrapper() {
-      const [entries, setEntries] = React.useState<ShoppingListEntry[]>([soloManual]);
+      const [entries, setEntries] = React.useState<ShoppingListEntry[]>([soloManual, manualEntry]);
       const groups = React.useMemo<Array<{ id: string; title: string; entries: ShoppingListEntry[] }>>(
         () => {
           const byId = new Map<string, { id: string; title: string; entries: ShoppingListEntry[] }>();
@@ -221,10 +221,16 @@ describe("ShoppingView", () => {
     }
 
     render(<Wrapper />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
     expect(await screen.findByRole("status", { name: "Куплено" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
-    expect(screen.getByText("Соль")).toBeInTheDocument();
+    const saltRow = screen.getByText("Соль").closest(".ds-product-row");
+    const breadRow = screen.getByText("Хлеб").closest(".ds-product-row");
+    expect(saltRow).not.toBeNull();
+    expect(breadRow).not.toBeNull();
+    expect(
+      saltRow!.compareDocumentPosition(breadRow!) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("calls onUndoCompleteShoppingListItem when Отмена is clicked on the bought row", async () => {
