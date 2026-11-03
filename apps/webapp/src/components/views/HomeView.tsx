@@ -50,6 +50,7 @@ export function HomeView({
   isActionPending: (key: string) => boolean;
 }) {
   const [boughtItems, setBoughtItems] = useState<ReadonlyMap<string, BoughtItemState>>(new Map());
+  const [restoringItemIds, setRestoringItemIds] = useState<ReadonlySet<string>>(new Set());
   const boughtTimersRef = useRef<Map<string, number>>(new Map());
 
   useEffect(() => {
@@ -117,11 +118,23 @@ export function HomeView({
     );
   }
 
+  function clearRestoringItem(itemId: string) {
+    setRestoringItemIds((current) => {
+      if (!current.has(itemId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.delete(itemId);
+      return next;
+    });
+  }
+
   function handleUndoBought(itemId: string) {
     const bought = boughtItems.get(itemId);
     if (!bought) {
       return;
     }
+    setRestoringItemIds((current) => new Set(current).add(itemId));
     removeBoughtItem(itemId);
     void onSetStatus(bought.item, bought.previousStatus, { showBoughtToast: false });
   }
@@ -304,10 +317,23 @@ export function HomeView({
                       </button>
                     </div>
                   ) : (
-                    <PurchaseCheckbox
-                      pending={isActionPending(`item:status:${item.id}`)}
-                      onMark={() => handleMarkBought(item)}
-                    />
+                    <div
+                      className={
+                        restoringItemIds.has(item.id)
+                          ? "ds-shopping-actions ds-shopping-actions--restoring"
+                          : "ds-shopping-actions"
+                      }
+                      onAnimationEnd={
+                        restoringItemIds.has(item.id)
+                          ? () => clearRestoringItem(item.id)
+                          : undefined
+                      }
+                    >
+                      <PurchaseCheckbox
+                        pending={isActionPending(`item:status:${item.id}`)}
+                        onMark={() => handleMarkBought(item)}
+                      />
+                    </div>
                   )
                 }
                 subtitle={item.category?.name}

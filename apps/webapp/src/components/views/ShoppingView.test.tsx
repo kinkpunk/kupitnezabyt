@@ -174,6 +174,59 @@ describe("ShoppingView", () => {
     }
   });
 
+  it("keeps the bought row visible when the bought entry was the last one in its group", async () => {
+    const soloManual: ShoppingListEntry = {
+      id: "entry-solo",
+      title: "Соль",
+      itemId: null,
+      categoryId: null,
+      category: null,
+      item: null
+    };
+
+    function Wrapper() {
+      const [entries, setEntries] = React.useState<ShoppingListEntry[]>([soloManual]);
+      const groups = React.useMemo<Array<{ id: string; title: string; entries: ShoppingListEntry[] }>>(
+        () => {
+          const byId = new Map<string, { id: string; title: string; entries: ShoppingListEntry[] }>();
+          for (const entry of entries) {
+            const id = entry.category?.id ?? "manual";
+            const group = byId.get(id);
+            if (group) {
+              group.entries.push(entry);
+            } else {
+              byId.set(id, {
+                id,
+                title: entry.category?.name ?? "Без категории",
+                entries: [entry]
+              });
+            }
+          }
+          return [...byId.values()];
+        },
+        [entries]
+      );
+
+      return (
+        <ShoppingView
+          {...createProps({
+            shoppingList: entries,
+            shoppingGroups: groups,
+            onCompleteShoppingListItem: async (entry: ShoppingListEntry) => {
+              setEntries((current) => current.filter((candidate) => candidate.id !== entry.id));
+            }
+          })}
+        />
+      );
+    }
+
+    render(<Wrapper />);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
+    expect(await screen.findByRole("status", { name: "Куплено" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+    expect(screen.getByText("Соль")).toBeInTheDocument();
+  });
+
   it("calls onUndoCompleteShoppingListItem when Отмена is clicked on the bought row", async () => {
     const onCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
     const onUndoCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
@@ -186,6 +239,7 @@ describe("ShoppingView", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Отмена" }));
     expect(onUndoCompleteShoppingListItem).toHaveBeenCalledWith("entry-2", "LOW", null);
     expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
+    expect(document.querySelector(".ds-shopping-actions--restoring")).not.toBeNull();
   });
 
   it("opens entry actions sheet for manual entries", async () => {

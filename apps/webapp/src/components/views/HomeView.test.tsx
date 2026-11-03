@@ -186,6 +186,7 @@ describe("HomeView", () => {
       showBoughtToast: false
     });
     expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
+    expect(document.querySelector(".ds-shopping-actions--restoring")).not.toBeNull();
   });
 
   it("shows empty state when there are no need-buy items", () => {

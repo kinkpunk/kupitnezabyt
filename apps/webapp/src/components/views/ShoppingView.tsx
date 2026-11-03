@@ -74,6 +74,7 @@ export function ShoppingView({
   const [boughtEntries, setBoughtEntries] = useState<ReadonlyMap<string, BoughtEntryState>>(
     new Map()
   );
+  const [restoringEntryIds, setRestoringEntryIds] = useState<ReadonlySet<string>>(new Set());
   const boughtTimersRef = useRef<Map<string, number>>(new Map());
   const activeEntry = useMemo(
     () => shoppingList.find((entry) => entry.id === activeEntryId) ?? null,
@@ -112,9 +113,21 @@ export function ShoppingView({
     const groups = visibleGroups.map((group) => ({ ...group, entries: [...group.entries] }));
     const groupIndex = new Map(groups.map((group, index) => [group.id, index]));
     for (const { entry, position } of boughtEntries.values()) {
-      const index = groupIndex.get(entry.category?.id ?? "manual");
-      const group = index === undefined ? undefined : groups[index];
-      if (!group || group.entries.some((candidate) => candidate.id === entry.id)) {
+      const groupId = entry.category?.id ?? "manual";
+      let index = groupIndex.get(groupId);
+      if (index === undefined) {
+        // The last open entry of a group was just bought, so the group fell out
+        // of the shopping list. Recreate it to keep the bought row visible.
+        groups.push({
+          id: groupId,
+          title: entry.category?.name ?? "Без категории",
+          entries: []
+        });
+        index = groups.length - 1;
+        groupIndex.set(groupId, index);
+      }
+      const group = groups[index]!;
+      if (group.entries.some((candidate) => candidate.id === entry.id)) {
         continue;
       }
       group.entries.splice(Math.min(position, group.entries.length), 0, entry);
@@ -172,11 +185,23 @@ export function ShoppingView({
       .catch((caughtError) => setError(formatError(caughtError)));
   }
 
+  function clearRestoringEntry(entryId: string) {
+    setRestoringEntryIds((current) => {
+      if (!current.has(entryId)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.delete(entryId);
+      return next;
+    });
+  }
+
   function handleUndoBought(entryId: string) {
     const bought = boughtEntries.get(entryId);
     if (!bought) {
       return;
     }
+    setRestoringEntryIds((current) => new Set(current).add(entryId));
     removeBoughtEntry(entryId);
     void onUndoCompleteShoppingListItem(entryId, bought.previousStatus, bought.previousLastBoughtAt)
       .catch((caughtError) => setError(formatError(caughtError)));
@@ -222,8 +247,14 @@ export function ShoppingView({
       );
     }
 
+    const isRestoring = restoringEntryIds.has(entry.id);
     return (
-      <div className="ds-shopping-actions">
+      <div
+        className={
+          isRestoring ? "ds-shopping-actions ds-shopping-actions--restoring" : "ds-shopping-actions"
+        }
+        onAnimationEnd={isRestoring ? () => clearRestoringEntry(entry.id) : undefined}
+      >
         <PurchaseCheckbox
           pending={isActionPending(`shopping:bought:${entry.id}`)}
           onMark={() => handleComplete(entry)}

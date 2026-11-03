@@ -1634,6 +1634,43 @@ select {
    на месте чекбокса, строка исчезает через несколько секунд. */
 .ds-shopping-actions--bought {
   flex-wrap: nowrap;
+  animation: ds-bought-in 200ms ease;
+}
+
+@keyframes ds-bought-in {
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Возврат позиции по «Отмене»: зеркальное появление чекбокса. */
+.ds-shopping-actions--restoring {
+  animation: ds-restore-in 200ms ease;
+}
+
+@keyframes ds-restore-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-shopping-actions--bought,
+  .ds-shopping-actions--restoring {
+    animation: none;
+  }
 }
 
 .ds-shopping-actions__undo {
