@@ -73,8 +73,8 @@
   --color-attention: var(--ds-status-bad);
   --color-attention-bg: var(--ds-status-bad-soft);
 
-  /* Typography */
-  --font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+  /* Typography: системный стек без веб-шрифтов (нет внешних запросов и FOUC). */
+  --font-family-base: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
@@ -824,7 +824,7 @@ button.ds-status-chip:not(:disabled):active {
 .ds-progress-bar__fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--ds-brand);
+  background: var(--ds-brand-strong);
   transition: width 200ms ease;
 }
 
