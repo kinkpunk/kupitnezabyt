@@ -4,9 +4,10 @@ import { Archive, Bell, ListPlus, ListTodo, MoreVertical, SlidersHorizontal } fr
 import React from "react";
 
 import { Button } from "../ui/Button";
+import { uiStatusLabels, type CategoryStatusFilter } from "../../lib/ui";
 import { BottomSheet } from "./BottomSheet";
 
-export type CategoryStatusFilter = "all" | "in_stock" | "low" | "need_buy";
+export type { CategoryStatusFilter } from "../../lib/ui";
 
 export interface PanelHeaderProps {
   total: number;
@@ -48,9 +49,9 @@ export function PanelHeader({
   const [menuOpen, setMenuOpen] = React.useState(false);
   const allChips: FilterChip[] = [
     { id: "all", label: "Все", count: total },
-    { id: "in_stock", label: "Есть", count: inStock, dot: "ok" },
-    { id: "low", label: "Мало", count: low, dot: "warn" },
-    { id: "need_buy", label: "Нет", count: needBuy, dot: "bad" }
+    { id: "in_stock", label: uiStatusLabels.ok, count: inStock, dot: "ok" },
+    { id: "low", label: uiStatusLabels.warn, count: low, dot: "warn" },
+    { id: "need_buy", label: uiStatusLabels.bad, count: needBuy, dot: "bad" }
   ];
   const chips = allChips.filter((chip) => chip.id === "all" || chip.count > 0);
 

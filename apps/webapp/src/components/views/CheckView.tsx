@@ -6,7 +6,7 @@ import React from "react";
 
 import { formatError } from "../../lib/format";
 import type { Category, CheckSession, CheckSessionItem } from "../../lib/types";
-import { statusLabels } from "../../lib/ui";
+import { checkActionLabels } from "../../lib/ui";
 import { EmptyState, SectionHeader } from "../common";
 import { Button } from "../ui/Button";
 import { ProgressBar } from "../ui/ProgressBar";
@@ -75,7 +75,7 @@ export function CheckView({
         onClick={() => handleStatus(status)}
       >
         <span aria-hidden="true" className={`ds-check-status__dot ds-check-status__dot--${tone}`} />
-        {statusLabels[status]}
+        {checkActionLabels[status]}
       </Button>
     );
   }

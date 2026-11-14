@@ -32,9 +32,9 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await finishOnboardingIfNeeded(page);
 
-  // Home intentionally has no product-name heading; its stock summary and
+  // Home intentionally has no product-name heading; its status dashboard and
   // navigation establish that an authenticated app shell has loaded.
-  await expect(page.getByRole("heading", { name: "Купить сейчас" })).toBeVisible();
+  await expect(page.locator(".ds-home-summary")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Основные разделы" })).toBeVisible();
   await expect(page.getByText("Web app")).toHaveCount(0);
 

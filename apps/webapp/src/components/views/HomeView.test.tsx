@@ -1,8 +1,8 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Category, CheckSession, InAppReminder, Item, ShoppingListEntry } from "../../lib/types";
+import type { Category, CheckSession, InAppReminder, Item } from "../../lib/types";
 import { HomeView } from "./HomeView";
 
 const category: Category = {
@@ -37,11 +37,20 @@ const itemNeedBuy: Item = {
   category
 };
 
-const itemNeedBuySecond: Item = {
+const itemLow: Item = {
   ...itemNeedBuy,
   id: "item-2",
   name: "Хлеб",
+  status: "LOW",
   sortOrder: 1
+};
+
+const itemInStock: Item = {
+  ...itemNeedBuy,
+  id: "item-3",
+  name: "Кофе",
+  status: "IN_STOCK",
+  sortOrder: 2
 };
 
 const categoryReminder: InAppReminder = {
@@ -55,150 +64,91 @@ const categoryReminder: InAppReminder = {
 
 function createProps(overrides: Partial<React.ComponentProps<typeof HomeView>> = {}) {
   return {
-    items: [itemNeedBuy],
-    categories: [category],
-    shoppingList: [] as ShoppingListEntry[],
+    items: [itemNeedBuy, itemLow, itemInStock],
     inAppReminders: [categoryReminder],
     checkSession: null as CheckSession | null,
-    needBuyItems: [itemNeedBuy],
     onSelectTab: vi.fn(),
-    onSelectCategory: vi.fn(),
-    onSetStatus: vi.fn().mockResolvedValue(undefined),
     onStartReminderCheck: vi.fn().mockResolvedValue(undefined),
     onSnoozeReminder: vi.fn().mockResolvedValue(undefined),
     onOpenReminder: vi.fn(),
+    onOpenShopping: vi.fn(),
+    onOpenLowItems: vi.fn(),
+    onOpenChecks: vi.fn(),
     isActionPending: vi.fn().mockReturnValue(false),
     ...overrides
   };
 }
 
 describe("HomeView", () => {
-  it("renders summary as a static list with informative labels", () => {
+  it("renders the dashboard with status rows and counts", () => {
     render(<HomeView {...createProps()} />);
-    const summary = document.querySelector(".ds-home-summary");
-    expect(summary).not.toBeNull();
-    expect(summary?.closest("button")).toBeNull();
-    expect(within(summary as HTMLElement).getByText("Купить сейчас")).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText("Осталось мало")).toBeInTheDocument();
-    expect(within(summary as HTMLElement).getByText("Категории")).toBeInTheDocument();
-  });
-
-  it("renders metric counts from items and reminders", () => {
-    render(<HomeView {...createProps()} />);
-    const summary = document.querySelector(".ds-home-summary") as HTMLElement;
+    const summary = screen.getByLabelText("Сводка");
 
     const metricValue = (label: string) =>
-      within(summary).getByText(label).parentElement?.querySelector(
+      within(summary).getByText(label).parentElement?.parentElement?.querySelector(
         ".ds-home-summary__metric-value"
       )?.textContent;
 
-    expect(metricValue("Купить сейчас")).toBe("1");
-    expect(metricValue("Осталось мало")).toBe("0");
-    expect(metricValue("Категории")).toBe("1");
+    expect(metricValue("Есть")).toBe("1");
+    expect(metricValue("Мало")).toBe("1");
+    expect(metricValue("Нет")).toBe("1");
+    expect(metricValue("К проверке")).toBe("1");
   });
 
-  it("renders «Всё в порядке» when all counters are zero", () => {
-    const itemInStock = { ...itemNeedBuy, status: "IN_STOCK" as const };
-    render(
-      <HomeView
-        {...createProps({
-          items: [itemInStock],
-          needBuyItems: [],
-          inAppReminders: []
-        })}
-      />
-    );
+  it("renders the status bar with one segment per present status", () => {
+    render(<HomeView {...createProps()} />);
+    const bar = document.querySelector(".ds-home-summary__bar");
+    expect(bar).not.toBeNull();
+    expect(bar?.getAttribute("aria-hidden")).toBe("true");
+    expect(bar?.querySelectorAll(".ds-home-summary__bar-segment")).toHaveLength(3);
+  });
+
+  it("ignores paused items in the dashboard", () => {
+    const itemPaused = { ...itemNeedBuy, id: "item-4", status: "PAUSED" as const };
+    render(<HomeView {...createProps({ items: [itemPaused], inAppReminders: [] })} />);
+    expect(screen.getByText("Всё в порядке")).toBeInTheDocument();
+    expect(document.querySelector(".ds-home-summary__bar")).toBeNull();
+  });
+
+  it("renders «Всё в порядке» when there are no active items and reminders", () => {
+    render(<HomeView {...createProps({ items: [], inAppReminders: [] })} />);
     expect(screen.getByText("Всё в порядке")).toBeInTheDocument();
     expect(document.querySelector(".ds-home-summary__list")).toBeNull();
   });
 
-  it("does not navigate anywhere from the static summary", () => {
-    const onSelectTab = vi.fn();
-    render(<HomeView {...createProps({ onSelectTab })} />);
-    fireEvent.click(document.querySelector(".ds-home-summary") as HTMLElement);
-    expect(onSelectTab).not.toHaveBeenCalled();
+  it("opens shopping from the Нет row and low items from the Мало row", () => {
+    const onOpenShopping = vi.fn();
+    const onOpenLowItems = vi.fn();
+    render(<HomeView {...createProps({ onOpenShopping, onOpenLowItems })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Нет 1" }));
+    expect(onOpenShopping).toHaveBeenCalledOnce();
+    expect(onOpenLowItems).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Мало 1" }));
+    expect(onOpenLowItems).toHaveBeenCalledOnce();
   });
 
-  it("renders need-buy items and navigates on title click", () => {
-    const onSelectCategory = vi.fn();
-    render(<HomeView {...createProps({ onSelectCategory })} />);
-    const title = screen.getByRole("button", { name: "Молоко" });
-    expect(title).toBeInTheDocument();
-    expect(title).toHaveClass("ds-product-row__title");
-    fireEvent.click(title);
-    expect(onSelectCategory).toHaveBeenCalledWith(itemNeedBuy.categoryId);
+  it("opens the check screen from the К проверке row", () => {
+    const onOpenChecks = vi.fn();
+    render(<HomeView {...createProps({ onOpenChecks })} />);
+    fireEvent.click(screen.getByRole("button", { name: "К проверке 1" }));
+    expect(onOpenChecks).toHaveBeenCalledOnce();
   });
 
-  it("marks need-buy item as bought via Куплено checkbox", async () => {
-    const onSetStatus = vi.fn().mockResolvedValue(undefined);
-    const onSelectCategory = vi.fn();
-    render(<HomeView {...createProps({ onSetStatus, onSelectCategory })} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
-    expect(onSetStatus).toHaveBeenCalledWith(itemNeedBuy, "IN_STOCK", { showBoughtToast: false });
-    expect(onSelectCategory).not.toHaveBeenCalled();
-    expect(await screen.findByRole("status", { name: "Куплено" })).toBeInTheDocument();
+  it("renders zero-count rows as non-interactive", () => {
+    render(<HomeView {...createProps({ items: [itemInStock] })} />);
+    const summary = screen.getByLabelText("Сводка");
+    expect(within(summary).queryByRole("button", { name: "Мало 0" })).toBeNull();
+    expect(within(summary).queryByRole("button", { name: "Нет 0" })).toBeNull();
+    const inStockRow = within(summary).getByText("Есть").parentElement?.parentElement;
+    expect(inStockRow?.querySelector(".ds-home-summary__chevron--hidden")).not.toBeNull();
   });
 
-  it("shows pending state on Куплено checkbox while status update is in flight", () => {
-    render(
-      <HomeView
-        {...createProps({ isActionPending: (key: string) => key === "item:status:item-1" })}
-      />
-    );
-    const checkbox = screen.getByRole("checkbox", { name: "Куплено" });
-    expect(checkbox).toBeDisabled();
-    expect(checkbox).toHaveAttribute("title", "Отмечаем...");
-  });
-
-  it("keeps the bought row in place with undo and removes it after the linger timeout", async () => {
-    vi.useFakeTimers();
-    try {
-      const onSetStatus = vi.fn().mockResolvedValue(undefined);
-      render(
-        <HomeView
-          {...createProps({ onSetStatus, needBuyItems: [itemNeedBuy, itemNeedBuySecond] })}
-        />
-      );
-      fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(0);
-      });
-
-      const row = document.querySelector(".ds-product-list .ds-product-row") as HTMLElement;
-      expect(row.textContent).toContain("Молоко");
-      expect(row.textContent).toContain("Куплено");
-
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(5000);
-      });
-      expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("restores the item when Отмена is clicked on the bought row", async () => {
-    const onSetStatus = vi.fn().mockResolvedValue(undefined);
-    render(<HomeView {...createProps({ onSetStatus })} />);
-    fireEvent.click(screen.getByRole("checkbox", { name: "Куплено" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Отмена" }));
-    expect(onSetStatus).toHaveBeenLastCalledWith(itemNeedBuy, "NEED_BUY", {
-      showBoughtToast: false
-    });
-    expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
-    expect(document.querySelector(".ds-shopping-actions--restoring")).not.toBeNull();
-  });
-
-  it("shows empty state when there are no need-buy items", () => {
-    render(<HomeView {...createProps({ needBuyItems: [] })} />);
-    expect(document.querySelector(".ds-empty-state")?.textContent).toContain("Пока спокойно");
-  });
-
-  it("navigates to categories from the Купить сейчас empty state CTA", () => {
-    const onSelectTab = vi.fn();
-    render(<HomeView {...createProps({ needBuyItems: [], onSelectTab })} />);
-    fireEvent.click(screen.getByRole("button", { name: "К категориям" }));
-    expect(onSelectTab).toHaveBeenCalledWith("items");
+  it("does not render the Купить сейчас section", () => {
+    render(<HomeView {...createProps()} />);
+    expect(screen.queryByRole("heading", { name: "Купить сейчас" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Куплено" })).not.toBeInTheDocument();
   });
 
   it("navigates to checks from the Проверки empty state CTA", () => {

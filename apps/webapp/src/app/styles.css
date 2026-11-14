@@ -527,8 +527,9 @@ select {
   justify-content: center;
   height: 32px;
   min-height: 32px;
-  /* Фиксированная ширина: статусы не прыгают по ширине между строками. */
-  width: 92px;
+  /* Фиксированная минимальная ширина: статусы не прыгают между строками,
+     а при системном шрифте шире ожидаемого чип растёт, а не обрезает текст. */
+  min-width: 92px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 9px;
@@ -1848,23 +1849,30 @@ select {
   padding: 16px;
 }
 
-.ds-home-summary__groups {
-  display: grid;
-  gap: 12px;
+.ds-home-summary__bar {
+  display: flex;
+  height: 12px;
+  margin-bottom: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ds-surface-2);
 }
 
-.ds-home-summary__group {
-  display: grid;
-  gap: 4px;
-  margin: 0;
+.ds-home-summary__bar-segment {
+  flex-basis: 0;
+  min-width: 4px;
 }
 
-.ds-home-summary__group-title {
-  margin: 0;
-  color: var(--ds-text-3);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
+.ds-home-summary__bar-segment--ok {
+  background: var(--ds-status-ok);
+}
+
+.ds-home-summary__bar-segment--warn {
+  background: var(--ds-status-warn);
+}
+
+.ds-home-summary__bar-segment--bad {
+  background: var(--ds-status-bad);
 }
 
 .ds-home-summary__list {
@@ -1881,6 +1889,23 @@ select {
   justify-content: space-between;
   gap: 12px;
   min-height: 36px;
+  padding: 0 4px;
+}
+
+.ds-home-summary__row--action {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ds-home-summary__row--action:active {
+  background: color-mix(in srgb, var(--ds-surface-2) 60%, transparent);
 }
 
 .ds-home-summary__row-label {
@@ -1890,6 +1915,17 @@ select {
   color: var(--ds-text-1);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
+}
+
+.ds-home-summary__row-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--ds-text-3);
+}
+
+.ds-home-summary__chevron--hidden {
+  visibility: hidden;
 }
 
 .ds-home-summary__metric-value {

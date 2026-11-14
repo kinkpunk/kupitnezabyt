@@ -24,10 +24,12 @@ import { formatDate, formatError } from "../../lib/format";
 import { getReminderDraftKey } from "../../lib/reminder-draft";
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
 import {
+  categoryStatusFilterToItemStatus,
   categoryTriggerItemStatus,
   itemStatusToUiStatus,
   nextUiStatus,
-  uiStatusToItemStatus
+  uiStatusToItemStatus,
+  type CategoryStatusFilter
 } from "../../lib/ui";
 import {
   BottomSheet,
@@ -36,8 +38,7 @@ import {
   PanelHeader,
   ProductRow,
   ProductRowMoreButton,
-  SearchField,
-  type CategoryStatusFilter
+  SearchField
 } from "../common";
 import { ReminderFields, type ReminderFieldsValue } from "../ui/ReminderFields";
 import { ReminderSettingsSheet } from "../ui/ReminderSettingsSheet";
@@ -68,6 +69,8 @@ export function CategoriesView({
   onSearchQueryChange,
   onSearch,
   onSelectCategory,
+  statusFilter,
+  onStatusFilterChange,
   onCreateCategory,
   onCreateItem,
   onSetStatus,
@@ -108,6 +111,8 @@ export function CategoriesView({
   onSearchQueryChange: (value: string) => void;
   onSearch: () => Promise<void>;
   onSelectCategory: (categoryId: string) => void;
+  statusFilter: CategoryStatusFilter;
+  onStatusFilterChange: (filter: CategoryStatusFilter) => void;
   onCreateCategory: (input: ReminderSettingInput) => Promise<void>;
   onCreateItem: (input: ReminderSettingInput) => Promise<void>;
   onSetStatus: (item: Item, status: ItemStatus) => Promise<void>;
@@ -135,12 +140,7 @@ export function CategoriesView({
   const [categoryReminder, setCategoryReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
   const [itemReminder, setItemReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
   const [isReordering, setIsReordering] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<CategoryStatusFilter>("all");
   const [reminderEntity, setReminderEntity] = useState<ReminderSettingEntity | null>(null);
-
-  React.useEffect(() => {
-    setStatusFilter("all");
-  }, [selectedCategory?.id]);
 
   const sheetItem = useMemo(
     () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
@@ -170,12 +170,9 @@ export function CategoriesView({
     if (statusFilter === "all") {
       return visibleItems;
     }
-    const statusByFilter: Record<Exclude<CategoryStatusFilter, "all">, Item["status"]> = {
-      in_stock: "IN_STOCK",
-      low: "LOW",
-      need_buy: "NEED_BUY"
-    };
-    return visibleItems.filter((item) => item.status === statusByFilter[statusFilter]);
+    return visibleItems.filter(
+      (item) => item.status === categoryStatusFilterToItemStatus[statusFilter]
+    );
   }, [statusFilter, visibleItems]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -359,7 +356,7 @@ export function CategoriesView({
             low={lowCount}
             filter={statusFilter}
             disabled={selectedCategory.itemCount === 0}
-            onFilterChange={setStatusFilter}
+            onFilterChange={onStatusFilterChange}
             onArchive={() =>
               void onArchiveSelectedCategory().catch((caughtError) =>
                 setError(formatError(caughtError))

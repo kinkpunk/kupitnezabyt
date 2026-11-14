@@ -1,18 +1,8 @@
-import type { ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
-import type { CategoryStatus } from "@kupitnezabyt/shared";
+import type { CategoryStatus, ItemImportance, ItemStatus } from "@kupitnezabyt/shared";
 
-import type { InAppReminder, WorkspaceSummary } from "./types";
+import type { Category, InAppReminder, Item, WorkspaceSummary } from "./types";
 
-export const statusLabels: Record<ItemStatus, string> = {
-  IN_STOCK: "Есть",
-  LOW: "Мало",
-  NEED_BUY: "Купить",
-  PAUSED: "Пауза"
-};
-
-export const statusOptions: ItemStatus[] = ["IN_STOCK", "LOW", "NEED_BUY"];
-
-/** UI-level status used by the design-system components (StatusChip, tabs, badges). */
+/** Единственный словарь состояний товара (ДС §1.6): чип, фильтры, сводки, aria-label. */
 export type UiItemStatus = "ok" | "warn" | "bad";
 
 export const uiStatusLabels: Record<UiItemStatus, string> = {
@@ -20,6 +10,38 @@ export const uiStatusLabels: Record<UiItemStatus, string> = {
   warn: "Мало",
   bad: "Нет"
 };
+
+/** Подписи кнопок экрана проверки (ДС §3): действие «Купить» вместо состояния «Нет». */
+export const checkActionLabels: Record<Exclude<ItemStatus, "PAUSED">, string> = {
+  IN_STOCK: "Есть",
+  LOW: "Мало",
+  NEED_BUY: "Купить"
+};
+
+/** Фильтр товаров по статусу в шапке категории (ДС §3). */
+export type CategoryStatusFilter = "all" | "in_stock" | "low" | "need_buy";
+
+export const categoryStatusFilterToItemStatus: Record<
+  Exclude<CategoryStatusFilter, "all">,
+  ItemStatus
+> = {
+  in_stock: "IN_STOCK",
+  low: "LOW",
+  need_buy: "NEED_BUY"
+};
+
+/** Первая категория с товарами указанного статуса — цель перехода из сводки «Главной». */
+export function findCategoryWithStatus(
+  categories: Category[],
+  items: Item[],
+  status: ItemStatus
+): Category | null {
+  return (
+    categories.find((category) =>
+      items.some((item) => item.categoryId === category.id && item.status === status)
+    ) ?? null
+  );
+}
 
 /** Cyclic order for the StatusChip tap interaction. */
 export const uiStatusCycle: UiItemStatus[] = ["ok", "warn", "bad"];
@@ -76,12 +98,6 @@ export const importanceBadgeClasses: Record<Exclude<ItemImportance, "NORMAL">, s
   LOW: "badge badge-muted",
   HIGH: "badge badge-warning",
   CRITICAL: "badge badge-urgent"
-};
-
-export const categoryStatusLabels: Record<CategoryStatus, string> = {
-  OK: "OK",
-  ATTENTION: "Мало",
-  NEED_BUY: "Купить"
 };
 
 export const categoryTriggerItemStatus: Record<CategoryStatus, ItemStatus | null> = {

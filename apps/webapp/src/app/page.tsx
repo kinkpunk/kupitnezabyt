@@ -96,17 +96,15 @@ export default function Home() {
         return (
           <HomeView
             items={state.items}
-            categories={state.categories}
-            shoppingList={state.shoppingList}
             inAppReminders={state.inAppReminders}
             checkSession={state.checkSession}
-            needBuyItems={state.needBuyItems}
             onSelectTab={state.handleSelectTab}
-            onSelectCategory={state.handleSelectCategory}
-            onSetStatus={state.handleSetStatus}
             onStartReminderCheck={state.handleStartReminderCheck}
             onSnoozeReminder={state.handleSnoozeReminder}
             onOpenReminder={state.handleOpenReminder}
+            onOpenShopping={() => state.handleSelectTab("shopping")}
+            onOpenLowItems={() => state.handleOpenItemsByStatus("low")}
+            onOpenChecks={() => state.handleSelectTab("check")}
             isActionPending={state.isActionPending}
           />
         );
@@ -140,6 +138,8 @@ export default function Home() {
               state.setSelectedCategoryId(categoryId);
               state.setShowCategoryForm(false);
             }}
+            statusFilter={state.categoryStatusFilter}
+            onStatusFilterChange={state.setCategoryStatusFilter}
             onCreateCategory={state.handleCreateCategory}
             onCreateItem={state.handleCreateItem}
             onSetStatus={state.handleSetStatus}

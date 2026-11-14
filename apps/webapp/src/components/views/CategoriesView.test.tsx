@@ -3,6 +3,7 @@ import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Category, Item, RecommendationSuggestion } from "../../lib/types";
+import type { CategoryStatusFilter } from "../../lib/ui";
 import { CategoriesView } from "./CategoriesView";
 
 const category: Category = {
@@ -118,6 +119,8 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     onSearchQueryChange: vi.fn(),
     onSearch: vi.fn().mockResolvedValue(undefined),
     onSelectCategory: vi.fn(),
+    statusFilter: "all" as CategoryStatusFilter,
+    onStatusFilterChange: vi.fn(),
     onCreateCategory: vi.fn().mockResolvedValue(undefined),
     onCreateItem: vi.fn().mockResolvedValue(undefined),
     onSetStatus: vi.fn().mockResolvedValue(undefined),
@@ -136,6 +139,17 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     isActionPending: vi.fn().mockReturnValue(false),
     ...overrides
   };
+}
+
+function StatefulCategoriesView(props: React.ComponentProps<typeof CategoriesView>) {
+  const [statusFilter, setStatusFilter] = React.useState<CategoryStatusFilter>("all");
+  return (
+    <CategoriesView
+      {...props}
+      statusFilter={statusFilter}
+      onStatusFilterChange={setStatusFilter}
+    />
+  );
 }
 
 describe("CategoriesView", () => {
@@ -165,7 +179,7 @@ describe("CategoriesView", () => {
   });
 
   it("filters item list by status chip", () => {
-    render(<CategoriesView {...createProps()} />);
+    render(<StatefulCategoriesView {...createProps()} />);
     clickFilter(/Мало/);
     expect(screen.getByText("Молоко")).toBeInTheDocument();
     expect(screen.queryByText("Кофе")).not.toBeInTheDocument();
@@ -177,27 +191,22 @@ describe("CategoriesView", () => {
 
   it("shows empty message when filter matches no items", () => {
     const { rerender } = render(
-      <CategoriesView {...createProps({ visibleItems: [itemLow] })} />
+      <StatefulCategoriesView {...createProps({ visibleItems: [itemLow] })} />
     );
     clickFilter(/Мало/);
     expect(screen.getByText("Молоко")).toBeInTheDocument();
 
-    rerender(<CategoriesView {...createProps({ visibleItems: [itemInStock] })} />);
+    rerender(
+      <StatefulCategoriesView {...createProps({ visibleItems: [itemInStock] })} />
+    );
     expect(screen.getByText("Нет товаров с таким статусом.")).toBeInTheDocument();
   });
 
-  it("resets status filter when selected category changes", () => {
-    const { rerender } = render(<CategoriesView {...createProps()} />);
+  it("reports filter changes via onStatusFilterChange", () => {
+    const onStatusFilterChange = vi.fn();
+    render(<CategoriesView {...createProps({ onStatusFilterChange })} />);
     clickFilter(/Мало/);
-    expect(screen.queryByText("Кофе")).not.toBeInTheDocument();
-
-    rerender(
-      <CategoriesView
-        {...createProps({ selectedCategory: { ...category, id: "cat-2", name: "Дом" } })}
-      />
-    );
-    expect(screen.getByText("Кофе")).toBeInTheDocument();
-    expect(screen.getByText("Молоко")).toBeInTheDocument();
+    expect(onStatusFilterChange).toHaveBeenCalledWith("low");
   });
 
   it("renders product rows for visible items", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ItemStatus, LegalConsent } from "@kupitnezabyt/shared";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   acceptRecommendation,
@@ -69,11 +69,14 @@ import {
 import type { CategorySortMode } from "../lib/api";
 import { calculateSnoozedAt, formatDate, formatError } from "../lib/format";
 import {
+  categoryStatusFilterToItemStatus,
+  findCategoryWithStatus,
   onboardingStorageKey,
   reminderSnoozeDays,
   resolveStarterItemCategories,
   starterCategories,
   themeStorageKey,
+  type CategoryStatusFilter,
   type StarterItemDraft,
   type ThemeMode
 } from "../lib/ui";
@@ -209,6 +212,16 @@ export function useAppState() {
     [categories, selectedCategoryId]
   );
 
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState<CategoryStatusFilter>("all");
+  // Фильтр, запрошенный из сводки «Главной»: переживает сброс при смене категории.
+  const pendingCategoryStatusFilterRef = useRef<Exclude<CategoryStatusFilter, "all"> | null>(null);
+
+  useEffect(() => {
+    const pending = pendingCategoryStatusFilterRef.current;
+    pendingCategoryStatusFilterRef.current = null;
+    setCategoryStatusFilter(pending ?? "all");
+  }, [selectedCategory?.id]);
+
   const activeWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId) ?? workspaces[0] ?? null,
     [activeWorkspaceId, workspaces]
@@ -280,10 +293,6 @@ export function useAppState() {
     checkSession?.items.filter((sessionItem) => sessionItem.checkedAt || sessionItem.selectedStatus)
       .length ?? 0;
 
-  const needBuyItems = useMemo(
-    () => items.filter((item) => item.status === "NEED_BUY").slice(0, 5),
-    [items]
-  );
   const themeButtonLabel =
     theme === "system"
       ? `Тема: как на устройстве (сейчас ${systemPrefersDark ? "тёмная" : "светлая"})`
@@ -1234,6 +1243,22 @@ export function useAppState() {
     setActiveTab("items");
   }
 
+  function handleOpenItemsByStatus(filter: Exclude<CategoryStatusFilter, "all">) {
+    const targetCategory = findCategoryWithStatus(
+      categories,
+      items,
+      categoryStatusFilterToItemStatus[filter]
+    );
+    if (targetCategory && targetCategory.id !== selectedCategory?.id) {
+      pendingCategoryStatusFilterRef.current = filter;
+    }
+    if (targetCategory) {
+      setSelectedCategoryId(targetCategory.id);
+    }
+    setCategoryStatusFilter(filter);
+    handleSelectTab("items");
+  }
+
   function handleEditShoppingEntryItem(item: Item) {
     clearSearchSession();
     setSelectedCategoryId(item.categoryId);
@@ -1629,6 +1654,8 @@ export function useAppState() {
     setStarterItems,
     selectedCategoryId,
     setSelectedCategoryId,
+    categoryStatusFilter,
+    setCategoryStatusFilter,
     categorySortMode,
     activeTab,
     setActiveTab,
@@ -1681,7 +1708,6 @@ export function useAppState() {
     shoppingGroups,
     currentCheckItem,
     checkedCount,
-    needBuyItems,
     themeButtonLabel,
 
     // Actions
@@ -1733,6 +1759,7 @@ export function useAppState() {
     handleOpenActivity,
     toggleTheme,
     handleSelectCategory,
+    handleOpenItemsByStatus,
     handleEditShoppingEntryItem,
     handleSelectWorkspace,
     handleCreateWorkspaceInvitation,
