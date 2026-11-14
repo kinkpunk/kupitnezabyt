@@ -1733,7 +1733,10 @@ select {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  padding: 10px 8px;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--ds-text-2);
@@ -2336,8 +2339,13 @@ select {
   border-radius: 999px;
   background: var(--ds-surface-2);
   color: var(--ds-text-2);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-bold);
+}
+
+.ds-auth-hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--ds-text-2);
+  text-align: center;
 }
 
 .ds-auth-divider {

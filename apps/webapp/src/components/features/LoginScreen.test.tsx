@@ -158,6 +158,65 @@ describe("LoginScreen", () => {
     expect(screen.getByRole("button", { name: "Получить ссылку" })).toBeEnabled();
   });
 
+  it("explains why sign-in buttons are disabled before consent", () => {
+    render(
+      <LoginScreen
+        {...createProps({ showLegalConsent: true, termsAccepted: false, privacyAccepted: false })}
+      />
+    );
+
+    const hint = screen.getByText("Примите условия, чтобы войти");
+    expect(hint).toHaveAttribute("id", "login-consent-hint");
+    expect(screen.getByRole("button", { name: "Войти через Google" })).toHaveAttribute(
+      "aria-describedby",
+      "login-consent-hint"
+    );
+    expect(screen.getByRole("button", { name: "Войти через Apple" })).toHaveAttribute(
+      "aria-describedby",
+      "login-consent-hint"
+    );
+    expect(screen.getByRole("button", { name: "Получить ссылку" })).toHaveAttribute(
+      "aria-describedby",
+      "login-consent-hint"
+    );
+  });
+
+  it("hides the consent hint once both checkboxes are ticked", () => {
+    function Harness() {
+      const [terms, setTerms] = React.useState(false);
+      const [privacy, setPrivacy] = React.useState(false);
+
+      return (
+        <LoginScreen
+          {...createProps({
+            showLegalConsent: true,
+            termsAccepted: terms,
+            privacyAccepted: privacy,
+            onTermsAcceptedChange: setTerms,
+            onPrivacyAcceptedChange: setPrivacy
+          })}
+        />
+      );
+    }
+
+    render(<Harness />);
+
+    expect(screen.getByText("Примите условия, чтобы войти")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: /Условия использования/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Политике конфиденциальности/ }));
+
+    expect(screen.queryByText("Примите условия, чтобы войти")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Войти через Google" })).not.toHaveAttribute(
+      "aria-describedby"
+    );
+  });
+
+  it("renders svg logos inside the provider icon badges", () => {
+    const { container } = render(<LoginScreen {...createProps()} />);
+    expect(container.querySelectorAll(".ds-provider-button__icon svg")).toHaveLength(2);
+  });
+
   it("hides consent checkboxes when consent was already accepted on this device", () => {
     render(<LoginScreen {...createProps({ showLegalConsent: false })} />);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();

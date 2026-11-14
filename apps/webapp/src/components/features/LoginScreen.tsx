@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 import { ErrorNotice } from "../ui/ErrorNotice";
 import { BrandWord } from "../ui/BrandWord";
 import { Button } from "../ui/Button";
+import { AppleLogo, GoogleLogo } from "../ui/AuthProviderIcons";
 
 export function openLegalDocument(path: string): void {
   window.open(path, "_blank", "noopener,noreferrer");
@@ -123,6 +124,8 @@ export function LoginScreen({
     isRequestingMagicLink ||
     isContinuingWithTelegram;
   const consentReady = !showLegalConsent || (termsAccepted && privacyAccepted);
+  const consentMissing = showLegalConsent && !consentReady;
+  const consentHintId = "login-consent-hint";
   const hasProviderButtons =
     telegramAvailable || authProviders?.google !== false || authProviders?.apple !== false;
 
@@ -147,6 +150,7 @@ export function LoginScreen({
             className="ds-provider-button"
             type="button"
             disabled={isBusy || !consentReady}
+            aria-describedby={consentMissing ? consentHintId : undefined}
             onClick={() => void onContinueWithTelegram()}
           >
             {isContinuingWithTelegram ? "Открываем Telegram..." : "Продолжить через Telegram"}
@@ -158,10 +162,11 @@ export function LoginScreen({
             variant="ghost"
             type="button"
             disabled={isBusy || !consentReady}
+            aria-describedby={consentMissing ? consentHintId : undefined}
             onClick={() => void onStartGoogleSignIn()}
           >
             <span aria-hidden="true" className="ds-provider-button__icon">
-              G
+              <GoogleLogo />
             </span>
             {isStartingGoogleSignIn ? "Открываем Google..." : "Войти через Google"}
           </Button>
@@ -172,10 +177,11 @@ export function LoginScreen({
             variant="ghost"
             type="button"
             disabled={isBusy || !consentReady}
+            aria-describedby={consentMissing ? consentHintId : undefined}
             onClick={() => void onStartAppleSignIn()}
           >
             <span aria-hidden="true" className="ds-provider-button__icon">
-              
+              <AppleLogo />
             </span>
             {isStartingAppleSignIn ? "Открываем Apple..." : "Войти через Apple"}
           </Button>
@@ -206,6 +212,7 @@ export function LoginScreen({
             variant="ghost"
             type="button"
             disabled={isBusy || !email.trim() || !consentReady}
+            aria-describedby={consentMissing ? consentHintId : undefined}
             onClick={() => void onRequestMagicLink()}
           >
             <Mail aria-hidden="true" size={18} />
@@ -221,6 +228,11 @@ export function LoginScreen({
           <a className="ds-dev-magic-link" href={devMagicLink}>
             Открыть dev magic link
           </a>
+        ) : null}
+        {consentMissing ? (
+          <p id={consentHintId} className="ds-auth-hint">
+            Примите условия, чтобы войти
+          </p>
         ) : null}
         <LegalConsentCheckboxes
           show={showLegalConsent}
