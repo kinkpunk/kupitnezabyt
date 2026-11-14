@@ -13,6 +13,9 @@
   --ds-brand: #f19fa7;
   --ds-brand-soft: #f19fa71f;
   --ds-brand-ink: #a84854;
+  /* Затемнённый бренд для обводок и штрихов контролов в светлой теме:
+     контраст ≥ 3:1 на светлых подложках (WCAG 1.4.11). */
+  --ds-brand-strong: #c25e6a;
   --ds-on-brand: #1a1d21;
   --ds-status-ok: #207246;
   --ds-status-ok-soft: #57b9811f;
@@ -20,6 +23,11 @@
   --ds-status-warn-soft: #e5b04c1f;
   --ds-status-bad: #b53a36;
   --ds-status-bad-soft: #e26d681f;
+  /* Графические оттенки статусов (полосы, диаграммы): осветлённые «текстовые»
+     статусы. Только декоративные сегменты — не для текста и одиночных маркеров. */
+  --ds-status-ok-chart: #5cb884;
+  --ds-status-warn-chart: #c9a227;
+  --ds-status-bad-chart: #dd7b74;
   --ds-status-check: #33628f;
   --ds-status-check-soft: #7aa7d91f;
   --ds-skeleton-shine: color-mix(in srgb, var(--ds-surface-2) 78%, #ffffff);
@@ -95,12 +103,18 @@
     --ds-text-2: #9ba1a9;
     --ds-text-3: #879099;
     --ds-brand-ink: #f19fa7;
+    /* В тёмной теме пастельный бренд сам даёт ~9:1 — strong не нужен. */
+    --ds-brand-strong: #f19fa7;
     --ds-status-ok: #57b981;
     --ds-status-ok-soft: #57b98124;
     --ds-status-warn: #e5b04c;
     --ds-status-warn-soft: #e5b04c26;
     --ds-status-bad: #e26d68;
     --ds-status-bad-soft: #e26d6826;
+    /* В тёмной теме яркие статусы сами подходят для графики. */
+    --ds-status-ok-chart: var(--ds-status-ok);
+    --ds-status-warn-chart: var(--ds-status-warn);
+    --ds-status-bad-chart: var(--ds-status-bad);
     --ds-status-check: #7aa7d9;
     --ds-status-check-soft: #7aa7d926;
     --ds-skeleton-shine: color-mix(in srgb, var(--ds-surface-2) 84%, var(--ds-text-1));
@@ -118,12 +132,17 @@
   --ds-text-2: #9ba1a9;
   --ds-text-3: #879099;
   --ds-brand-ink: #f19fa7;
+  --ds-brand-strong: #f19fa7;
   --ds-status-ok: #57b981;
   --ds-status-ok-soft: #57b98124;
   --ds-status-warn: #e5b04c;
   --ds-status-warn-soft: #e5b04c26;
   --ds-status-bad: #e26d68;
   --ds-status-bad-soft: #e26d6826;
+  /* В тёмной теме яркие статусы сами подходят для графики. */
+  --ds-status-ok-chart: var(--ds-status-ok);
+  --ds-status-warn-chart: var(--ds-status-warn);
+  --ds-status-bad-chart: var(--ds-status-bad);
   --ds-status-check: #7aa7d9;
   --ds-status-check-soft: #7aa7d926;
   --ds-skeleton-shine: color-mix(in srgb, var(--ds-surface-2) 84%, var(--ds-text-1));
@@ -1754,7 +1773,7 @@ select {
   justify-content: center;
   width: 22px;
   height: 22px;
-  border: 2px solid var(--ds-brand);
+  border: 2px solid var(--ds-brand-strong);
   border-radius: 6px;
   transition: background-color 120ms ease-out, transform 120ms ease-out;
 }
@@ -1767,7 +1786,7 @@ select {
 .ds-purchase-checkbox__spinner {
   width: 12px;
   height: 12px;
-  border: 2px solid var(--ds-brand);
+  border: 2px solid var(--ds-brand-strong);
   border-top-color: transparent;
   border-radius: 50%;
   animation: ds-purchase-checkbox-spin 0.8s linear infinite;
@@ -1889,7 +1908,8 @@ select {
 
 .ds-home-summary__bar {
   display: flex;
-  height: 12px;
+  gap: 2px;
+  height: 14px;
   margin-bottom: 12px;
   border-radius: 999px;
   overflow: hidden;
@@ -1902,15 +1922,15 @@ select {
 }
 
 .ds-home-summary__bar-segment--ok {
-  background: var(--ds-status-ok);
+  background: var(--ds-status-ok-chart);
 }
 
 .ds-home-summary__bar-segment--warn {
-  background: var(--ds-status-warn);
+  background: var(--ds-status-warn-chart);
 }
 
 .ds-home-summary__bar-segment--bad {
-  background: var(--ds-status-bad);
+  background: var(--ds-status-bad-chart);
 }
 
 .ds-home-summary__list {
@@ -2437,14 +2457,14 @@ select {
 }
 
 .ds-choice--active {
-  border-color: var(--ds-brand);
+  border-color: var(--ds-brand-strong);
   background: var(--ds-brand-soft);
   color: var(--ds-text-1);
   font-weight: var(--font-weight-semibold);
 }
 
 .ds-choice:not(:disabled):hover {
-  border-color: var(--ds-brand);
+  border-color: var(--ds-brand-strong);
 }
 
 .ds-starter-items {
