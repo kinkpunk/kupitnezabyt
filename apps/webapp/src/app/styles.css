@@ -1594,9 +1594,10 @@ select {
 
 .ds-shopping-groups {
   display: grid;
+  gap: 16px;
 }
 
-/* Список разбит на группы по категориям (заголовков групп нет), поэтому
+/* Список разбит на группы по категориям с sticky-заголовками, поэтому
    глобальное снятие разделителя у :last-child обрывает линию между группами:
    разделитель нужен между всеми строками, кроме последней в последней группе. */
 .ds-shopping-groups .ds-product-row:last-child {
@@ -1610,6 +1611,40 @@ select {
 .ds-shopping-group {
   display: grid;
   gap: 8px;
+}
+
+/* Заголовок группы прилипает под sticky-панелью действий: высота панели
+   49px (8 padding + 32 кнопка + 8 padding + 1 обводка) минус 12px
+   компенсации отступа контейнера — та же геометрия, что у самой панели.
+   Подложка обязательна: без неё строки скроллятся сквозь заголовок. */
+.ds-shopping-group__title {
+  position: sticky;
+  top: 37px;
+  z-index: 10;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 4px 8px;
+  background: var(--ds-bg-base);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ds-text-2);
+}
+
+.ds-shopping-group__title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-shopping-group__count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-3);
 }
 
 .ds-shopping-actions {

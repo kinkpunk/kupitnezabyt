@@ -107,6 +107,27 @@ describe("ShoppingView", () => {
     expect(screen.getByText("Молоко")).toBeInTheDocument();
   });
 
+  it("renders a sticky group title with a position count instead of per-row category subtitles", () => {
+    render(<ShoppingView {...createProps()} />);
+    const groupTitle = screen.getByRole("heading", { name: "Еда 2" });
+    expect(groupTitle).toHaveClass("ds-shopping-group__title");
+    expect(groupTitle.querySelector(".ds-shopping-group__count")).toHaveTextContent("2");
+    expect(document.querySelector(".ds-shopping-group .ds-product-row__subtitle")).toBeNull();
+  });
+
+  it("keeps the row subtitle in the manual group to distinguish one-off and tracked entries", () => {
+    render(
+      <ShoppingView
+        {...createProps({
+          shoppingList: [manualEntry],
+          shoppingGroups: [{ id: "manual", title: "Без категории", entries: [manualEntry] }]
+        })}
+      />
+    );
+    expect(screen.getByRole("heading", { name: "Без категории 1" })).toBeInTheDocument();
+    expect(document.querySelector(".ds-shopping-group .ds-product-row__subtitle")).not.toBeNull();
+  });
+
   it("opens create shopping sheet from the sticky panel header", () => {
     const setShowShoppingForm = vi.fn();
     render(<ShoppingView {...createProps({ setShowShoppingForm })} />);

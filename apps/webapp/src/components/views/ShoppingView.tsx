@@ -363,6 +363,10 @@ export function ShoppingView({
         <div className="ds-shopping-groups">
           {displayGroups.map((group) => (
             <section className="ds-shopping-group" key={group.id}>
+              <h2 className="ds-shopping-group__title">
+                <span className="ds-shopping-group__title-text">{group.title}</span>
+                <span className="ds-shopping-group__count">{group.entries.length}</span>
+              </h2>
               <div className="ds-product-list">
                 {group.entries.map((entry) =>
                   editingShoppingId === entry.id ? (
@@ -385,7 +389,7 @@ export function ShoppingView({
                     <ProductRow
                       key={entry.id}
                       actions={renderEntryActions(entry)}
-                      subtitle={getEntrySubtitle(entry)}
+                      subtitle={group.id === "manual" ? getEntrySubtitle(entry) : undefined}
                       title={entry.title}
                     />
                   )
