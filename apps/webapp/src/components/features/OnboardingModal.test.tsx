@@ -111,14 +111,14 @@ describe("OnboardingModal", () => {
     const onFinish = vi.fn().mockResolvedValue(undefined);
     render(<OnboardingModal {...createProps({ onboardingStep: 3, onFinish })} />);
     expect(screen.getByRole("heading", { name: "Напоминания" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    fireEvent.click(screen.getByRole("button", { name: "Создать и начать" }));
     expect(onFinish).toHaveBeenCalledWith();
   });
 
-  it("skips reminders", () => {
+  it("starts with an empty list", () => {
     const onFinish = vi.fn().mockResolvedValue(undefined);
     render(<OnboardingModal {...createProps({ onboardingStep: 3, onFinish })} />);
-    fireEvent.click(screen.getByRole("button", { name: "Пропустить напоминания" }));
+    fireEvent.click(screen.getByRole("button", { name: "Начать с пустым списком" }));
     expect(onFinish).toHaveBeenCalledWith(true);
   });
 });

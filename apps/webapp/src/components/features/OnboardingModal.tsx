@@ -163,19 +163,20 @@ export function OnboardingModal({
           <>
             <h1>Напоминания</h1>
             <p>
-              Я буду показывать напоминания внутри приложения, когда пора
-              проверить запасы.
+              Напоминания о проверке запасов появляются в «Активности» —
+              включать их не нужно. Срок проверки настраивается у каждого
+              товара.
             </p>
             <div className="ds-onboarding-actions">
               <Button type="button" onClick={() => void onFinish()}>
-                Готово
+                Создать и начать
               </Button>
               <Button
                 variant="ghost"
                 type="button"
                 onClick={() => void onFinish(true)}
               >
-                Пропустить напоминания
+                Начать с пустым списком
               </Button>
             </div>
           </>

@@ -49,7 +49,7 @@ export async function finishOnboardingIfNeeded(page: Page): Promise<void> {
   await startButton.click();
   await page.getByRole("button", { name: "Продолжить" }).click();
   await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
+  await page.getByRole("button", { name: "Создать и начать" }).click();
 }
 
 // Проходит онбординг, полностью пропуская создание стартовых данных,
@@ -69,5 +69,5 @@ export async function skipOnboardingIfNeeded(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Пропустить" }).click();
   // Пропускаем добавление стартовых товаров
   await page.getByRole("button", { name: "Пропустить" }).click();
-  await page.getByRole("button", { name: "Готово" }).click();
+  await page.getByRole("button", { name: "Создать и начать" }).click();
 }
