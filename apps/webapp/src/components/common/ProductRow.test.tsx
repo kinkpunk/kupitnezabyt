@@ -57,6 +57,26 @@ describe("ProductRow", () => {
     expect(handleStatusClick).toHaveBeenCalledOnce();
   });
 
+  it("passes the direct selection from the chip menu to onStatusSelect", () => {
+    const handleStatusSelect = vi.fn();
+    render(
+      <ProductRow
+        title="Молоко"
+        status="ok"
+        onStatusClick={vi.fn()}
+        onStatusSelect={handleStatusSelect}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать статус" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Мало" }));
+    expect(handleStatusSelect).toHaveBeenCalledWith("warn");
+  });
+
+  it("renders a single cycling button when onStatusSelect is not provided", () => {
+    render(<ProductRow title="Молоко" status="ok" onStatusClick={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "Выбрать статус" })).not.toBeInTheDocument();
+  });
+
   it("calls onClick when title is pressed", () => {
     const handleClick = vi.fn();
     render(

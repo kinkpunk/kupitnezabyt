@@ -170,7 +170,9 @@ describe("CategoriesView", () => {
     expect(filterChip(/Все/)).toHaveTextContent("2");
     expect(filterChip(/Есть/)).toHaveTextContent("1");
     expect(filterChip(/Мало/)).toHaveTextContent("1");
-    expect(screen.queryByRole("button", { name: /Нет/ })).not.toBeInTheDocument();
+    openFilterPanel();
+    const filterGroup = screen.getByRole("group", { name: "Фильтр по статусу" });
+    expect(within(filterGroup).queryByRole("button", { name: /Нет/ })).not.toBeInTheDocument();
   });
 
   it("renders need-buy chip with count of items to buy", () => {

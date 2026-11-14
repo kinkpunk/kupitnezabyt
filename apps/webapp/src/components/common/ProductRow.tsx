@@ -13,6 +13,7 @@ export interface ProductRowProps {
   meta?: ReactNode;
   status?: UiItemStatus | "paused" | undefined;
   onStatusClick?: (() => void) | undefined;
+  onStatusSelect?: ((status: UiItemStatus) => void) | undefined;
   actions?: ReactNode;
   onClick?: (() => void) | undefined;
   reorderHandle?: boolean;
@@ -24,6 +25,7 @@ export function ProductRow({
   meta,
   status,
   onStatusClick,
+  onStatusSelect,
   actions,
   onClick,
   reorderHandle = false
@@ -61,6 +63,7 @@ export function ProductRow({
             disabled={!onStatusClick}
             status={status}
             onCycle={onStatusClick ?? (() => {})}
+            onSelect={onStatusSelect}
           />
         ) : null}
         {actions}

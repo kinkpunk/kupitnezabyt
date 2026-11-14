@@ -29,7 +29,8 @@ import {
   itemStatusToUiStatus,
   nextUiStatus,
   uiStatusToItemStatus,
-  type CategoryStatusFilter
+  type CategoryStatusFilter,
+  type UiItemStatus
 } from "../../lib/ui";
 import {
   BottomSheet,
@@ -187,6 +188,15 @@ export function CategoriesView({
     }
 
     const nextStatus = nextUiStatus(uiStatus);
+    void onSetStatus(item, uiStatusToItemStatus(nextStatus)).catch((caughtError) =>
+      setError(formatError(caughtError))
+    );
+  }
+
+  function handleStatusSelect(item: Item, nextStatus: UiItemStatus) {
+    if (itemStatusToUiStatus(item.status) === nextStatus) {
+      return;
+    }
     void onSetStatus(item, uiStatusToItemStatus(nextStatus)).catch((caughtError) =>
       setError(formatError(caughtError))
     );
@@ -463,6 +473,9 @@ export function CategoriesView({
                     title={item.name}
                     onClick={isReordering ? () => setSheetItemId(item.id) : undefined}
                     onStatusClick={isReordering ? undefined : () => handleStatusClick(item)}
+                    onStatusSelect={
+                      isReordering ? undefined : (nextStatus) => handleStatusSelect(item, nextStatus)
+                    }
                   />
                 )
               )

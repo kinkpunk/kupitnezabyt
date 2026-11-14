@@ -546,9 +546,9 @@ select {
   justify-content: center;
   height: 32px;
   min-height: 32px;
-  /* Фиксированная минимальная ширина: статусы не прыгают между строками,
-     а при системном шрифте шире ожидаемого чип растёт, а не обрезает текст. */
-  min-width: 92px;
+  /* Фиксированная ширина: чипы выравнены в колонке независимо от статуса,
+     текст короткий (3–5 символов), поэтому обрезки нет. */
+  width: 104px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 9px;
@@ -574,9 +574,112 @@ select {
   opacity: 0.55;
 }
 
-.ds-status-chip:not(:disabled):active {
+button.ds-status-chip:not(:disabled):active {
   background: color-mix(in srgb, currentColor 14%, transparent);
   transform: scale(0.97);
+}
+
+/* Разделённый чип: тело циклит статус, шеврон открывает меню прямого выбора. */
+.ds-status-chip--split {
+  padding: 0;
+  gap: 0;
+  cursor: default;
+}
+
+/* У одинарного чипа ::before — расширенная зона нажатия, событие резолвится
+   в кнопку. У обёртки split-чипа псевдоэлемент перехватил бы pointer events
+   у вложенных кнопок, поэтому его отключаем. */
+.ds-status-chip--split::before {
+  content: none;
+}
+
+.ds-status-chip--split:active {
+  transform: none;
+}
+
+.ds-status-chip__main,
+.ds-status-chip__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ds-status-chip__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 4px 0 12px;
+  border-radius: 8px 0 0 8px;
+}
+
+.ds-status-chip__toggle {
+  flex: 0 0 auto;
+  width: 26px;
+  margin-right: 4px;
+  border-radius: 0 8px 8px 0;
+  opacity: 0.7;
+}
+
+.ds-status-chip__main:not(:disabled):active,
+.ds-status-chip__toggle:not(:disabled):active {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.ds-status-chip__menu {
+  position: fixed;
+  z-index: 70;
+  display: grid;
+  gap: 2px;
+  width: 148px;
+  padding: 6px;
+  border: 1px solid var(--ds-line);
+  border-radius: 12px;
+  background: var(--ds-surface-1);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+}
+
+.ds-status-chip__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ds-text-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ds-status-chip__menu-item[aria-checked="true"] {
+  background: var(--ds-surface-2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ds-status-chip__menu-item:focus-visible {
+  outline: 2px solid var(--ds-brand-strong);
+  outline-offset: -2px;
+}
+
+.ds-status-chip__dot--ok {
+  background: var(--ds-status-ok);
+}
+
+.ds-status-chip__dot--warn {
+  background: var(--ds-status-warn);
+}
+
+.ds-status-chip__dot--bad {
+  background: var(--ds-status-bad);
 }
 
 .ds-status-chip__cycle {
@@ -600,26 +703,14 @@ select {
   color: var(--ds-status-ok);
 }
 
-.ds-status-chip--ok .ds-status-chip__dot {
-  background: var(--ds-status-ok);
-}
-
 .ds-status-chip--warn {
   background: var(--ds-status-warn-soft);
   color: var(--ds-status-warn);
 }
 
-.ds-status-chip--warn .ds-status-chip__dot {
-  background: var(--ds-status-warn);
-}
-
 .ds-status-chip--bad {
   background: var(--ds-status-bad-soft);
   color: var(--ds-status-bad);
-}
-
-.ds-status-chip--bad .ds-status-chip__dot {
-  background: var(--ds-status-bad);
 }
 
 .ds-filter-chip {
@@ -1642,7 +1733,7 @@ select {
   z-index: 10;
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   margin: 0;
   padding: 10px 4px 8px;
