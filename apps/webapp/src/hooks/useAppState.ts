@@ -984,6 +984,28 @@ export function useAppState() {
     }
   }
 
+  // Тихая архивация для свайпа и быстрых действий: без модального подтверждения,
+  // с тостом «Отменить», который возвращает товар через restoreItem.
+  async function handleArchiveItemQuiet(item: Item) {
+    if (!token) {
+      return;
+    }
+
+    setError(null);
+    try {
+      await archiveItem(token, item.id);
+    } catch (caughtError) {
+      setError(formatError(caughtError));
+      throw caughtError;
+    }
+    await refreshActiveData(token);
+    if (activeTab === "archive") {
+      await refreshArchivedData(token);
+    }
+    setToastAction({ label: "Отменить", run: () => void handleRestoreItem(item) });
+    setToastMessage(`"${item.name}" в архиве`);
+  }
+
   async function handleArchiveSelectedCategory() {
     if (!token || !selectedCategory) {
       return;
@@ -1721,6 +1743,7 @@ export function useAppState() {
     handleStartReminderCheck,
     handleSaveReminderSetting,
     handleArchiveItem,
+    handleArchiveItemQuiet,
     handleArchiveSelectedCategory,
     handleRestoreCategory,
     handleRestoreItem,

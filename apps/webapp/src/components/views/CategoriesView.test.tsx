@@ -626,6 +626,76 @@ describe("CategoriesView", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("archives item when the row is swiped left past the commit threshold", async () => {
+    let resolveArchive: (() => void) | undefined;
+    const onArchiveItem = vi.fn().mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveArchive = resolve;
+      })
+    );
+    render(<CategoriesView {...createProps({ onArchiveItem })} />);
+    const row = document.querySelectorAll(".ds-swipe-row")[0]!;
+
+    firePointer(row, "pointerdown", { pointerId: 11, clientX: 300, clientY: 30 });
+    firePointer(window, "pointermove", { pointerId: 11, clientX: 220, clientY: 32 });
+    expect(
+      (row.querySelector(".ds-swipe-row__content") as HTMLElement).style.transform
+    ).toBe("translateX(-80px)");
+
+    firePointer(window, "pointerup", { pointerId: 11, clientX: 220, clientY: 32 });
+    expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+    // Строка скрыта оптимистично, пока запрос в полёте
+    expect(document.querySelectorAll(".ds-swipe-row")).toHaveLength(1);
+
+    // Клик-«отпускание» в конце свайпа глушится (не должен открывать bottom-sheet)
+    const remainingRow = document.querySelectorAll(".ds-swipe-row")[0]!;
+    fireEvent.click(remainingRow.querySelector(".ds-swipe-row__content")!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    resolveArchive!();
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ds-swipe-row")).toHaveLength(2);
+    });
+  });
+
+  it("snaps the row back when the swipe is below the commit threshold", () => {
+    const onArchiveItem = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onArchiveItem })} />);
+    const row = document.querySelectorAll(".ds-swipe-row")[0]!;
+
+    firePointer(row, "pointerdown", { pointerId: 12, clientX: 300, clientY: 30 });
+    firePointer(window, "pointermove", { pointerId: 12, clientX: 262, clientY: 31 });
+    firePointer(window, "pointerup", { pointerId: 12, clientX: 262, clientY: 31 });
+
+    expect(onArchiveItem).not.toHaveBeenCalled();
+    expect(document.querySelectorAll(".ds-swipe-row")).toHaveLength(2);
+    expect(
+      (row.querySelector(".ds-swipe-row__content") as HTMLElement).style.transform
+    ).toBe("");
+  });
+
+  it("treats a vertical gesture as scrolling, not a swipe", () => {
+    const onArchiveItem = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onArchiveItem })} />);
+    const row = document.querySelectorAll(".ds-swipe-row")[0]!;
+
+    firePointer(row, "pointerdown", { pointerId: 13, clientX: 300, clientY: 30 });
+    firePointer(window, "pointermove", { pointerId: 13, clientX: 302, clientY: 120 });
+    firePointer(window, "pointerup", { pointerId: 13, clientX: 302, clientY: 120 });
+
+    expect(onArchiveItem).not.toHaveBeenCalled();
+    expect(
+      (row.querySelector(".ds-swipe-row__content") as HTMLElement).style.transform
+    ).toBe("");
+  });
+
+  it("archives item via the revealed swipe action button", () => {
+    const onArchiveItem = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onArchiveItem })} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "В архив" })[0]!);
+    expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+  });
+
   it("does not show status sort option when already sorting by status", () => {
     render(<CategoriesView {...createProps({ categorySortMode: "status" })} />);
     clickItemActionsButton();

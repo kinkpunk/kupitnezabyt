@@ -149,7 +149,7 @@ export default function Home() {
             onDismissRecommendation={state.handleDismissRecommendation}
             onHideSimilarRecommendations={state.handleHideSimilarRecommendations}
             onUpdateItem={state.handleUpdateItem}
-            onArchiveItem={state.handleArchiveItem}
+            onArchiveItem={state.handleArchiveItemQuiet}
             onArchiveSelectedCategory={state.handleArchiveSelectedCategory}
             onStartCategoryCheck={state.handleStartCategoryCheck}
             onSaveReminderSetting={state.handleSaveReminderSetting}

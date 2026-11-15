@@ -48,6 +48,9 @@ import { Button } from "../ui/Button";
 
 const REORDER_DRAG_THRESHOLD_PX = 10;
 const REORDER_EDGE_SCROLL_PX = 56;
+const SWIPE_ACTION_WIDTH_PX = 88;
+const SWIPE_COMMIT_THRESHOLD_PX = 56;
+const SWIPE_DRAG_THRESHOLD_PX = 10;
 
 function matchesStatusFilter(item: Item, statusFilter: CategoryStatusFilter): boolean {
   return statusFilter === "all" || item.status === categoryStatusFilterToItemStatus[statusFilter];
@@ -202,6 +205,23 @@ export function CategoriesView({
     cancel: () => void;
   } | null>(null);
   const suppressReorderClickRef = useRef(false);
+  const [swipeState, setSwipeState] = useState<{ itemId: string; deltaX: number } | null>(null);
+  const [hiddenItemIds, setHiddenItemIds] = useState<ReadonlySet<string>>(new Set());
+  const swipeDragRef = useRef<{
+    pointerId: number;
+    item: Item;
+    startX: number;
+    startY: number;
+    deltaX: number;
+    swiping: boolean;
+    cancelled: boolean;
+  } | null>(null);
+  const swipeListenersRef = useRef<{
+    move: (event: PointerEvent) => void;
+    up: (event: PointerEvent) => void;
+    cancel: () => void;
+  } | null>(null);
+  const suppressSwipeClickRef = useRef(false);
 
   const sheetItem = useMemo(
     () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
@@ -216,8 +236,9 @@ export function CategoriesView({
     [isReordering, reorderDraft, visibleItems]
   );
   const displayedItems = useMemo(
-    () => filterItemsByStatus(orderedItems, statusFilter),
-    [orderedItems, statusFilter]
+    () =>
+      filterItemsByStatus(orderedItems, statusFilter).filter((item) => !hiddenItemIds.has(item.id)),
+    [orderedItems, statusFilter, hiddenItemIds]
   );
   const sheetItemIndex = useMemo(
     () => (sheetItem ? displayedItems.findIndex((item) => item.id === sheetItem.id) : -1),
@@ -325,6 +346,125 @@ export function CategoriesView({
     setIsReordering(false);
     setSheetItemId(null);
     setReorderDraft(null);
+  }
+
+  // Быстрая архивация без модального подтверждения: строка скрывается сразу
+  // (оптимистично), undo живёт в тосте на уровне useAppState; при отказе API
+  // строка возвращается, ошибка уже показана обработчиком.
+  function archiveItemQuietly(item: Item) {
+    setSwipeState(null);
+    setHiddenItemIds((current) => new Set(current).add(item.id));
+    void onArchiveItem(item)
+      .catch(() => undefined)
+      .finally(() => {
+        setHiddenItemIds((current) => {
+          if (!current.has(item.id)) {
+            return current;
+          }
+          const next = new Set(current);
+          next.delete(item.id);
+          return next;
+        });
+      });
+  }
+
+  function detachSwipeListeners() {
+    const listeners = swipeListenersRef.current;
+    if (!listeners) {
+      return;
+    }
+    window.removeEventListener("pointermove", listeners.move);
+    window.removeEventListener("pointerup", listeners.up);
+    window.removeEventListener("pointercancel", listeners.cancel);
+    swipeListenersRef.current = null;
+  }
+
+  useEffect(() => () => {
+    detachSwipeListeners();
+  }, []);
+
+  function handleSwipePointerDown(event: React.PointerEvent<HTMLDivElement>, item: Item) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+    if (swipeDragRef.current) {
+      detachSwipeListeners();
+    }
+    const drag = {
+      pointerId: event.pointerId,
+      item,
+      startX: event.clientX,
+      startY: event.clientY,
+      deltaX: 0,
+      swiping: false,
+      cancelled: false
+    };
+    swipeDragRef.current = drag;
+    setSwipeState(null);
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== drag.pointerId || drag.cancelled) {
+        return;
+      }
+      const dx = moveEvent.clientX - drag.startX;
+      const dy = moveEvent.clientY - drag.startY;
+      if (!drag.swiping) {
+        if (Math.abs(dx) > SWIPE_DRAG_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy)) {
+          drag.swiping = true;
+        } else if (Math.abs(dy) > SWIPE_DRAG_THRESHOLD_PX && Math.abs(dy) > Math.abs(dx)) {
+          drag.cancelled = true;
+          return;
+        } else {
+          return;
+        }
+      }
+      moveEvent.preventDefault();
+      drag.deltaX = Math.max(Math.min(dx, 0), -SWIPE_ACTION_WIDTH_PX);
+      setSwipeState({ itemId: drag.item.id, deltaX: drag.deltaX });
+    };
+
+    const finishDrag = () => {
+      detachSwipeListeners();
+      swipeDragRef.current = null;
+    };
+
+    const handleUp = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId !== drag.pointerId) {
+        return;
+      }
+      const wasSwiping = drag.swiping;
+      const committed = drag.deltaX <= -SWIPE_COMMIT_THRESHOLD_PX;
+      const draggedItem = drag.item;
+      finishDrag();
+      setSwipeState(null);
+      if (!wasSwiping) {
+        return;
+      }
+      // Клик-«отпускание» в конце свайпа не должен открывать bottom-sheet
+      suppressSwipeClickRef.current = true;
+      if (committed) {
+        archiveItemQuietly(draggedItem);
+      }
+    };
+
+    const handleCancel = () => {
+      setSwipeState(null);
+      finishDrag();
+    };
+
+    swipeListenersRef.current = { move: handleMove, up: handleUp, cancel: handleCancel };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleCancel);
+  }
+
+  function handleSwipeClickCapture(event: React.MouseEvent<HTMLDivElement>) {
+    if (!suppressSwipeClickRef.current) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    suppressSwipeClickRef.current = false;
   }
 
   function detachReorderListeners() {
@@ -514,7 +654,7 @@ export function CategoriesView({
       return;
     }
 
-    void onArchiveItem(sheetItem).catch((caughtError) => setError(formatError(caughtError)));
+    archiveItemQuietly(sheetItem);
     setSheetItemId(null);
   }
 
@@ -732,15 +872,44 @@ export function CategoriesView({
                     />
                   </div>
                 ) : (
-                  <ProductRow
+                  <div
                     key={item.id}
-                    actions={<ProductRowMoreButton onClick={() => setSheetItemId(item.id)} />}
-                    status={getItemStatus(item)}
-                    subtitle={getItemSubtitle(item)}
-                    title={item.name}
-                    onStatusClick={() => handleStatusClick(item)}
-                    onStatusSelect={(nextStatus) => handleStatusSelect(item, nextStatus)}
-                  />
+                    className={
+                      swipeState?.itemId === item.id && swipeState.deltaX !== 0
+                        ? "ds-swipe-row ds-swipe-row--swiping"
+                        : "ds-swipe-row"
+                    }
+                    onClickCapture={handleSwipeClickCapture}
+                    onPointerDown={(event) => handleSwipePointerDown(event, item)}
+                  >
+                    <div className="ds-swipe-row__underlay">
+                      <button
+                        type="button"
+                        className="ds-swipe-row__action"
+                        onClick={() => archiveItemQuietly(item)}
+                      >
+                        <Archive aria-hidden="true" size={16} />
+                        В архив
+                      </button>
+                    </div>
+                    <div
+                      className="ds-swipe-row__content"
+                      style={
+                        swipeState?.itemId === item.id
+                          ? { transform: `translateX(${swipeState.deltaX}px)` }
+                          : undefined
+                      }
+                    >
+                      <ProductRow
+                        actions={<ProductRowMoreButton onClick={() => setSheetItemId(item.id)} />}
+                        status={getItemStatus(item)}
+                        subtitle={getItemSubtitle(item)}
+                        title={item.name}
+                        onStatusClick={() => handleStatusClick(item)}
+                        onStatusSelect={(nextStatus) => handleStatusSelect(item, nextStatus)}
+                      />
+                    </div>
+                  </div>
                 )
               )
             ) : statusFilter === "all" ? (

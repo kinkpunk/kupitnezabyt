@@ -1074,6 +1074,14 @@ button.ds-status-chip:not(:disabled):active {
   border-bottom: 0;
 }
 
+/* Строки в свайп/драг-обёртках — всё ещё элементы списка: разделитель
+   обнуляется только у последней строки списка, а не у каждой обёрнутой
+   (внутри обёртки .ds-product-row всегда :last-child). */
+.ds-swipe-row:not(:last-child) .ds-product-row,
+.ds-reorder-row:not(:last-child) .ds-product-row {
+  border-bottom: 1px solid var(--ds-line);
+}
+
 .ds-reorder-row {
   touch-action: pan-x; /* вертикальный жест — drag-переупорядочивание, горизонтальный — скролл */
   transition: transform 150ms ease;
@@ -1114,6 +1122,62 @@ button.ds-status-chip:not(:disabled):active {
 
 .ds-reorder-bar .ds-button {
   flex: 1 1 0;
+}
+
+/* Свайп-действие на строке товара: подложка с «В архив» раскрывается слева
+   при свайпе влево; контент строки скользит над ней. Вертикальный скролл
+   остаётся нативным (pan-y), горизонтальный жест забирает pointer-слой. */
+.ds-swipe-row {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.ds-swipe-row__underlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ds-swipe-row__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--ds-status-bad-soft);
+  color: var(--ds-status-bad);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+}
+
+.ds-swipe-row__action:not(:disabled):active {
+  background: color-mix(in srgb, var(--ds-status-bad) 24%, transparent);
+}
+
+.ds-swipe-row__content {
+  position: relative;
+  background: var(--ds-bg-base); /* непрозрачный фон, иначе подложка видна сквозь строку */
+  transition: transform 150ms ease;
+}
+
+.ds-swipe-row--swiping .ds-swipe-row__content {
+  transition: none; /* контент следует за пальцем без задержки */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-swipe-row__content {
+    transition: none;
+  }
 }
 
 .ds-product-row__info {
@@ -1191,6 +1255,7 @@ button.ds-status-chip:not(:disabled):active {
    (8px + обводка) уже задаёт нужный воздух, иначе первая строка выглядит
    просторнее остальных. */
 .ds-panel-header + .ds-product-list > .ds-product-row:first-child,
+.ds-panel-header + .ds-product-list > .ds-swipe-row:first-child .ds-product-row,
 .ds-panel-header
   + .ds-shopping-groups
   .ds-shopping-group:first-child
