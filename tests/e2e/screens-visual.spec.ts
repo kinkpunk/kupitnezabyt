@@ -129,7 +129,9 @@ test.describe("Screens visual regression", () => {
 
   test("home with data", async () => {
     await page.getByRole("button", { name: "Главная", exact: true }).click();
-    await expect(page.getByText("Молоко")).toBeVisible();
+    // Home shows a status dashboard instead of product rows: three new items
+    // all sit in the "Нет" bucket.
+    await expect(page.getByRole("button", { name: /Нет 3/ })).toBeVisible();
     await expect(page).toHaveScreenshot("home-with-data.png");
   });
 

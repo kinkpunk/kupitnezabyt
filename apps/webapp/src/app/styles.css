@@ -1613,34 +1613,103 @@ button.ds-status-chip:not(:disabled):active {
   padding: 12px 16px;
 }
 
-.app-loading__header-icon {
+.app-loading__logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.app-loading__menu {
   width: 40px;
   height: 40px;
   border-radius: 12px;
 }
 
-.app-loading__header-title {
-  width: 96px;
-  height: 20px;
+.app-loading__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.app-loading__section {
-  display: grid;
-  gap: 4px;
-  padding: 8px 0 16px;
+.app-loading__search {
+  height: 44px;
+  border-radius: 12px;
 }
 
-.app-loading__section-title {
+.app-loading__tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.app-loading__tab {
+  width: 64px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.app-loading__tab--short {
+  width: 52px;
+}
+
+.app-loading__tab--long {
   width: 88px;
-  height: 18px;
-  margin-bottom: 8px;
+}
+
+.app-loading__tab-add {
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  border-radius: 9px;
+}
+
+.app-loading__panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ds-line);
+}
+
+.app-loading__panel-action {
+  width: 104px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.app-loading__panel-action--wide {
+  width: 132px;
+}
+
+.app-loading__panel-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+}
+
+.app-loading__panel-icon--filters {
+  margin-left: auto;
+}
+
+.app-loading__rows {
+  display: grid;
 }
 
 .app-loading__row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 56px;
+  gap: 8px;
+  min-height: 72px;
+  border-bottom: 1px solid var(--ds-line);
+  padding: 12px 0;
+}
+
+.app-loading__row-info {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 6px;
+  min-width: 0;
 }
 
 .app-loading__row-title {
@@ -1656,16 +1725,23 @@ button.ds-status-chip:not(:disabled):active {
   width: 60%;
 }
 
-.app-loading__row-meta {
-  width: 72px;
+.app-loading__row-subtitle {
+  width: 30%;
   height: 13px;
-  margin-left: auto;
 }
 
-.app-loading__row-action {
-  width: 76px;
+.app-loading__row-chip {
+  flex: 0 0 auto;
+  width: 104px;
   height: 32px;
-  border-radius: 999px;
+  border-radius: 9px;
+}
+
+.app-loading__row-more {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
 }
 
 .app-loading__nav {

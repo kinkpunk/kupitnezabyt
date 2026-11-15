@@ -72,10 +72,11 @@ test("browser user can sort category items by status", async ({ page, request },
   // Switch to manual order through the item sheet, then back to status.
   await itemRows.first().getByRole("button", { name: "Ещё" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Изменить порядок" }).click();
-  // In reorder mode the row itself opens the move sheet; "Готово" leaves the
-  // manual order in place.
+  // In reorder mode the row itself opens the move sheet; dismiss it, then the
+  // sticky bar's "Готово" leaves the manual order in place.
   await page.getByRole("button", { name: inStockItemName }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Готово" }).click();
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Готово", exact: true }).click();
   await expect(itemRows.nth(0)).toContainText(inStockItemName);
   await expect(itemRows.nth(1)).toContainText(lowItemName);
   await expect(itemRows.nth(2)).toContainText(needBuyItemName);

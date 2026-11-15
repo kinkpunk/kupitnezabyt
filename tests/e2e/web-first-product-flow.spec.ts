@@ -57,8 +57,11 @@ test("browser user can complete the core web-first stock flow", async ({ page, r
   await mainNavigation.getByRole("button", { name: "Покупки" }).click();
   const shoppingRow = page.locator(".ds-product-row").filter({ hasText: itemName });
   await expect(shoppingRow).toBeVisible();
+  // The bought row lingers in a "Куплено" state for a few seconds (with an
+  // undo action) before disappearing from the list.
   await shoppingRow.getByRole("checkbox", { name: "Куплено" }).click();
-  await expect(shoppingRow).toHaveCount(0);
+  await expect(shoppingRow.getByText("Куплено", { exact: true })).toBeVisible();
+  await expect(shoppingRow).toHaveCount(0, { timeout: 10_000 });
 
   const searchBox = page.getByRole("searchbox", { name: "Поиск" });
   await mainNavigation.getByRole("button", { name: "Категории" }).click();

@@ -62,7 +62,9 @@ test("browser user can reorder items within a category", async ({ page, request 
   await page.getByRole("button", { name: firstItemName }).click();
   const moveSheet = page.getByRole("dialog", { name: firstItemName });
   await moveSheet.getByRole("button", { name: "Вниз" }).click();
-  await moveSheet.getByRole("button", { name: "Готово" }).click();
+  // The sheet overlay covers the bar, so dismiss it before committing.
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Готово", exact: true }).click();
 
   // After moving the first item down, the second item should be first in the list.
   const itemRows = page.locator(".ds-product-row");
