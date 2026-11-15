@@ -77,6 +77,7 @@ export function ShoppingView({
   );
   const [restoringEntryIds, setRestoringEntryIds] = useState<ReadonlySet<string>>(new Set());
   const boughtTimersRef = useRef<Map<string, number>>(new Map());
+  const completionPromisesRef = useRef<Map<string, Promise<boolean>>>(new Map());
   const activeEntry = useMemo(
     () => shoppingList.find((entry) => entry.id === activeEntryId) ?? null,
     [shoppingList, activeEntryId]
@@ -191,10 +192,22 @@ export function ShoppingView({
   }
 
   function handleComplete(entry: ShoppingListEntry) {
+    if (boughtTimersRef.current.has(entry.id) || boughtEntries.has(entry.id)) {
+      return;
+    }
     const location = findEntryPosition(entry);
-    void onCompleteShoppingListItem(entry)
-      .then(() => registerBoughtEntry(entry, location))
-      .catch((caughtError) => setError(formatError(caughtError)));
+    registerBoughtEntry(entry, location);
+    const request = onCompleteShoppingListItem(entry)
+      .then(() => true)
+      .catch((caughtError: unknown) => {
+        removeBoughtEntry(entry.id);
+        setError(formatError(caughtError));
+        return false;
+      })
+      .finally(() => {
+        completionPromisesRef.current.delete(entry.id);
+      });
+    completionPromisesRef.current.set(entry.id, request);
   }
 
   function clearRestoringEntry(entryId: string) {
@@ -215,8 +228,16 @@ export function ShoppingView({
     }
     setRestoringEntryIds((current) => new Set(current).add(entryId));
     removeBoughtEntry(entryId);
-    void onUndoCompleteShoppingListItem(entryId, bought.previousStatus, bought.previousLastBoughtAt)
-      .catch((caughtError) => setError(formatError(caughtError)));
+    const pendingCompletion = completionPromisesRef.current.get(entryId);
+    void (pendingCompletion ?? Promise.resolve(true)).then((completed) => {
+      if (!completed) {
+        // The completion failed and the row already rolled back to the checkbox.
+        clearRestoringEntry(entryId);
+        return;
+      }
+      void onUndoCompleteShoppingListItem(entryId, bought.previousStatus, bought.previousLastBoughtAt)
+        .catch((caughtError: unknown) => setError(formatError(caughtError)));
+    });
   }
 
   function handleUpdate(entry: ShoppingListEntry, event: React.FormEvent<HTMLFormElement>) {

@@ -264,9 +264,114 @@ describe("ShoppingView", () => {
     );
     fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[1] as HTMLElement);
     fireEvent.click(await screen.findByRole("button", { name: "Отмена" }));
-    expect(onUndoCompleteShoppingListItem).toHaveBeenCalledWith("entry-2", "LOW", null);
+    await waitFor(() => {
+      expect(onUndoCompleteShoppingListItem).toHaveBeenCalledWith("entry-2", "LOW", null);
+    });
     expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
     expect(document.querySelector(".ds-shopping-actions--restoring")).not.toBeNull();
+  });
+
+  it("shows the bought state immediately, before the completion request resolves", async () => {
+    let resolveComplete!: () => void;
+    const onCompleteShoppingListItem = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveComplete = resolve;
+        })
+    );
+    render(<ShoppingView {...createProps({ onCompleteShoppingListItem })} />);
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
+    expect(screen.getByRole("status", { name: "Куплено" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Отмена" })).toBeInTheDocument();
+
+    resolveComplete();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.getByRole("status", { name: "Куплено" })).toBeInTheDocument();
+  });
+
+  it("rolls the bought row back and reports an error when the completion request fails", async () => {
+    const onCompleteShoppingListItem = vi.fn().mockRejectedValue(new Error("Сеть недоступна"));
+    const setError = vi.fn();
+    render(<ShoppingView {...createProps({ onCompleteShoppingListItem, setError })} />);
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement);
+    expect(screen.getByRole("status", { name: "Куплено" })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("status", { name: "Куплено" })).toBeNull();
+    });
+    expect(screen.getAllByRole("checkbox", { name: "Куплено" })).toHaveLength(2);
+    expect(setError).toHaveBeenCalledWith("Сеть недоступна");
+  });
+
+  it("waits for the in-flight completion before undoing it", async () => {
+    let resolveComplete!: () => void;
+    const onCompleteShoppingListItem = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveComplete = resolve;
+        })
+    );
+    const onUndoCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
+    render(
+      <ShoppingView
+        {...createProps({ onCompleteShoppingListItem, onUndoCompleteShoppingListItem })}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[1] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(onUndoCompleteShoppingListItem).not.toHaveBeenCalled();
+
+    resolveComplete();
+    await waitFor(() => {
+      expect(onUndoCompleteShoppingListItem).toHaveBeenCalledWith("entry-2", "LOW", null);
+    });
+  });
+
+  it("skips the undo when the in-flight completion has already failed", async () => {
+    let rejectComplete!: (error: Error) => void;
+    const onCompleteShoppingListItem = vi.fn(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          rejectComplete = reject;
+        })
+    );
+    const onUndoCompleteShoppingListItem = vi.fn().mockResolvedValue(undefined);
+    const setError = vi.fn();
+    render(
+      <ShoppingView
+        {...createProps({ onCompleteShoppingListItem, onUndoCompleteShoppingListItem, setError })}
+      />
+    );
+    fireEvent.click(screen.getAllByRole("checkbox", { name: "Куплено" })[1] as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+
+    rejectComplete(new Error("Сеть недоступна"));
+    await waitFor(() => {
+      expect(setError).toHaveBeenCalledWith("Сеть недоступна");
+    });
+    expect(onUndoCompleteShoppingListItem).not.toHaveBeenCalled();
+    expect(screen.getAllByRole("checkbox", { name: "Куплено" })).toHaveLength(2);
+  });
+
+  it("ignores a duplicate completion tap while the row is already bought", async () => {
+    let resolveComplete!: () => void;
+    const onCompleteShoppingListItem = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveComplete = resolve;
+        })
+    );
+    render(<ShoppingView {...createProps({ onCompleteShoppingListItem })} />);
+    const checkbox = screen.getAllByRole("checkbox", { name: "Куплено" })[0] as HTMLElement;
+    fireEvent.click(checkbox);
+    fireEvent.click(checkbox);
+    expect(onCompleteShoppingListItem).toHaveBeenCalledOnce();
+    resolveComplete();
+    await act(async () => {
+      await Promise.resolve();
+    });
   });
 
   it("opens entry actions sheet for manual entries", async () => {
