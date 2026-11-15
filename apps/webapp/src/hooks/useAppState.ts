@@ -676,35 +676,15 @@ export function useAppState() {
     await refreshActiveData(token, mode);
   }
 
-  async function handleMoveItem(item: Item, direction: "up" | "down") {
+  async function handleReorderItems(itemIds: string[]) {
     if (!token || !selectedCategory || categorySortMode === "status") {
       return;
     }
 
-    const categoryItems = visibleItems;
-    const index = categoryItems.findIndex((currentItem) => currentItem.id === item.id);
-    if (index === -1) {
-      return;
-    }
-
-    const targetIndex = direction === "up" ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= categoryItems.length) {
-      return;
-    }
-
-    const actionKey = `item:reorder:${item.id}`;
+    const actionKey = "items:reorder";
     try {
       setError(null);
       setPendingAction(actionKey, true);
-
-      const reorderedItems = [...categoryItems];
-      const [movedItem] = reorderedItems.splice(index, 1);
-      if (!movedItem) {
-        return;
-      }
-      reorderedItems.splice(targetIndex, 0, movedItem);
-      const itemIds = reorderedItems.map((currentItem) => currentItem.id);
-
       await reorderItems(token, selectedCategory.id, itemIds);
       await refreshActiveData(token);
     } finally {
@@ -1722,7 +1702,7 @@ export function useAppState() {
     handleCreateItem,
     handleSetStatus,
     handleCategorySortModeChange,
-    handleMoveItem,
+    handleReorderItems,
     handleAcceptRecommendation,
     handleDismissRecommendation,
     handleHideSimilarRecommendations,

@@ -88,6 +88,23 @@ function clickFilter(name: string | RegExp) {
   fireEvent.click(within(group).getByRole("button", { name }));
 }
 
+// jsdom не реализует PointerEvent с координатами: dispatch через MouseEvent,
+// pointerId проставляется отдельно (обработчики сверяют его с pointerdown).
+function firePointer(
+  target: Element | Window,
+  type: string,
+  init: { pointerId: number; clientX: number; clientY: number }
+) {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    cancelable: true,
+    clientX: init.clientX,
+    clientY: init.clientY
+  });
+  Object.defineProperty(event, "pointerId", { value: init.pointerId });
+  fireEvent(target, event);
+}
+
 function filterChip(name: string | RegExp) {
   openFilterPanel();
   const group = screen.getByRole("group", { name: "Фильтр по статусу" });
@@ -125,7 +142,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     onCreateItem: vi.fn().mockResolvedValue(undefined),
     onSetStatus: vi.fn().mockResolvedValue(undefined),
     onCategorySortModeChange: vi.fn().mockResolvedValue(undefined),
-    onMoveItem: vi.fn().mockResolvedValue(undefined),
+    onReorderItems: vi.fn().mockResolvedValue(undefined),
     onAcceptRecommendation: vi.fn().mockResolvedValue(undefined),
     onDismissRecommendation: vi.fn().mockResolvedValue(undefined),
     onHideSimilarRecommendations: vi.fn().mockResolvedValue(undefined),
@@ -443,13 +460,13 @@ describe("CategoriesView", () => {
     expect(document.querySelector(".ds-product-row__reorder")).toBeInTheDocument();
   });
 
-  it("moves item up and exits reorder mode via done button", async () => {
-    const onMoveItem = vi.fn().mockResolvedValue(undefined);
+  it("moves item via sheet buttons and commits the full order on done", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
     const onCategorySortModeChange = vi.fn().mockResolvedValue(undefined);
     render(
       <CategoriesView
         {...createProps({
-          onMoveItem,
+          onReorderItems,
           onCategorySortModeChange
         })}
       />
@@ -463,11 +480,132 @@ describe("CategoriesView", () => {
     const rows = screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ });
     fireEvent.click(rows[1]!);
     fireEvent.click(screen.getByRole("button", { name: "Вверх" }));
-    expect(onMoveItem).toHaveBeenCalledWith(itemLow, "up");
+    expect(onReorderItems).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(onReorderItems).toHaveBeenCalledWith(["item-2", "item-1"]);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.querySelector(".ds-product-row__reorder")).not.toBeInTheDocument();
+  });
+
+  it("does not call the API when reorder mode ends without changes", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onReorderItems, categorySortMode: "manual" })} />);
+    clickItemActionsButton();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(document.querySelector(".ds-product-row__reorder")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(onReorderItems).not.toHaveBeenCalled();
+  });
+
+  it("reorders by dragging a row and commits on done", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onReorderItems, categorySortMode: "manual" })} />);
+    clickItemActionsButton();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ds-reorder-row")).toHaveLength(2);
+    });
+
+    const wrappers = document.querySelectorAll(".ds-reorder-row");
+    wrappers.forEach((row, index) => {
+      vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+        top: index * 72,
+        bottom: (index + 1) * 72,
+        height: 72,
+        left: 0,
+        right: 300,
+        width: 300,
+        x: 0,
+        y: index * 72,
+        toJSON: () => ({})
+      } as DOMRect);
+    });
+
+    firePointer(wrappers[0]!, "pointerdown", { pointerId: 7, clientX: 20, clientY: 20 });
+    firePointer(window, "pointermove", { pointerId: 7, clientX: 22, clientY: 150 });
+    expect(wrappers[0]!.classList.contains("ds-reorder-row--dragging")).toBe(true);
+    expect((wrappers[1] as HTMLElement).style.transform).toBe("translateY(-72px)");
+
+    firePointer(window, "pointerup", { pointerId: 7, clientX: 22, clientY: 150 });
+    expect(onReorderItems).not.toHaveBeenCalled();
+
+    // Клик сразу после drop глушится (отпускание мыши в конце drag не должно открывать sheet)
+    fireEvent.click(screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ })[0]!);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(onReorderItems).toHaveBeenCalledWith(["item-2", "item-1"]);
+  });
+
+  it("shows a sticky done bar in reorder mode and discards the draft on cancel", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onReorderItems, categorySortMode: "manual" })} />);
+    expect(screen.queryByRole("button", { name: "Отмена" })).not.toBeInTheDocument();
+
+    clickItemActionsButton();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ds-reorder-row")).toHaveLength(2);
+    });
+    expect(document.querySelector(".ds-reorder-bar")).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ })[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "Вверх" }));
+    expect(onReorderItems).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(onReorderItems).not.toHaveBeenCalled();
+    expect(document.querySelector(".ds-reorder-bar")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".ds-reorder-row")).toHaveLength(0);
+  });
+
+  it("treats a short tap as a tap, not a drag", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
+    render(<CategoriesView {...createProps({ onReorderItems, categorySortMode: "manual" })} />);
+    clickItemActionsButton();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ds-reorder-row")).toHaveLength(2);
+    });
+
+    const wrappers = document.querySelectorAll(".ds-reorder-row");
+    firePointer(wrappers[0]!, "pointerdown", { pointerId: 9, clientX: 20, clientY: 20 });
+    firePointer(window, "pointerup", { pointerId: 9, clientX: 21, clientY: 22 });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /^(Кофе|Молоко)/ })[0]!);
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(onReorderItems).not.toHaveBeenCalled();
+  });
+
+  it("moves items within the visible subset when a status filter is active", async () => {
+    const onReorderItems = vi.fn().mockResolvedValue(undefined);
+    const itemC: Item = { ...itemLow, id: "item-3", name: "Сливки" };
+    render(
+      <CategoriesView
+        {...createProps({
+          onReorderItems,
+          categorySortMode: "manual",
+          visibleItems: [itemInStock, itemLow, itemC],
+          statusFilter: "low"
+        })}
+      />
+    );
+    clickItemActionsButton();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить порядок" }));
+    await waitFor(() => {
+      expect(document.querySelectorAll(".ds-reorder-row")).toHaveLength(2);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Сливки" }));
+    fireEvent.click(screen.getByRole("button", { name: "Вверх" }));
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    expect(onReorderItems).toHaveBeenCalledWith(["item-1", "item-3", "item-2"]);
   });
 
   it("offers status sort option when manual order is active", async () => {

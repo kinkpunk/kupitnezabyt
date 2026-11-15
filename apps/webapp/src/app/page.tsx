@@ -144,7 +144,7 @@ export default function Home() {
             onCreateItem={state.handleCreateItem}
             onSetStatus={state.handleSetStatus}
             onCategorySortModeChange={state.handleCategorySortModeChange}
-            onMoveItem={state.handleMoveItem}
+            onReorderItems={state.handleReorderItems}
             onAcceptRecommendation={state.handleAcceptRecommendation}
             onDismissRecommendation={state.handleDismissRecommendation}
             onHideSimilarRecommendations={state.handleHideSimilarRecommendations}

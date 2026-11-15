@@ -29,7 +29,7 @@ function openMenu() {
 describe("PanelHeader", () => {
   it("renders the action row with quiet ghost actions", () => {
     render(<PanelHeader {...createProps()} />);
-    expect(screen.getByRole("button", { name: "Проверить" })).toHaveClass("ds-button--ghost");
+    expect(screen.getByRole("button", { name: "Проверить" })).toHaveClass("ds-button--accent");
     expect(screen.queryByRole("button", { name: "В архив" })).not.toBeInTheDocument();
   });
 

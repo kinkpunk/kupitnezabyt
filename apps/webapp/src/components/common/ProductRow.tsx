@@ -32,11 +32,6 @@ export function ProductRow({
 }: ProductRowProps) {
   return (
     <div className="ds-product-row">
-      {reorderHandle ? (
-        <span className="ds-product-row__reorder" aria-hidden="true">
-          <GripVertical size={18} />
-        </span>
-      ) : null}
       <div className="ds-product-row__info">
         {onClick ? (
           <button
@@ -68,6 +63,11 @@ export function ProductRow({
         ) : null}
         {actions}
       </div>
+      {reorderHandle ? (
+        <span className="ds-product-row__reorder" aria-hidden="true">
+          <GripVertical size={18} />
+        </span>
+      ) : null}
     </div>
   );
 }

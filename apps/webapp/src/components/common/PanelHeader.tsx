@@ -76,7 +76,7 @@ export function PanelHeader({
           <Button
             className="ds-button--compact"
             disabled={disabled}
-            variant="ghost"
+            variant="accent"
             onClick={onCheck}
           >
             <ListTodo aria-hidden="true" size={18} />

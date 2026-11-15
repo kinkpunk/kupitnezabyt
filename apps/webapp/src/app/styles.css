@@ -1074,6 +1074,48 @@ button.ds-status-chip:not(:disabled):active {
   border-bottom: 0;
 }
 
+.ds-reorder-row {
+  touch-action: pan-x; /* вертикальный жест — drag-переупорядочивание, горизонтальный — скролл */
+  transition: transform 150ms ease;
+}
+
+.ds-reorder-row--dragging {
+  position: relative;
+  z-index: 5;
+  transition: none; /* перетаскиваемая строка следует за пальцем без задержки */
+}
+
+.ds-reorder-row--dragging .ds-product-row {
+  background: var(--ds-surface-1);
+  border-bottom-color: transparent;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-reorder-row {
+    transition: none;
+  }
+}
+
+/* Панель завершения режима переупорядочивания: прилипает к низу скроллпорта,
+   пока режим активен. Отрицательные поля компенсируют padding .main-content. */
+.ds-reorder-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+  display: flex;
+  gap: 8px;
+  margin: 8px -16px -24px;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--ds-line);
+  background: var(--ds-bg-base);
+}
+
+.ds-reorder-bar .ds-button {
+  flex: 1 1 0;
+}
+
 .ds-product-row__info {
   display: grid;
   min-width: 0;

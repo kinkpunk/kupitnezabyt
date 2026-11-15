@@ -17,7 +17,7 @@ import {
   Save,
   X
 } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 import type { CategorySortMode } from "../../lib/api";
 import { formatDate, formatError } from "../../lib/format";
@@ -45,6 +45,41 @@ import { ReminderFields, type ReminderFieldsValue } from "../ui/ReminderFields";
 import { ReminderSettingsSheet } from "../ui/ReminderSettingsSheet";
 import type { ReminderSettingEntity, ReminderSettingInput } from "../ui/ReminderSettingsSheet";
 import { Button } from "../ui/Button";
+
+const REORDER_DRAG_THRESHOLD_PX = 10;
+const REORDER_EDGE_SCROLL_PX = 56;
+
+function matchesStatusFilter(item: Item, statusFilter: CategoryStatusFilter): boolean {
+  return statusFilter === "all" || item.status === categoryStatusFilterToItemStatus[statusFilter];
+}
+
+function filterItemsByStatus(items: Item[], statusFilter: CategoryStatusFilter): Item[] {
+  return statusFilter === "all"
+    ? items
+    : items.filter((item) => item.status === categoryStatusFilterToItemStatus[statusFilter]);
+}
+
+// Moves an item to a target position among the items visible under the active
+// status filter; filtered-out items keep their relative positions. The full
+// (unfiltered) order is always returned, so it can be committed to the API.
+function applyDisplayIndexMove(
+  items: Item[],
+  statusFilter: CategoryStatusFilter,
+  itemId: string,
+  targetDisplayIndex: number
+): Item[] {
+  const displayed = items.filter((item) => matchesStatusFilter(item, statusFilter));
+  const sourceDisplayIndex = displayed.findIndex((item) => item.id === itemId);
+  const clampedTarget = Math.min(Math.max(targetDisplayIndex, 0), displayed.length - 1);
+  if (sourceDisplayIndex < 0 || clampedTarget === sourceDisplayIndex) {
+    return items;
+  }
+  const nextDisplayed = [...displayed];
+  const [movedItem] = nextDisplayed.splice(sourceDisplayIndex, 1);
+  nextDisplayed.splice(clampedTarget, 0, movedItem!);
+  const queue = [...nextDisplayed];
+  return items.map((item) => (matchesStatusFilter(item, statusFilter) ? queue.shift()! : item));
+}
 
 export function CategoriesView({
   categories,
@@ -76,7 +111,7 @@ export function CategoriesView({
   onCreateItem,
   onSetStatus,
   onCategorySortModeChange,
-  onMoveItem,
+  onReorderItems,
   onAcceptRecommendation,
   onDismissRecommendation,
   onHideSimilarRecommendations,
@@ -118,7 +153,7 @@ export function CategoriesView({
   onCreateItem: (input: ReminderSettingInput) => Promise<void>;
   onSetStatus: (item: Item, status: ItemStatus) => Promise<void>;
   onCategorySortModeChange: (mode: CategorySortMode) => Promise<void>;
-  onMoveItem: (item: Item, direction: "up" | "down") => Promise<void>;
+  onReorderItems: (itemIds: string[]) => Promise<void>;
   onAcceptRecommendation: (recommendation: RecommendationSuggestion) => Promise<void>;
   onDismissRecommendation: (recommendation: RecommendationSuggestion) => Promise<void>;
   onHideSimilarRecommendations: (recommendation: RecommendationSuggestion) => Promise<void>;
@@ -141,15 +176,52 @@ export function CategoriesView({
   const [categoryReminder, setCategoryReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
   const [itemReminder, setItemReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
   const [isReordering, setIsReordering] = useState(false);
+  const [reorderDraft, setReorderDraft] = useState<Item[] | null>(null);
+  const [dragState, setDragState] = useState<{
+    itemId: string;
+    deltaY: number;
+    sourceDisplayIndex: number;
+    targetDisplayIndex: number;
+  } | null>(null);
   const [reminderEntity, setReminderEntity] = useState<ReminderSettingEntity | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const reorderRowElementsRef = useRef(new Map<string, HTMLDivElement>());
+  const reorderDragRef = useRef<{
+    pointerId: number;
+    itemId: string;
+    startX: number;
+    startY: number;
+    sourceDisplayIndex: number;
+    targetDisplayIndex: number;
+    dragging: boolean;
+    cancelled: boolean;
+  } | null>(null);
+  const reorderListenersRef = useRef<{
+    move: (event: PointerEvent) => void;
+    up: (event: PointerEvent) => void;
+    cancel: () => void;
+  } | null>(null);
+  const suppressReorderClickRef = useRef(false);
 
   const sheetItem = useMemo(
     () => visibleItems.find((item) => item.id === sheetItemId) ?? null,
     [visibleItems, sheetItemId]
   );
+
+  // В режиме переупорядочивания полный (нефильтрованный) порядок берётся из
+  // локального черновика, пока пользователь не нажал «Готово»; видимый список —
+  // черновик под активным фильтром.
+  const orderedItems = useMemo(
+    () => (isReordering ? (reorderDraft ?? visibleItems) : visibleItems),
+    [isReordering, reorderDraft, visibleItems]
+  );
+  const displayedItems = useMemo(
+    () => filterItemsByStatus(orderedItems, statusFilter),
+    [orderedItems, statusFilter]
+  );
   const sheetItemIndex = useMemo(
-    () => (sheetItem ? visibleItems.findIndex((item) => item.id === sheetItem.id) : -1),
-    [visibleItems, sheetItem]
+    () => (sheetItem ? displayedItems.findIndex((item) => item.id === sheetItem.id) : -1),
+    [displayedItems, sheetItem]
   );
   const activeRecommendation = useMemo(
     () =>
@@ -166,15 +238,6 @@ export function CategoriesView({
     }),
     [visibleItems]
   );
-
-  const filteredItems = useMemo(() => {
-    if (statusFilter === "all") {
-      return visibleItems;
-    }
-    return visibleItems.filter(
-      (item) => item.status === categoryStatusFilterToItemStatus[statusFilter]
-    );
-  }, [statusFilter, visibleItems]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -219,14 +282,201 @@ export function CategoriesView({
     setSheetItemId(null);
   }
 
-  function handleMove(direction: "up" | "down") {
-    if (!sheetItem) {
+  function handleDraftMove(itemId: string, direction: "up" | "down") {
+    setReorderDraft((current) => {
+      const base = current ?? visibleItems;
+      const displayed = filterItemsByStatus(base, statusFilter);
+      const sourceIndex = displayed.findIndex((item) => item.id === itemId);
+      const targetIndex = direction === "up" ? sourceIndex - 1 : sourceIndex + 1;
+      const next = applyDisplayIndexMove(base, statusFilter, itemId, targetIndex);
+      return next === base ? current : next;
+    });
+  }
+
+  function handleFinishReorder() {
+    if (isActionPending("items:reorder")) {
       return;
     }
+    const finalDraft = reorderDraft;
+    setIsReordering(false);
+    setSheetItemId(null);
+    setReorderDraft(null);
+    setDragState(null);
+    detachReorderListeners();
+    reorderDragRef.current = null;
+    if (!finalDraft) {
+      return;
+    }
+    const currentIds = visibleItems.map((item) => item.id);
+    const draftIds = finalDraft.map((item) => item.id);
+    const unchanged =
+      draftIds.length === currentIds.length &&
+      draftIds.every((id, index) => id === currentIds[index]);
+    if (unchanged) {
+      return;
+    }
+    void onReorderItems(draftIds).catch((caughtError) => setError(formatError(caughtError)));
+  }
 
-    void onMoveItem(sheetItem, direction).catch((caughtError) =>
-      setError(formatError(caughtError))
-    );
+  function handleCancelReorder() {
+    detachReorderListeners();
+    reorderDragRef.current = null;
+    setDragState(null);
+    setIsReordering(false);
+    setSheetItemId(null);
+    setReorderDraft(null);
+  }
+
+  function detachReorderListeners() {
+    const listeners = reorderListenersRef.current;
+    if (!listeners) {
+      return;
+    }
+    window.removeEventListener("pointermove", listeners.move);
+    window.removeEventListener("pointerup", listeners.up);
+    window.removeEventListener("pointercancel", listeners.cancel);
+    reorderListenersRef.current = null;
+  }
+
+  useEffect(() => () => {
+    detachReorderListeners();
+  }, []);
+
+  function handleReorderPointerDown(event: React.PointerEvent<HTMLDivElement>, item: Item) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+    if (reorderDragRef.current) {
+      detachReorderListeners();
+    }
+    const sourceDisplayIndex = displayedItems.findIndex((current) => current.id === item.id);
+    if (sourceDisplayIndex < 0) {
+      return;
+    }
+    const drag = {
+      pointerId: event.pointerId,
+      itemId: item.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      sourceDisplayIndex,
+      targetDisplayIndex: sourceDisplayIndex,
+      dragging: false,
+      cancelled: false
+    };
+    reorderDragRef.current = drag;
+
+    // Обработчики намеренно захватывают displayedItems/statusFilter момента
+    // начала жеста: во время drag они не меняются — черновик правится на pointerup.
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (drag.pointerId !== moveEvent.pointerId || drag.cancelled) {
+        return;
+      }
+      const deltaX = moveEvent.clientX - drag.startX;
+      const deltaY = moveEvent.clientY - drag.startY;
+      if (!drag.dragging) {
+        if (
+          Math.abs(deltaX) <= REORDER_DRAG_THRESHOLD_PX &&
+          Math.abs(deltaY) <= REORDER_DRAG_THRESHOLD_PX
+        ) {
+          return;
+        }
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          drag.cancelled = true; // горизонтальный жест отдаём горизонтальному скроллу
+          return;
+        }
+        drag.dragging = true;
+      }
+      moveEvent.preventDefault();
+      let insertionIndex = 0;
+      for (const current of displayedItems) {
+        const element = reorderRowElementsRef.current.get(current.id);
+        if (!element) {
+          continue;
+        }
+        const rect = element.getBoundingClientRect();
+        if (moveEvent.clientY >= rect.top + rect.height / 2) {
+          insertionIndex += 1;
+        }
+      }
+      const lastIndex = displayedItems.length - 1;
+      const target =
+        insertionIndex > drag.sourceDisplayIndex ? insertionIndex - 1 : insertionIndex;
+      drag.targetDisplayIndex = Math.min(Math.max(target, 0), lastIndex);
+      setDragState({
+        itemId: drag.itemId,
+        deltaY,
+        sourceDisplayIndex: drag.sourceDisplayIndex,
+        targetDisplayIndex: drag.targetDisplayIndex
+      });
+
+      const container = listRef.current?.closest(".main-content");
+      if (container) {
+        const containerRect = container.getBoundingClientRect();
+        if (moveEvent.clientY < containerRect.top + REORDER_EDGE_SCROLL_PX) {
+          container.scrollTop -= Math.round(
+            (containerRect.top + REORDER_EDGE_SCROLL_PX - moveEvent.clientY) / 4
+          );
+        } else if (moveEvent.clientY > containerRect.bottom - REORDER_EDGE_SCROLL_PX) {
+          container.scrollTop += Math.round(
+            (moveEvent.clientY - (containerRect.bottom - REORDER_EDGE_SCROLL_PX)) / 4
+          );
+        }
+      }
+    };
+
+    const handleUp = (upEvent: PointerEvent) => {
+      detachReorderListeners();
+      reorderDragRef.current = null;
+      if (drag.pointerId !== upEvent.pointerId || !drag.dragging || drag.cancelled) {
+        return;
+      }
+      suppressReorderClickRef.current = true;
+      setDragState(null);
+      setReorderDraft((current) => {
+        const base = current ?? visibleItems;
+        const next = applyDisplayIndexMove(base, statusFilter, drag.itemId, drag.targetDisplayIndex);
+        return next === base ? current : next;
+      });
+    };
+
+    const handleCancel = () => {
+      detachReorderListeners();
+      reorderDragRef.current = null;
+      setDragState(null);
+    };
+
+    reorderListenersRef.current = { move: handleMove, up: handleUp, cancel: handleCancel };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleCancel);
+  }
+
+  function handleReorderClickCapture(event: React.MouseEvent<HTMLDivElement>) {
+    if (!suppressReorderClickRef.current) {
+      return;
+    }
+    suppressReorderClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  function getReorderRowStyle(itemId: string): React.CSSProperties | undefined {
+    if (!isReordering || !dragState) {
+      return undefined;
+    }
+    const draggedHeight =
+      reorderRowElementsRef.current.get(dragState.itemId)?.getBoundingClientRect().height ?? 0;
+    if (itemId === dragState.itemId) {
+      return { transform: `translateY(${dragState.deltaY}px)` };
+    }
+    const index = displayedItems.findIndex((item) => item.id === itemId);
+    let shift = 0;
+    if (index > dragState.sourceDisplayIndex && index <= dragState.targetDisplayIndex) {
+      shift = -draggedHeight;
+    } else if (index >= dragState.targetDisplayIndex && index < dragState.sourceDisplayIndex) {
+      shift = draggedHeight;
+    }
+    return shift ? { transform: `translateY(${shift}px)` } : undefined;
   }
 
   async function handleStartReorder() {
@@ -256,11 +506,6 @@ export function CategoriesView({
       return;
     }
 
-    setSheetItemId(null);
-  }
-
-  function handleFinishReorder() {
-    setIsReordering(false);
     setSheetItemId(null);
   }
 
@@ -435,9 +680,9 @@ export function CategoriesView({
             </section>
           ) : null}
 
-          <div className="ds-product-list">
-            {filteredItems.length ? (
-              filteredItems.map((item) =>
+          <div className="ds-product-list" ref={listRef}>
+            {displayedItems.length ? (
+              displayedItems.map((item) =>
                 editingItemId === item.id ? (
                   <form
                     className="ds-product-row__edit"
@@ -459,23 +704,42 @@ export function CategoriesView({
                       Сохранить
                     </Button>
                   </form>
+                ) : isReordering ? (
+                  <div
+                    key={item.id}
+                    ref={(element) => {
+                      if (element) {
+                        reorderRowElementsRef.current.set(item.id, element);
+                      } else {
+                        reorderRowElementsRef.current.delete(item.id);
+                      }
+                    }}
+                    className={
+                      dragState?.itemId === item.id
+                        ? "ds-reorder-row ds-reorder-row--dragging"
+                        : "ds-reorder-row"
+                    }
+                    style={getReorderRowStyle(item.id)}
+                    onClickCapture={handleReorderClickCapture}
+                    onPointerDown={(event) => handleReorderPointerDown(event, item)}
+                  >
+                    <ProductRow
+                      actions={null}
+                      reorderHandle
+                      subtitle={getItemSubtitle(item)}
+                      title={item.name}
+                      onClick={() => setSheetItemId(item.id)}
+                    />
+                  </div>
                 ) : (
                   <ProductRow
                     key={item.id}
-                    actions={
-                      isReordering ? null : (
-                        <ProductRowMoreButton onClick={() => setSheetItemId(item.id)} />
-                      )
-                    }
-                    reorderHandle={isReordering}
-                    status={isReordering ? undefined : getItemStatus(item)}
+                    actions={<ProductRowMoreButton onClick={() => setSheetItemId(item.id)} />}
+                    status={getItemStatus(item)}
                     subtitle={getItemSubtitle(item)}
                     title={item.name}
-                    onClick={isReordering ? () => setSheetItemId(item.id) : undefined}
-                    onStatusClick={isReordering ? undefined : () => handleStatusClick(item)}
-                    onStatusSelect={
-                      isReordering ? undefined : (nextStatus) => handleStatusSelect(item, nextStatus)
-                    }
+                    onStatusClick={() => handleStatusClick(item)}
+                    onStatusSelect={(nextStatus) => handleStatusSelect(item, nextStatus)}
                   />
                 )
               )
@@ -491,6 +755,21 @@ export function CategoriesView({
               <p className="ds-empty">Нет товаров с таким статусом.</p>
             )}
           </div>
+
+          {isReordering ? (
+            <div className="ds-reorder-bar">
+              <Button variant="ghost" onClick={handleCancelReorder}>
+                Отмена
+              </Button>
+              <Button
+                variant="solid"
+                disabled={isActionPending("items:reorder")}
+                onClick={handleFinishReorder}
+              >
+                {isActionPending("items:reorder") ? "Сохраняем..." : "Готово"}
+              </Button>
+            </div>
+          ) : null}
 
           <BottomSheet
             show={showItemForm}
@@ -545,34 +824,21 @@ export function CategoriesView({
                 <>
                   <button
                     className="ds-bottom-sheet__action"
-                    disabled={
-                      sheetItemIndex <= 0 || isActionPending(`item:reorder:${sheetItemId}`)
-                    }
+                    disabled={sheetItemIndex <= 0}
                     type="button"
-                    onClick={() => handleMove("up")}
+                    onClick={() => sheetItem && handleDraftMove(sheetItem.id, "up")}
                   >
                     <ArrowUp aria-hidden="true" size={18} />
                     Вверх
                   </button>
                   <button
                     className="ds-bottom-sheet__action"
-                    disabled={
-                      sheetItemIndex === -1 ||
-                      sheetItemIndex >= visibleItems.length - 1 ||
-                      isActionPending(`item:reorder:${sheetItemId}`)
-                    }
+                    disabled={sheetItemIndex === -1 || sheetItemIndex >= displayedItems.length - 1}
                     type="button"
-                    onClick={() => handleMove("down")}
+                    onClick={() => sheetItem && handleDraftMove(sheetItem.id, "down")}
                   >
                     <ArrowDown aria-hidden="true" size={18} />
                     Вниз
-                  </button>
-                  <button
-                    className="ds-bottom-sheet__action ds-bottom-sheet__action--active"
-                    type="button"
-                    onClick={handleFinishReorder}
-                  >
-                    Готово
                   </button>
                 </>
               ) : (
