@@ -466,6 +466,20 @@ select {
   background: var(--ds-brand-soft);
 }
 
+.ds-button--solid {
+  border-color: transparent;
+  background: var(--ds-brand);
+  color: var(--ds-on-brand);
+}
+
+.ds-button--solid:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ds-brand) 90%, var(--ds-text-1));
+}
+
+.ds-button--solid:not(:disabled):active {
+  background: var(--ds-brand);
+}
+
 .ds-button--compact {
   position: relative;
   min-height: 32px;

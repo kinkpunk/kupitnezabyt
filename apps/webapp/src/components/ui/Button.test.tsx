@@ -18,6 +18,13 @@ describe("Button", () => {
     expect(button).not.toHaveClass("ds-button--accent");
   });
 
+  it("renders solid variant", () => {
+    render(<Button variant="solid">Solid</Button>);
+    const button = screen.getByRole("button", { name: "Solid" });
+    expect(button).toHaveClass("ds-button--solid");
+    expect(button).not.toHaveClass("ds-button--accent");
+  });
+
   it("renders icon variant", () => {
     render(<Button variant="icon" aria-label="Icon button" />);
     const button = screen.getByRole("button", { name: "Icon button" });

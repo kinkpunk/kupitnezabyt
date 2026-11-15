@@ -366,7 +366,7 @@ export function ShoppingView({
               <Button
                 aria-label="Добавить покупку"
                 className="ds-button--compact ds-panel-header__add"
-                variant="ghost"
+                variant="solid"
                 onClick={() => setShowShoppingForm(true)}
               >
                 <ListPlus aria-hidden="true" size={18} />

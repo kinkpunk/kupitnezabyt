@@ -63,7 +63,7 @@ export function PanelHeader({
             <Button
               aria-label="Добавить товар"
               className="ds-button--compact ds-panel-header__add"
-              variant="ghost"
+              variant="solid"
               onClick={onAddItem}
             >
               <ListPlus aria-hidden="true" size={18} />

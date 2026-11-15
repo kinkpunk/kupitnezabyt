@@ -132,7 +132,7 @@ describe("ShoppingView", () => {
     const setShowShoppingForm = vi.fn();
     render(<ShoppingView {...createProps({ setShowShoppingForm })} />);
     const addButton = screen.getByRole("button", { name: "Добавить покупку" });
-    expect(addButton).toHaveClass("ds-button--ghost");
+    expect(addButton).toHaveClass("ds-button--solid");
     expect(addButton.closest(".ds-panel-header")).not.toBeNull();
     expect(document.querySelector(".ds-add-item-row")).not.toBeInTheDocument();
     fireEvent.click(addButton);

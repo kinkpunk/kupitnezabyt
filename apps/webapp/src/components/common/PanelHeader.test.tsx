@@ -38,11 +38,11 @@ describe("PanelHeader", () => {
     expect(screen.queryByRole("button", { name: "Добавить товар" })).not.toBeInTheDocument();
   });
 
-  it("renders the add item button as ghost and calls onAddItem when provided", () => {
+  it("renders the add item button as solid and calls onAddItem when provided", () => {
     const handleAddItem = vi.fn();
     render(<PanelHeader {...createProps({ onAddItem: handleAddItem })} />);
     const addButton = screen.getByRole("button", { name: "Добавить товар" });
-    expect(addButton).toHaveClass("ds-button--ghost");
+    expect(addButton).toHaveClass("ds-button--solid");
     fireEvent.click(addButton);
     expect(handleAddItem).toHaveBeenCalledOnce();
   });
