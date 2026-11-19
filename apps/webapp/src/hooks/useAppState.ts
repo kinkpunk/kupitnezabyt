@@ -57,6 +57,7 @@ import {
   setItemStatus,
   snoozeItemReminder,
   stagePendingLoginConsent,
+  syncTelegramHeaderColor,
   startAppleSignIn,
   startCategoryCheckSession,
   startGoogleSignIn,
@@ -319,12 +320,13 @@ export function useAppState() {
     if (theme === "system") {
       document.documentElement.removeAttribute("data-theme");
       window.localStorage.removeItem(themeStorageKey);
-      return;
+    } else {
+      document.documentElement.setAttribute("data-theme", theme);
+      window.localStorage.setItem(themeStorageKey, theme);
     }
 
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem(themeStorageKey, theme);
-  }, [theme]);
+    syncTelegramHeaderColor();
+  }, [theme, systemPrefersDark]);
 
   useEffect(() => {
     let isMounted = true;

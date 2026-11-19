@@ -34,9 +34,9 @@ declare global {
     Telegram?: {
       WebApp?: {
         initData?: string;
-        themeParams?: TelegramThemeParams;
         ready?: () => void;
         expand?: () => void;
+        setHeaderColor?: (color: string) => void;
         HapticFeedback?: TelegramHapticFeedback;
       };
     };
@@ -58,14 +58,6 @@ const legalConsentStorageKey = "kupitnezabyt.legalConsent";
 const pendingConsentStorageKey = "kupitnezabyt.pendingConsent";
 
 let pendingLoginConsent: LegalConsent | null = null;
-
-type TelegramThemeParams = {
-  bg_color?: string;
-  button_color?: string;
-  hint_color?: string;
-  secondary_bg_color?: string;
-  text_color?: string;
-};
 
 export class ApiError extends Error {
   constructor(message: string) {
@@ -379,26 +371,33 @@ function prepareTelegramWebApp(): void {
   const webApp = window.Telegram?.WebApp;
   webApp?.ready?.();
   webApp?.expand?.();
-  applyTelegramTheme(webApp?.themeParams);
 }
 
-function applyTelegramTheme(themeParams: TelegramThemeParams | undefined): void {
-  if (!themeParams) {
+/* Шапка WebView по умолчанию окрашена в фон клиента Telegram, который светлее
+   фона приложения (--ds-bg-base) и даёт видимый стык под шапкой. Подгоняем
+   её под текущую тему приложения. */
+export function syncTelegramHeaderColor(): void {
+  if (typeof window === "undefined") {
     return;
   }
 
-  const root = document.documentElement;
-  setCssVariable(root, "--background", themeParams.bg_color);
-  setCssVariable(root, "--surface", themeParams.secondary_bg_color);
-  setCssVariable(root, "--surface-strong", themeParams.secondary_bg_color);
-  setCssVariable(root, "--text", themeParams.text_color);
-  setCssVariable(root, "--muted", themeParams.hint_color);
-  setCssVariable(root, "--accent", themeParams.button_color);
-}
+  const setHeaderColor = window.Telegram?.WebApp?.setHeaderColor;
+  if (!setHeaderColor) {
+    return;
+  }
 
-function setCssVariable(root: HTMLElement, name: string, value: string | undefined): void {
-  if (value) {
-    root.style.setProperty(name, value);
+  const bgBase = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue("--ds-bg-base")
+    .trim();
+  if (!bgBase) {
+    return;
+  }
+
+  try {
+    setHeaderColor(bgBase);
+  } catch {
+    // старые клиенты Telegram не принимают произвольный цвет — косметика, игнорируем
   }
 }
 
