@@ -19,6 +19,14 @@ const category: Category = {
   aggregateStatus: "OK"
 };
 
+const secondCategory: Category = {
+  ...category,
+  id: "cat-2",
+  name: "Аптека",
+  sortOrder: 1,
+  itemCount: 0
+};
+
 const itemInStock: Item = {
   id: "item-1",
   userId: "u1",
@@ -147,6 +155,7 @@ function createProps(overrides: Partial<React.ComponentProps<typeof CategoriesVi
     onDismissRecommendation: vi.fn().mockResolvedValue(undefined),
     onHideSimilarRecommendations: vi.fn().mockResolvedValue(undefined),
     onUpdateItem: vi.fn().mockResolvedValue(undefined),
+    onMoveItem: vi.fn().mockResolvedValue(undefined),
     onArchiveItem: vi.fn().mockResolvedValue(undefined),
     onArchiveSelectedCategory: vi.fn().mockResolvedValue(undefined),
     onStartCategoryCheck: vi.fn().mockResolvedValue(undefined),
@@ -377,6 +386,63 @@ describe("CategoriesView", () => {
     clickItemActionsButton();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "В архив" }));
     expect(onArchiveItem).toHaveBeenCalledWith(itemInStock);
+  });
+
+  it("moves item to another category from actions sheet", () => {
+    const onMoveItem = vi.fn().mockResolvedValue(undefined);
+    render(
+      <CategoriesView
+        {...createProps({ categories: [category, secondCategory], onMoveItem })}
+      />
+    );
+    clickItemActionsButton();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Переместить" })
+    );
+
+    const picker = screen.getByRole("dialog");
+    expect(picker).toHaveAttribute("aria-label", "Переместить в…");
+    expect(within(picker).getByRole("button", { name: "Аптека" })).toBeInTheDocument();
+    expect(within(picker).queryByRole("button", { name: "Еда" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(picker).getByRole("button", { name: "Аптека" }));
+    expect(onMoveItem).toHaveBeenCalledWith(itemInStock, secondCategory.id);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("returns from move picker back to item actions", () => {
+    render(<CategoriesView {...createProps({ categories: [category, secondCategory] })} />);
+    clickItemActionsButton();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Переместить" })
+    );
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Назад" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-label", itemInStock.name);
+    expect(within(dialog).getByRole("button", { name: "Переместить" })).toBeInTheDocument();
+  });
+
+  it("hides move action with a single category or read-only workspace", () => {
+    const { rerender } = render(<CategoriesView {...createProps()} />);
+    clickItemActionsButton();
+    expect(
+      within(screen.getByRole("dialog")).queryByRole("button", { name: "Переместить" })
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Закрыть" }));
+
+    rerender(
+      <CategoriesView
+        {...createProps({
+          categories: [category, secondCategory],
+          canWriteActiveWorkspace: false
+        })}
+      />
+    );
+    clickItemActionsButton();
+    expect(
+      within(screen.getByRole("dialog")).queryByRole("button", { name: "Переместить" })
+    ).not.toBeInTheDocument();
   });
 
   it("opens item reminder sheet and saves the setting", async () => {

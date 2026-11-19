@@ -149,6 +149,7 @@ export default function Home() {
             onDismissRecommendation={state.handleDismissRecommendation}
             onHideSimilarRecommendations={state.handleHideSimilarRecommendations}
             onUpdateItem={state.handleUpdateItem}
+            onMoveItem={state.handleMoveItem}
             onArchiveItem={state.handleArchiveItemQuiet}
             onArchiveSelectedCategory={state.handleArchiveSelectedCategory}
             onStartCategoryCheck={state.handleStartCategoryCheck}

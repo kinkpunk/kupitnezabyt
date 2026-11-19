@@ -4,9 +4,11 @@ import type { ItemStatus } from "@kupitnezabyt/shared";
 import {
   Archive,
   ArrowDown,
+  ArrowLeft,
   ArrowUp,
   Bell,
   EyeOff,
+  FolderInput,
   FolderPlus,
   GripVertical,
   ListOrdered,
@@ -119,6 +121,7 @@ export function CategoriesView({
   onDismissRecommendation,
   onHideSimilarRecommendations,
   onUpdateItem,
+  onMoveItem,
   onArchiveItem,
   onArchiveSelectedCategory,
   onStartCategoryCheck,
@@ -161,6 +164,7 @@ export function CategoriesView({
   onDismissRecommendation: (recommendation: RecommendationSuggestion) => Promise<void>;
   onHideSimilarRecommendations: (recommendation: RecommendationSuggestion) => Promise<void>;
   onUpdateItem: (item: Item) => Promise<void>;
+  onMoveItem: (item: Item, categoryId: string) => Promise<void>;
   onArchiveItem: (item: Item) => Promise<void>;
   onArchiveSelectedCategory: () => Promise<void>;
   onStartCategoryCheck: () => Promise<void>;
@@ -174,6 +178,7 @@ export function CategoriesView({
   isActionPending: (key: string) => boolean;
 }) {
   const [sheetItemId, setSheetItemId] = useState<string | null>(null);
+  const [movePickerOpen, setMovePickerOpen] = useState(false);
   const [activeRecommendationId, setActiveRecommendationId] = useState<string | null>(null);
   const emptyReminderValue: ReminderFieldsValue = { usageCycleDays: null, reminderEnabled: false };
   const [categoryReminder, setCategoryReminder] = useState<ReminderFieldsValue>(emptyReminderValue);
@@ -985,9 +990,44 @@ export function CategoriesView({
 
           <BottomSheet
             show={sheetItemId !== null}
-            title={sheetItem?.name ?? ""}
-            onClose={() => setSheetItemId(null)}
+            title={movePickerOpen ? "Переместить в…" : (sheetItem?.name ?? "")}
+            onClose={() => {
+              setSheetItemId(null);
+              setMovePickerOpen(false);
+            }}
           >
+            {movePickerOpen && sheetItem ? (
+              <div className="ds-bottom-sheet__actions">
+                {categories
+                  .filter((category) => category.id !== sheetItem.categoryId)
+                  .map((category) => (
+                    <button
+                      key={category.id}
+                      className="ds-bottom-sheet__action"
+                      disabled={isActionPending("items:move")}
+                      type="button"
+                      onClick={() => {
+                        setMovePickerOpen(false);
+                        setSheetItemId(null);
+                        void onMoveItem(sheetItem, category.id).catch((caughtError) =>
+                          setError(formatError(caughtError))
+                        );
+                      }}
+                    >
+                      {category.icon ? `${category.icon} ` : ""}
+                      {category.name}
+                    </button>
+                  ))}
+                <button
+                  className="ds-bottom-sheet__action"
+                  type="button"
+                  onClick={() => setMovePickerOpen(false)}
+                >
+                  <ArrowLeft aria-hidden="true" size={18} />
+                  Назад
+                </button>
+              </div>
+            ) : (
             <div className="ds-bottom-sheet__actions">
               {isReordering ? (
                 <>
@@ -1040,6 +1080,16 @@ export function CategoriesView({
                     <Pencil aria-hidden="true" size={18} />
                     Редактировать
                   </button>
+                  {canWriteActiveWorkspace && categories.length > 1 ? (
+                    <button
+                      className="ds-bottom-sheet__action"
+                      type="button"
+                      onClick={() => setMovePickerOpen(true)}
+                    >
+                      <FolderInput aria-hidden="true" size={18} />
+                      Переместить
+                    </button>
+                  ) : null}
                   <button
                     className="ds-bottom-sheet__action"
                     type="button"
@@ -1059,6 +1109,7 @@ export function CategoriesView({
                 </>
               )}
             </div>
+            )}
           </BottomSheet>
 
           <BottomSheet

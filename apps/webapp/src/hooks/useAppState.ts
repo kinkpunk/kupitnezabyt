@@ -854,6 +854,22 @@ export function useAppState() {
     await refreshActiveData(token);
   }
 
+  async function handleMoveItem(item: Item, categoryId: string) {
+    if (!token || item.categoryId === categoryId) {
+      return;
+    }
+
+    const actionKey = "items:move";
+    try {
+      setError(null);
+      setPendingAction(actionKey, true);
+      await updateItem(token, item.id, { categoryId });
+      await refreshActiveData(token);
+    } finally {
+      setPendingAction(actionKey, false);
+    }
+  }
+
   async function handleSaveReminderSetting(
     entityType: InAppReminder["entityType"],
     entityId: string,
@@ -1734,6 +1750,7 @@ export function useAppState() {
     handleUpdateManualShoppingItem,
     handleDeleteManualShoppingItem,
     handleUpdateItem,
+    handleMoveItem,
     setReminderSaving,
     setPendingAction,
     showBoughtToast,
