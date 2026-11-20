@@ -194,8 +194,11 @@ test.describe("Screens visual regression", () => {
     await expect(page.locator(".ds-product-row").filter({ hasText: "Еда" })).toBeVisible();
     await expect(page.getByText("Еда")).toBeVisible();
     // Дата архивации зависит от текущего дня — исключаем её из сравнения.
+    // Маска динамического текста даёт субпиксельный шум на границе (~36px) —
+    // допускаем малую разницу, чтобы тест не был флаки.
     await expect(page).toHaveScreenshot("archive-with-category.png", {
-      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })]
+      mask: [page.locator(".ds-product-row__subtitle").filter({ hasText: /\d/ })],
+      maxDiffPixels: 100
     });
   });
 });

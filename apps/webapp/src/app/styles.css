@@ -2517,7 +2517,11 @@ button.ds-status-chip:not(:disabled):active {
 
 .ds-menu-workspace-switcher {
   display: grid;
-  gap: 4px;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--ds-surface-2);
 }
 
 .ds-menu-workspace-switcher span {
@@ -2529,6 +2533,9 @@ button.ds-status-chip:not(:disabled):active {
 
 .ds-menu-workspace-switcher select {
   width: 100%;
+  min-height: 32px;
+  padding-right: 28px;
+  background: var(--ds-surface-1);
 }
 
 .ds-notification-group {
